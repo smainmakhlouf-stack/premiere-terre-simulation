@@ -582,7 +582,7 @@ async function enregistrerRapide(){
   if(!courant){await ouvrir();const d=$('dos-droite');if(d&&!selection)d.innerHTML='<div class="vide"><b>Pour enregistrer cette simulation</b>, choisissez le client à gauche, ou créez-le avec « + Client ».</div>';return}
   if(!courant.simId)return ouvrir(courant.clientId,true);
   const boutons=[$('dos-bar-save'),$('st-save')].filter(Boolean);boutons.forEach(b=>{b.disabled=true;b.dataset.txt=b.textContent;b.textContent='Enregistrement…'});
-  try{await api('/api/simulations/'+courant.simId,{method:'PUT',body:JSON.stringify({data:capturer()})});boutons.forEach(b=>b.textContent='Enregistré ✓');setTimeout(()=>{barre();boutons.forEach(b=>{b.disabled=false;b.textContent=b.dataset.txt})},1500)}
+  try{await api('/api/simulations/'+courant.simId,{method:'PUT',body:JSON.stringify({data:capturer()})});if(window.ptMarquerEnregistre)window.ptMarquerEnregistre();boutons.forEach(b=>b.textContent='Enregistré ✓');setTimeout(()=>{barre();boutons.forEach(b=>{b.disabled=false;b.textContent=b.dataset.txt})},1500)}
   catch(e){alert('Enregistrement impossible : '+e.message);barre();boutons.forEach(b=>{b.disabled=false;b.textContent=b.dataset.txt})}
 }
 
@@ -649,7 +649,7 @@ async function choisir(id,proposerEnregistrement){
   $('dos-save').onclick=async()=>{
     $('dos-save').disabled=true;
     try{const j=await api('/api/dossiers/'+c.id+'/simulations',{method:'POST',body:JSON.stringify({nom:$('dos-simnom').value,data:capturer()})});
-      setCourant({clientId:c.id,client:nomClient(c),simId:j.simulation.id,simNom:j.simulation.nom});await chargerListe();await choisir(c.id);message('Simulation enregistrée.')}
+      setCourant({clientId:c.id,client:nomClient(c),simId:j.simulation.id,simNom:j.simulation.nom});try{localStorage.removeItem('pt-brouillon-simulation')}catch{}if(window.ptMarquerEnregistre)window.ptMarquerEnregistre();await chargerListe();await choisir(c.id);message('Simulation enregistrée.')}
     catch(e){message(e.message,false);$('dos-save').disabled=false}
   };
   $('dos-maj-client').onclick=async()=>{
@@ -671,7 +671,7 @@ $('dos-droite').addEventListener('click',async e=>{
       b.disabled=true;
       const s=(await api('/api/simulations/'+b.dataset.ouvrir)).simulation;
       restaurer(s.data);
-      setCourant({clientId:c.id,client:nomClient(c),simId:s.id,simNom:s.nom});
+      setCourant({clientId:c.id,client:nomClient(c),simId:s.id,simNom:s.nom});setTimeout(()=>window.ptMarquerEnregistre&&window.ptMarquerEnregistre(),0);
       fermer();
       if(window.ptOpenStudio)window.ptOpenStudio('plan');else{const plan=document.querySelector('#pt-home [data-go="plan"]');if(plan)plan.click()}
     }else if(b.dataset.maj){
@@ -700,10 +700,52 @@ window.ptOpenDossiers=()=>ouvrir(courant?.clientId);
 function nouvelle(){
   if(!confirm(courant?.simId?'Fermer « '+(courant.simNom||'cette simulation')+' » et commencer une nouvelle simulation vierge ?\n\nLes modifications non enregistrées seront perdues.':'Commencer une nouvelle simulation vierge ?\n\nLes saisies non enregistrées seront perdues.'))return;
   setCourant(null);
-  try{localStorage.removeItem('pt-finance-v17-borrower');sessionStorage.setItem('pt-vierge','1')}catch{}
+  try{localStorage.removeItem('pt-finance-v17-borrower');localStorage.removeItem('pt-brouillon-simulation');sessionStorage.setItem('pt-vierge','1')}catch{}
   location.reload();
 }
 window.ptNouvelleSimulation=nouvelle;
+
+// ---------- Enregistrement automatique ----------
+// Simulation rattachée à un dossier : mise à jour sur le serveur toutes les 30 s si elle a changé,
+// et au moment de quitter la page. Sinon : brouillon de secours dans le navigateur, proposé au retour.
+const CLE_BROUILLON='pt-brouillon-simulation';
+let dernierEtat=null,dernierAuto=null,autoEnCours=false;
+const etatActuel=()=>{try{return JSON.stringify(capturer())}catch{return null}};
+function marquerEnregistre(){dernierEtat=etatActuel()}
+window.ptMarquerEnregistre=marquerEnregistre;
+async function autoEnregistrer(sortie){
+  const etat=etatActuel();if(!etat||etat===dernierEtat||autoEnCours)return;
+  if(courant?.simId){
+    autoEnCours=true;
+    try{
+      const r=await fetch('/api/simulations/'+courant.simId,{method:'PUT',credentials:'same-origin',keepalive:!!sortie,headers:{'Content-Type':'application/json'},body:JSON.stringify({data:JSON.parse(etat)})});
+      if(r.ok){dernierEtat=etat;dernierAuto=new Date();if(window.ptStudioDossier)window.ptStudioDossier();barreAuto()}
+    }catch{}finally{autoEnCours=false}
+  }else{
+    try{localStorage.setItem(CLE_BROUILLON,JSON.stringify({at:new Date().toISOString(),data:JSON.parse(etat)}));dernierEtat=etat}catch{}
+  }
+}
+window.ptDernierAuto=()=>dernierAuto;
+function barreAuto(){const sp=document.querySelector('#pt-dos-bar span');if(sp&&dernierAuto&&!sp.querySelector('.auto'))sp.insertAdjacentHTML('beforeend',' <small class="auto" style="opacity:.75"></small>');const a=document.querySelector('#pt-dos-bar .auto');if(a&&dernierAuto)a.textContent='· enregistré à '+dernierAuto.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}
+setInterval(()=>autoEnregistrer(false),30000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')autoEnregistrer(true)});
+addEventListener('pagehide',()=>autoEnregistrer(true));
+// Brouillon d'une simulation non enregistrée : proposé au retour sur la page.
+function proposerBrouillon(){
+  if(courant?.simId||window.ptVierge)return;
+  let b=null;try{b=JSON.parse(localStorage.getItem(CLE_BROUILLON)||'null')}catch{}
+  if(!b?.data)return;
+  const hote=$('pt-barre-compte');if(!hote)return;
+  const el=document.createElement('div');el.id='pt-brouillon';
+  el.style.cssText='position:fixed;top:44px;left:50%;transform:translateX(-50%);z-index:9800;background:#fff;color:#2b2320;border:1px solid #e2cfc3;border-radius:12px;box-shadow:0 10px 30px #0002;padding:10px 14px;font:13px Inter,Arial,sans-serif;display:flex;gap:10px;align-items:center;flex-wrap:wrap;max-width:94vw';
+  el.innerHTML=`<span>Simulation non enregistrée du <b>${esc(new Date(b.at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))}</b> retrouvée.</span><button type="button" id="brouillon-oui" style="background:#a34d31;color:#fff;border:0;border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:600">Reprendre</button><button type="button" id="brouillon-non" style="background:#f1e5dd;color:#7e412f;border:0;border-radius:8px;padding:6px 12px;cursor:pointer">Ignorer</button>`;
+  document.body.appendChild(el);
+  $('brouillon-oui').onclick=()=>{try{restaurer(b.data);marquerEnregistre()}catch(e){alert('Brouillon illisible.')}el.remove();if(window.ptOpenStudio)window.ptOpenStudio('plan')};
+  $('brouillon-non').onclick=()=>{try{localStorage.removeItem(CLE_BROUILLON)}catch{}el.remove()};
+}
+setTimeout(proposerBrouillon,1500);
+// État de référence une fois la page prête (paramètres appliqués) : rien n'est enregistré tant qu'on n'a rien modifié.
+setTimeout(()=>{if(dernierEtat===null)marquerEnregistre()},2500);
 window.ptEnregistrerSimulation=enregistrerRapide;
 window.ptDossierCourant=()=>courant;
 // Page rechargée pour une nouvelle simulation : tous les montants repartent de zéro.
@@ -716,7 +758,7 @@ try{if(sessionStorage.getItem('pt-vierge')){sessionStorage.removeItem('pt-vierge
 }}catch(e){}
 // Après un rechargement, le formulaire revient aux valeurs par défaut : on recharge la simulation
 // en cours, sinon « Enregistrer » écraserait le dossier avec un formulaire vide.
-if(courant?.simId){api('/api/simulations/'+courant.simId).then(j=>{restaurer(j.simulation.data);setCourant({...courant,simNom:j.simulation.nom})}).catch(()=>setCourant(null))}
+if(courant?.simId){api('/api/simulations/'+courant.simId).then(j=>{restaurer(j.simulation.data);setCourant({...courant,simNom:j.simulation.nom});setTimeout(()=>window.ptMarquerEnregistre&&window.ptMarquerEnregistre(),0)}).catch(()=>setCourant(null))}
 $('dos-close').onclick=fermer;
 dialog.addEventListener('click',e=>{if(e.target===dialog)fermer()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dialog.classList.contains('open'))fermer()});
@@ -924,7 +966,7 @@ window.ptParametresPrets=charger().then(()=>{if(!courant?.simId)appliquer(0)}).c
 })();
 </script>
 <!-- Écrans simplifiés : Plan de financement, Diagnostic (capacité d'emprunt), Optimiseur fiscal -->
-<style>
+<style id="st-style">
 #pt-studio{display:none;position:fixed;left:0;right:0;bottom:0;top:38px;z-index:9250;background:#faf7f3;overflow:auto;font-family:Inter,Arial,sans-serif;color:#2b2320}
 #pt-studio.open{display:block}#pt-studio *{box-sizing:border-box}
 #pt-studio .st-top{position:sticky;top:0;z-index:2;background:#fffdfb;border-bottom:1px solid #eaded7;padding:12px clamp(16px,3vw,40px);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
@@ -989,7 +1031,7 @@ window.ptParametresPrets=charger().then(()=>{if(!courant?.simId)appliquer(0)}).c
 <div id="pt-studio" aria-live="polite">
 <div class="st-top"><button class="st-back" type="button" id="st-home">← Accueil</button><div class="st-title"><h1 id="st-h1"></h1><p id="st-p"></p></div>
 <div class="st-switch" id="st-switch"><button type="button" data-st="diag" title="Point de départ : les revenus. Résultat : le budget maximum.">1 · Budget max</button><button type="button" data-st="plan" title="Point de départ : le prix d'un bien. Résultat : le financement et la mensualité.">2 · Plan de financement</button><button type="button" data-st="fiscal" title="Investissement locatif : rendement, cash-flow, régime fiscal.">Optimiseur fiscal</button></div>
-<div class="st-actions"><span id="st-dossier"></span><button class="st-act prim" type="button" id="st-save">Enregistrer</button><button class="st-act" type="button" id="st-list">Mes simulations</button><button class="st-act" type="button" id="st-new">Nouvelle simulation</button><button class="st-expert" type="button" id="st-expert">Mode détaillé →</button></div></div>
+<div class="st-actions"><span id="st-dossier"></span><button class="st-act prim" type="button" id="st-save">Enregistrer</button><button class="st-act" type="button" id="st-list">Mes simulations</button><button class="st-act" type="button" id="st-pdf" title="Ouvre l'impression : choisissez « Enregistrer au format PDF »">PDF client</button><button class="st-act" type="button" id="st-new">Nouvelle simulation</button><button class="st-expert" type="button" id="st-expert">Mode détaillé →</button></div></div>
 <div class="st-body"><div class="st-form" id="st-form"></div><div class="st-res" id="st-res"></div></div>
 </div>
 <div id="st-tip"></div>
@@ -1436,13 +1478,52 @@ $('st-expert').onclick=()=>VUES[vue].expert();
 $('st-save').onclick=()=>window.ptEnregistrerSimulation&&window.ptEnregistrerSimulation();
 $('st-list').onclick=()=>window.ptOpenDossiers&&window.ptOpenDossiers();
 $('st-new').onclick=()=>window.ptNouvelleSimulation&&window.ptNouvelleSimulation();
-window.ptStudioDossier=()=>{const c=window.ptDossierCourant&&window.ptDossierCourant();$('st-dossier').innerHTML=c?`Dossier : <b>${esc(c.client)}</b>${c.simNom?' · '+esc(c.simNom):''}`:'Simulation non enregistrée';$('st-save').textContent=c?.simId?'Enregistrer':'Enregistrer…'};
+window.ptStudioDossier=()=>{const c=window.ptDossierCourant&&window.ptDossierCourant();const auto=window.ptDernierAuto&&window.ptDernierAuto();$('st-dossier').innerHTML=c?`Dossier : <b>${esc(c.client)}</b>${c.simNom?' · '+esc(c.simNom):''}${c.simId?`<br><span style="font-size:11px">${auto?'Enregistré automatiquement à '+auto.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'Enregistrement automatique activé'}</span>`:''}`:'Simulation non enregistrée<br><span style="font-size:11px">brouillon gardé sur cet ordinateur</span>';$('st-save').textContent=c?.simId?'Enregistrer':'Enregistrer…'};
 window.ptStudioDossier();
 studio.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>ouvrir(b.dataset.st));
 // Le PTZ ajouté depuis le barème doit apparaître tout de suite dans le plan.
 const ajoutOrigine=window.addLoan;
 if(typeof ajoutOrigine==='function'){window.addLoan=function(){const r=ajoutOrigine.apply(this,arguments);if(studio.classList.contains('open')&&vue==='plan')setTimeout(()=>{fraisAuto();rafraichir()},0);return r};try{addLoan=window.addLoan}catch(e){}}
 window.ptOpenStudio=ouvrir;
+
+// ---------- PDF client ----------
+// Les écrans rapides sont recalculés hors écran puis assemblés dans une page imprimable
+// (impression du navigateur → « Enregistrer au format PDF »).
+function capturerVue(nom){const v=VUES[nom];v.form();v.res();const res=$('st-res').cloneNode(true);res.querySelectorAll('.cta,button').forEach(b=>b.remove());res.querySelectorAll('[data-tip]').forEach(e=>e.removeAttribute('data-tip'));res.querySelectorAll('.legend span').forEach(e=>{if(/Survolez/.test(e.textContent))e.remove()});return res.innerHTML.replace(/ ?Survolez pour le détail\./g,'')}
+function genererPDF(){
+  const avant=vue,ouvert=studio.classList.contains('open');principal();
+  const sections=[];
+  const d=lireDiag();if(d.revenus>0)sections.push(['Votre budget',capturerVue('diag')]);
+  if(fv('price')>0)sections.push(['Votre plan de financement',capturerVue('plan')]);
+  if($('purpose')?.value==='invest'&&num(m('of-loyer').value)>0)sections.push(['Votre investissement locatif',capturerVue('fiscal')]);
+  vue=avant;if(ouvert)rafraichir();
+  if(!sections.length){alert('Rien à imprimer : renseignez au moins les revenus (Budget max) ou le prix du bien (Plan de financement).');return}
+  const c=window.ptDossierCourant&&window.ptDossierCourant(),saisi=($('client')?.value||'').trim(),client=c?.client||(saisi&&saisi!=='Simulation test'?saisi:'');
+  const conseiller=(window.ptUtilisateur&&window.ptUtilisateur.nom)||'',date=new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+  const css=($('st-style')?.textContent||'').replace(/@media print\{[^}]*\}\}?/g,'');
+  const html=`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Étude de financement${client?' · '+esc(client):''}</title><style>${css}
+  @page{size:A4;margin:12mm}
+  html,body{margin:0;background:#fff}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #pt-studio{position:static!important;display:block!important;overflow:visible!important;background:#fff;top:auto}
+  #pt-studio .tiles{grid-template-columns:repeat(3,minmax(0,1fr))!important}#pt-studio .cols{grid-template-columns:1fr 1fr!important}
+  #pt-studio .card,#pt-studio .tile,#pt-studio .hero{break-inside:avoid}
+  .doc-tete{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #a34d31;padding-bottom:12px;margin-bottom:18px}
+  .doc-tete img{height:56px}.doc-tete h1{font:24px Georgia,serif;margin:0;color:#2b2320}.doc-tete p{margin:3px 0 0;color:#7b6b62;font-size:12px}
+  .doc-section{margin-bottom:22px}.doc-section>h2{font:19px Georgia,serif;color:#a34d31;margin:0 0 10px}
+  .doc-section+.doc-section{break-before:page}
+  .doc-pied{border-top:1px solid #e2cfc3;margin-top:18px;padding-top:10px;font-size:10.5px;color:#7b6b62;line-height:1.5}
+  </style></head><body><div id="pt-studio">
+  <div class="doc-tete"><div><h1>Étude de financement${client?' · '+esc(client):''}</h1><p>Établie le ${esc(date)}${conseiller?' par '+esc(conseiller):''} · Première Terre</p></div><img src="${location.origin}/logo-premiere-terre.png?v=2" alt="Première Terre"></div>
+  ${sections.map(([t,h])=>`<div class="doc-section"><h2>${esc(t)}</h2><div class="st-res">${h}</div></div>`).join('')}
+  <div class="doc-pied">Simulation indicative et non contractuelle, établie à partir des informations communiquées et des conditions de marché à la date du document. Elle ne constitue ni une offre de prêt ni un accord de financement : les conditions définitives (taux, assurance, garanties, frais, éligibilité aux prêts aidés) sont fixées par les établissements prêteurs après étude du dossier. Un crédit vous engage et doit être remboursé : vérifiez vos capacités de remboursement avant de vous engager.</div>
+  </div></body></html>`;
+  const f=document.createElement('iframe');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(f);
+  const doc=f.contentDocument;doc.open();doc.write(html);doc.close();
+  const imprimer=()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){alert('Impression impossible : '+e.message)}setTimeout(()=>f.remove(),60000)};
+  const img=doc.querySelector('img');if(img&&!img.complete){img.onload=img.onerror=()=>setTimeout(imprimer,100)}else setTimeout(imprimer,250);
+}
+$('st-pdf').onclick=genererPDF;
+window.ptGenererPDF=genererPDF;
 // Nouvelle simulation vierge : les champs du diagnostic et de l'optimiseur repartent aussi de zéro.
 if(window.ptVierge)document.querySelectorAll('#st-memo input').forEach(i=>i.value='');
 })();
