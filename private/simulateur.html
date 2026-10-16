@@ -1783,7 +1783,8 @@ function bindDiag(){
 // =====================================================================
 // 3. OPTIMISEUR FISCAL (investissement locatif)
 // =====================================================================
-const DEF_OF={'of-prix':200000,'of-travaux':0,'of-apport':20000,'of-loyer':850,'of-tf':900,'of-copro':600,'of-pno':150,'of-gestion':0,'of-vacance':0.5,'of-tmi':30,'of-ps':17.2,'of-mobilier':5000,'of-duree':20};
+// À l'ouverture, tous les montants sont à zéro ; seuls les paramètres fiscaux et la durée ont une valeur de départ.
+const DEF_OF={'of-prix':0,'of-travaux':0,'of-apport':0,'of-loyer':0,'of-tf':0,'of-copro':0,'of-pno':0,'of-gestion':0,'of-vacance':0,'of-tmi':30,'of-ps':17.2,'of-mobilier':0,'of-duree':20};
 function initFiscal(){Object.entries(DEF_OF).forEach(([k,v])=>{if(m(k).value==='')m(k).value=v})}
 function champOF(id,label,u,aide){return `<div class="f"><label for="s${id}">${label}${aide?` <span style="font-weight:400;color:#8a7a70">${aide}</span>`:''}</label><div class="euro" data-u="${u}"><input id="s${id}" data-memo="${id}" inputmode="decimal" value="${esc(m(id).value)}"></div></div>`}
 function formFiscal(){
@@ -1808,6 +1809,7 @@ function formFiscal(){
 function resFiscal(){
   const g=id=>num(m(id).value),p=P();
   const prix=g('of-prix'),travaux=g('of-travaux'),apport=g('of-apport'),mobilier=g('of-mobilier'),ans=g('of-duree')||20;
+  if(prix<=0||g('of-loyer')<=0){$('st-res').innerHTML=`<div class="card"><h2>Indiquez le prix du bien et le loyer</h2><p class="sub">Le rendement, le cash-flow et le régime fiscal le plus favorable se calculent dès que le prix et le loyer mensuel sont saisis.</p></div>`;return}
   const notaire=prix*p.frais.notaireAncien/100,fraisB=p.frais.dossier;
   const coutTotal=prix+travaux+notaire+fraisB,pret=Math.max(0,coutTotal-apport);
   const tauxOF=m('of-taux').value===''?tauxDuree(ans):g('of-taux'),assOF=m('of-ass').value===''?assDefaut():g('of-ass');
