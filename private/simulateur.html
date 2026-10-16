@@ -1422,16 +1422,17 @@ function formDiag(){
   <div class="f"><label for="sd-enfants">Enfants</label><input id="sd-enfants" data-memo="dg-enfants" type="number" min="0" max="10" value="${v('dg-enfants')}"></div></div>
   <h3>Projet</h3>
   <div class="f"><div class="seg" data-dseg="dg-type"><button type="button" data-v="neuf" class="${d.type==='neuf'?'on':''}">Neuf</button><button type="button" data-v="ancien" class="${d.type==='ancien'?'on':''}">Ancien</button></div></div>
+  <div class="st-ptz" style="background:#fbf3ee;border:1px solid #efdcd1;border-radius:12px;padding:12px 12px 2px;margin-bottom:14px"><h3 style="margin-top:0">PTZ (neuf)</h3>
+  <div class="duo"><div class="f"><label for="sd-zone">Zone</label><select id="sd-zone" data-memo="dg-zone">${['A','B1','B2','C'].map(z=>`<option value="${z}" ${d.zone===z?'selected':''}>${z==='A'?'A bis / A':z}</option>`).join('')}</select></div>
+  <div class="f"><label for="sd-rfr">RFR N-2</label><div class="euro" data-u="€"><input id="sd-rfr" data-memo="dg-rfr" inputmode="numeric" placeholder="estimé" value="${v('dg-rfr')}"></div></div></div>
+  <div class="f"><label>Primo-accédant</label><div class="seg" data-dseg="dg-primo"><button type="button" data-v="oui" class="${d.primo?'on':''}">Oui</button><button type="button" data-v="non" class="${d.primo?'':'on'}">Non</button></div></div>
+  <button type="button" id="sd-detail" style="width:100%;margin:2px 0 12px;background:#fff;border:1px solid #d9c5b9;color:#8e3f29;border-radius:9px;padding:9px;cursor:pointer;font:600 12.5px Inter,Arial,sans-serif">Diagnostic détaillé : PTZ, Action Logement, prêt complémentaire →</button></div>
   <div class="f"><label for="sd-apport">Apport disponible</label><div class="euro" data-u="€"><input id="sd-apport" data-memo="dg-apport" inputmode="numeric" value="${v('dg-apport')}"></div></div>
   ${champDuree('sd-duree','Durée',v('dg-duree'),'')}
   <div class="f"><label for="sd-endet-n">Taux d'endettement visé</label><div class="duree"><input id="sd-endet" type="range" min="20" max="45" step="0.5" value="${d.endet??P().seuils.endettement}" aria-label="Taux d'endettement visé"><div class="euro" data-u="%"><input id="sd-endet-n" type="number" min="20" max="45" step="0.5" inputmode="decimal" value="${d.endet??P().seuils.endettement}" style="padding-right:30px"></div></div><div class="hint">Repère de l'équipe : ${pc(P().seuils.endettement,0)}. Faites glisser pour ajuster le budget. ${d.endet!=null?'<button type="button" class="lien" id="sd-endet-reset">Revenir au repère</button>':''}</div></div>
   <div class="duo"><div class="f"><label for="sd-taux">Taux</label><div class="euro" data-u="%"><input id="sd-taux" data-memo="dg-taux" inputmode="decimal" placeholder="${String(tauxDuree(d.ans)).replace('.',',')}" value="${v('dg-taux')}"></div></div>
   <div class="f"><label for="sd-ass">Assurance <span style="font-weight:400;color:#8a7a70">/ emprunteur</span></label><div class="euro" data-u="%"><input id="sd-ass" data-memo="dg-ass" inputmode="decimal" placeholder="${String(assDefaut()).replace('.',',')}" value="${v('dg-ass')}"></div></div></div>
   <div class="hint" style="margin-top:-6px;margin-bottom:10px">Vides : valeurs de l'équipe (taux de la grille pour la durée choisie). Saisissez-les pour une offre précise.</div>
-  <h3>PTZ (neuf)</h3>
-  <div class="duo"><div class="f"><label for="sd-zone">Zone</label><select id="sd-zone" data-memo="dg-zone">${['A','B1','B2','C'].map(z=>`<option value="${z}" ${d.zone===z?'selected':''}>${z==='A'?'A bis / A':z}</option>`).join('')}</select></div>
-  <div class="f"><label for="sd-rfr">RFR N-2</label><div class="euro" data-u="€"><input id="sd-rfr" data-memo="dg-rfr" inputmode="numeric" placeholder="estimé" value="${v('dg-rfr')}"></div></div></div>
-  <div class="f"><label>Primo-accédant</label><div class="seg" data-dseg="dg-primo"><button type="button" data-v="oui" class="${d.primo?'on':''}">Oui</button><button type="button" data-v="non" class="${d.primo?'':'on'}">Non</button></div></div>
   <div class="hint">Frais et seuils : paramètres de l'équipe. Sans RFR, il est estimé à 90 % des revenus annuels.</div>`;
 }
 function resDiag(){
@@ -1454,7 +1455,7 @@ function resDiag(){
    <div class="tile"><small>Taux d'endettement</small><b>${pc((c.mensualite+d.charges)/d.revenus*100)}</b>${c.seuil>p.seuils.endettement+1e-9?statut('warn','au-dessus du repère équipe ('+pc(p.seuils.endettement,0)+')'):statut('ok','repère équipe '+pc(p.seuils.endettement,0))}</div>
    <div class="tile"><small>Reste à vivre</small><b>${eur(c.reste)}</b>${statut(okReste?'ok':'bad',okReste?'minimum '+eur(c.resteMin):'sous le minimum de '+eur(c.resteMin))}</div>
   </div>
-  <div class="card"><h2>Neuf ou ancien : la différence de budget</h2><p class="sub">Même foyer, même mensualité. ${ecart>0?`Dans le neuf, votre client peut viser <b style="color:#a34d31">${eur(ecart)} de plus</b> : frais de notaire réduits${neuf.ptz.montant?' et PTZ à 0 %':''}.`:'Avec ces critères, le neuf n\'apporte pas de budget supplémentaire.'}${neuf.ptz.motif&&d.primo?' '+esc(neuf.ptz.motif):''}${!d.primo?' PTZ non retenu : le client n\'est pas primo-accédant.':''}</p>
+  <div class="card"><h2>Neuf ou ancien : la différence de budget</h2><p class="sub">Même foyer, même mensualité. ${ecart>0?`Dans le neuf, votre client peut viser <b style="color:#a34d31">${eur(ecart)} de plus</b> : frais de notaire réduits${neuf.ptz.montant?' et PTZ à 0 %':''}.`:'Avec ces critères, le neuf n\'apporte pas de budget supplémentaire.'}${neuf.ptz.motif&&d.primo?' '+esc(neuf.ptz.motif)+(d.rfr?'':` (RFR non saisi, estimé à ${eur(d.revenus*12*0.9)} : saisissez le RFR N-2 réel dans le bloc PTZ)`):''}${!d.primo?' PTZ non retenu : le client n\'est pas primo-accédant.':''}</p>
    <div class="cols">${colonne(neuf,'Neuf',C.main)}${colonne(ancien,'Ancien',C.frais)}</div></div>
   <div class="card"><h2>À prix égal (${eur(prixRef)}) : le neuf s'amortit plus vite</h2><p class="sub">Moins de frais de notaire${sn.ptz.montant?' et un PTZ sans intérêts':''} : on emprunte moins à la banque, la dette baisse plus vite et coûte moins cher.</p>
    ${courbes([{l:'Neuf · capital restant dû',c:C.main,v:sn.crd},{l:'Ancien · capital restant dû',c:C.frais,v:sa.crd}],d.ans)}
@@ -1478,6 +1479,7 @@ function resDiag(){
 }
 function bindDiag(){
   const f=$('st-form');
+  $('sd-detail')?.addEventListener('click',versDiagDetaille);
   f.querySelectorAll('[data-memo]').forEach(i=>i.addEventListener('input',()=>{m(i.dataset.memo).value=i.id==='sd-taux'||i.id==='sd-ass'?i.value.replace(',','.').trim():i.value;resDiag()}));
   lierDuree('sd-duree',a=>{m('dg-duree').value=a;$('sd-taux').placeholder=String(tauxDuree(a)).replace('.',',');resDiag()});
   // Curseur du taux d'endettement : ajuste le budget en direct.
@@ -1566,9 +1568,24 @@ function bindFiscal(){
 // ---------- Navigation ----------
 const VUES={
   plan:{t:'Plan de financement',p:'Pour un bien précis (prix connu) : comment il est financé, la mensualité et le taux d\'endettement.',form:formPlan,res:resPlan,bind:bindPlan,expert:()=>versExpert('#price')},
-  diag:{t:'Diagnostic financier',p:'Avant de chercher un bien : à partir des revenus, le budget maximum du client, en neuf et en ancien.',form:formDiag,res:resDiag,bind:bindDiag,expert:()=>{fermer();window.ptOpenDiagExpert&&window.ptOpenDiagExpert()}},
+  diag:{t:'Diagnostic financier',p:'Avant de chercher un bien : à partir des revenus, le budget maximum du client, en neuf et en ancien.',form:formDiag,res:resDiag,bind:bindDiag,expert:versDiagDetaille},
   fiscal:{t:'Optimiseur fiscal',p:'Investissement locatif : rendement, cash-flow et régime fiscal le plus favorable.',form:formFiscal,res:resFiscal,bind:bindFiscal,expert:()=>versExpert('#v8vefa')},
 };
+function versDiagDetaille(){
+  const d=lireDiag(),dlg=document.getElementById('pt-diagnostic');
+  const champ=k=>dlg&&dlg.querySelector('[data-d="'+k+'"]');
+  const poser=(k,v)=>{const el=champ(k);if(!el||v==null||v==='')return;if(el.type==='checkbox')el.checked=!!v;else el.value=v};
+  if(dlg){
+    poser('propertyType',d.type==='neuf'?'new':'old');poser('primo',d.primo);poser('zone',d.zone);
+    const cap=capacite(d,d.type);if(cap.budget>0){poser('price',Math.round(cap.budget));poser('land',0);poser('works',0)}
+    if(d.rfr)poser('rfr',d.rfr);poser('deposit',d.apport);poser('years',d.ans);
+    if(d.taux!=null)poser('rate',d.taux);if(d.endet!=null)poser('threshold',d.endet);
+    const r1=num(m('dg-rev1').value),r2=num(m('dg-rev2').value);
+    if(r1)poser('income',r1);if(r2){poser('co',true);poser('coincome',r2)}
+  }
+  fermer();window.ptOpenDiagExpert&&window.ptOpenDiagExpert();
+  if(dlg){dlg.querySelector('[data-tab="financing"]')?.click();champ('primo')?.dispatchEvent(new Event('change',{bubbles:true}))}
+}
 function versExpert(sel){fermer();const h=$('pt-home');if(h)h.style.display='none';const t=document.querySelector(sel);if(t)t.scrollIntoView({behavior:'smooth',block:'center'})}
 function rafraichir(){const v=VUES[vue];v.form();v.bind();v.res()}
 function ouvrir(nom){
