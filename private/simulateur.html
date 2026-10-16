@@ -1867,4 +1867,13 @@ if(bouton){const origine=bouton.onclick;bouton.onclick=function(){
 aidesAuto();
 })();
 </script>
+<script>
+/* Retour à l'accueil depuis n'importe quel écran (bouton de la barre du haut). */
+window.ptAllerAccueil=function(){
+  ['pt-studio','pt-diagnostic','pt-ptz','pt-dos','pt-par'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('open')});
+  if(document.body.classList.contains('v9clientmode')){document.body.classList.remove('v9clientmode');const b=document.getElementById('v9present');if(b)b.textContent='Présentation client'}
+  const h=document.getElementById('pt-home');if(h)h.style.display='block';
+  document.body.style.overflow='';window.scrollTo(0,0);
+};
+</script>
 </html>

@@ -28,6 +28,7 @@ export async function GET(request: Request) {
 <script>window.ptUtilisateur=${JSON.stringify({ nom: session.user.name || session.user.email, admin }).replace(/</g, "\\u003c")}</script>
 <style>body{padding-top:38px}#pt-home{top:38px!important}@media print{#pt-barre-compte{display:none!important}body{padding-top:0!important}}</style>
 <div id="pt-barre-compte" style="position:fixed;top:0;left:0;right:0;height:38px;z-index:9600;display:flex;justify-content:flex-end;align-items:center;gap:14px;padding:0 5%;background:#754338;color:#fff;font:13px Inter,system-ui,sans-serif;white-space:nowrap;overflow:hidden">
+  <button type="button" onclick="window.ptAllerAccueil&&window.ptAllerAccueil()" style="order:-1;margin-right:auto;background:#fff;color:#754338;border:0;border-radius:6px;padding:4px 12px;cursor:pointer;font:600 13px Inter,system-ui,sans-serif">← Accueil</button>
   <span>Connecté : <strong>${escapeHtml(session.user.name || session.user.email)}</strong></span>
   ${admin ? '<a href="/comptes" style="color:#fff">Comptes vendeurs</a>' : ""}
   <form method="post" action="/deconnexion" style="margin:0"><button type="submit" style="background:none;border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font:inherit">Déconnexion</button></form>
