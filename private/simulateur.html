@@ -1009,6 +1009,16 @@ window.ptParametresPrets=charger().then(()=>{if(!courant?.simId)appliquer(0)}).c
 .st-detres .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:#5e4f48;margin-top:6px}.st-detres .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .st-boite{background:#fff;border:1px solid #eaded7;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:13px}.st-boite h4{margin:0 0 6px;font-size:13px;color:#8e3f29}.st-boite div{display:flex;justify-content:space-between;padding:3px 0;font-variant-numeric:tabular-nums}.st-boite div.tot{border-top:1px solid #eaded7;margin-top:4px;padding-top:6px}
 .st-detres .note{font-size:12px;color:#7b6b62}
+#pt-sorties{display:none;position:fixed;inset:0;z-index:9700;background:#261b17a6;align-items:center;justify-content:center;padding:16px;font-family:Inter,Arial,sans-serif}#pt-sorties.open{display:flex}
+#pt-sorties .srt-win{background:#fffdfb;border-radius:16px;max-width:520px;width:100%;padding:20px 22px;box-shadow:0 20px 60px #0004;color:#2b2320}
+#pt-sorties .srt-tete{display:flex;justify-content:space-between;align-items:center}#pt-sorties h2{margin:0;font:22px Georgia,serif}#pt-sorties .srt-x{border:0;background:#f5e6de;color:#8e3f29;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:15px}
+#pt-sorties .srt-sub{color:#7b6b62;font-size:13px;margin:4px 0 14px}#pt-sorties .srt-liste{display:grid;gap:8px;margin-bottom:18px}#pt-sorties .srt-liste label{display:flex;gap:10px;align-items:center;border:1px solid #eaded7;border-radius:10px;padding:10px 12px;cursor:pointer;font-size:14px}#pt-sorties .srt-liste label:hover{background:#fbf3ee}#pt-sorties input{width:17px;height:17px;accent-color:#a34d31}
+#pt-sorties .srt-act{display:flex;gap:10px;flex-wrap:wrap}
+.srt-btn{border:0;border-radius:9px;padding:10px 14px;cursor:pointer;font:600 13.5px Inter,Arial,sans-serif;background:#f5e6de;color:#8e3f29}.srt-btn.prim{background:#a34d31;color:#fff}
+#pt-apercu{display:none;position:fixed;inset:0;z-index:9800;background:#ece6e1;flex-direction:column}#pt-apercu.open{display:flex}
+#pt-apercu .apc-barre{display:flex;align-items:center;gap:14px;padding:10px 16px;background:#fffdfb;border-bottom:1px solid #eaded7;font:600 14px Inter,Arial,sans-serif;color:#2b2320}#pt-apercu .apc-barre span{flex:1;text-align:center}
+#pt-apercu iframe{flex:1;border:0;width:100%;background:#ece6e1}
+.srt-row{display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 16px}
 #pt-studio *{box-sizing:border-box}
 #pt-studio .st-top{position:sticky;top:0;z-index:2;background:#fffdfb;border-bottom:1px solid #eaded7;padding:12px clamp(16px,3vw,40px);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 #pt-studio .st-back{background:#f5e6de;color:#8e3f29;border:0;border-radius:9px;padding:9px 13px;cursor:pointer;font:600 13px Inter,Arial,sans-serif}
@@ -1078,7 +1088,7 @@ window.ptParametresPrets=charger().then(()=>{if(!courant?.simId)appliquer(0)}).c
 <div id="st-tip"></div>
 <!-- Champs mémorisés avec le dossier (diagnostic et optimiseur fiscal) -->
 <div hidden id="st-memo">
-<input id="dg-rev1"><input id="dg-rev2"><input id="dg-autres"><input id="dg-charges"><input id="dg-apport"><input id="dg-duree"><input id="dg-enfants"><input id="dg-type"><input id="dg-endet"><input id="dg-loyer"><input id="dg-taux"><input id="dg-ass"><input id="dg-zone"><input id="dg-rfr"><input id="dg-primo"><input id="dg-occ"><input id="dg-notoff"><input id="dg-ptztype"><input id="dg-etat">
+<input id="dg-rev1"><input id="dg-rev2"><input id="dg-autres"><input id="dg-charges"><input id="dg-apport"><input id="dg-duree"><input id="dg-enfants"><input id="dg-type"><input id="dg-endet"><input id="dg-loyer"><input id="dg-taux"><input id="dg-ass"><input id="dg-zone"><input id="dg-rfr"><input id="dg-primo"><input id="dg-occ"><input id="dg-notoff"><input id="dg-notpct"><input id="dg-ptztype"><input id="dg-etat">
 <input id="of-prix"><input id="of-travaux"><input id="of-apport"><input id="of-loyer"><input id="of-tf"><input id="of-copro"><input id="of-pno"><input id="of-gestion"><input id="of-vacance"><input id="of-tmi"><input id="of-ps"><input id="of-mobilier"><input id="of-duree"><input id="of-taux"><input id="of-ass">
 </div>
 <script>
@@ -1383,7 +1393,7 @@ function initDiag(){
 function lireDiag(){
   const g=id=>num(m(id).value),rev2=g('dg-rev2');
   return {revenus:g('dg-rev1')+rev2+g('dg-autres'),charges:g('dg-charges'),apport:g('dg-apport'),ans:g('dg-duree')||25,enfants:g('dg-enfants'),adultes:rev2>0?2:1,
-    type:m('dg-type').value||'neuf',zone:m('dg-zone').value||'B1',rfr:g('dg-rfr'),primo:m('dg-primo').value!=='non',occupants:g('dg-occ')||null,notaireOfferts:m('dg-notoff').value==='oui',ptzType:m('dg-ptztype').value||'coll',
+    type:m('dg-type').value||'neuf',zone:m('dg-zone').value||'B1',rfr:g('dg-rfr'),primo:m('dg-primo').value!=='non',occupants:g('dg-occ')||null,notaireOfferts:m('dg-notoff').value==='oui',notairePct:m('dg-notpct').value===''?null:num(m('dg-notpct').value.replace(',','.')),ptzType:m('dg-ptztype').value||'coll',
     taux:m('dg-taux').value===''?null:g('dg-taux'),ass:m('dg-ass').value===''?null:g('dg-ass'),endet:m('dg-endet').value===''?null:g('dg-endet')};
 }
 /** Taux saisi par le vendeur s'il y en a un (sinon grille de l'équipe) ; l'écart saisi est conservé pour les autres durées. */
@@ -1403,7 +1413,7 @@ const annuite=(c,t,m)=>{const r=t/1200;return c<=0||m<=0?0:r?c*r/(1-Math.pow(1+r
 const pretsExt=d=>(d.prets||[]).filter(x=>x.montant>0).map(x=>{const mois=x.mois||Math.round((x.ans||d.ans)*12);return {...x,mois,mens:x.mens!=null?x.mens:annuite(x.montant,x.taux||0,mois)}});
 /** Budget d'achat maximum : la mensualité disponible fixe le prêt bancaire ; dans le neuf, le PTZ s'y ajoute. */
 function capacite(d,type){
-  const b=bases(d),offerts=type==='neuf'&&!!d.notaireOfferts,pctTheo=(type==='neuf'?b.p.frais.notaireNeuf:b.p.frais.notaireAncien)/100,notaire=offerts?0:pctTheo;
+  const b=bases(d),offerts=type==='neuf'&&!!d.notaireOfferts,pctTheo=(d.notairePct!=null&&type===d.type?d.notairePct:(type==='neuf'?b.p.frais.notaireNeuf:b.p.frais.notaireAncien))/100,notaire=offerts?0:pctTheo;
   let ptz={montant:0},pret=0,budget=0;
   // Prêt bancaire lissé : la mensualité totale (banque + PTZ) reste égale à la mensualité disponible
   // pendant toute la durée ; la banque baisse sa mensualité pendant le remboursement du PTZ.
@@ -1420,7 +1430,7 @@ function capacite(d,type){
 }
 /** À prix égal : ce qu'il faut emprunter, les intérêts et le capital restant dû année par année. */
 function aPrixEgal(d,type,prix){
-  const b=bases(d),notaire=type==='neuf'&&d.notaireOfferts?0:(type==='neuf'?b.p.frais.notaireNeuf:b.p.frais.notaireAncien)/100,ptz=ptzPour(d,type,prix);
+  const b=bases(d),notaire=type==='neuf'&&d.notaireOfferts?0:(d.notairePct!=null&&type===d.type?d.notairePct:(type==='neuf'?b.p.frais.notaireNeuf:b.p.frais.notaireAncien))/100,ptz=ptzPour(d,type,prix);
   const besoin=prix*(1+notaire)+b.p.frais.dossier-d.apport-(ptz.montant||0);
   const banque=Math.max(0,besoin/(1-b.fraisPct)),mens=banque*b.facteur,assurance=banque*b.ins*b.n,interets=mens*b.n-banque;
   const crd=[];let reste=banque;for(let a=0;a<=d.ans;a++){
@@ -1454,6 +1464,7 @@ function formDiag(){
   <div class="f"><label for="sd-enfants">Enfants</label><input id="sd-enfants" data-memo="dg-enfants" type="number" min="0" max="10" value="${v('dg-enfants')}"></div></div>
   <h3>Projet</h3>
   <div class="f"><div class="seg" data-dseg="dg-type"><button type="button" data-v="neuf" class="${d.type==='neuf'?'on':''}">Neuf</button><button type="button" data-v="ancien" class="${d.type==='ancien'?'on':''}">Ancien</button></div></div>
+  <div class="f"><label for="sd-notpct">Frais de notaire ${d.type==='neuf'?'neuf':'ancien'} <span style="font-weight:400;color:#8a7a70">${d.notaireOfferts&&d.type==='neuf'?'offerts':'du prix'}</span></label><div class="euro" data-u="%"><input id="sd-notpct" data-memo="dg-notpct" inputmode="decimal" placeholder="${String(d.type==='neuf'?P().frais.notaireNeuf:P().frais.notaireAncien).replace('.',',')}" value="${v('dg-notpct')}"></div><div class="hint" id="sd-notmt" style="margin:4px 0 0"></div></div>
   ${d.type==='neuf'?`<div class="f"><label>Frais de notaire offerts par le promoteur</label><div class="seg" data-dseg="dg-notoff"><button type="button" data-v="oui" class="${d.notaireOfferts?'on':''}">Oui</button><button type="button" data-v="non" class="${d.notaireOfferts?'':'on'}">Non</button></div></div>`:''}
   <div class="st-ptz" style="background:#fbf3ee;border:1px solid #efdcd1;border-radius:12px;padding:12px 12px 2px;margin-bottom:14px"><h3 style="margin-top:0">PTZ (neuf)</h3>
   <div class="duo"><div class="f"><label for="sd-zone">Zone</label><select id="sd-zone" data-memo="dg-zone">${['A','B1','B2','C'].map(z=>`<option value="${z}" ${d.zone===z?'selected':''}>${z==='A'?'A bis / A':z}</option>`).join('')}</select></div>
@@ -1510,7 +1521,7 @@ function lierRemb(d,racine,surEndet,surDuree){
   svg.addEventListener('pointerdown',ev=>{if(!ev.target.closest('.remb-barre'))return;ev.preventDefault();glisse=true;document.body.style.cursor='ns-resize';window.addEventListener('pointermove',bouge);window.addEventListener('pointerup',fin)});
 }
 /** Résultat visuel du diagnostic détaillé (même moteur que l'écran Budget max). */
-function resultatDetaille(d,racine,surEndet,surDuree){
+function resultatDetaille(d,racine,surEndet,surDuree,ctx){
   const c=capacite(d,d.type),b=c,z=c.ptz||{montant:0};
   // Coût du crédit : total des mensualités moins les montants empruntés.
   const deb=(z.differe||0)*12,fin=(z.duree||0)*12,mensZ=z.montant&&fin>deb?z.montant/(fin-deb):0;
@@ -1533,10 +1544,134 @@ function resultatDetaille(d,racine,surEndet,surDuree){
     <div>${boite('Dépenses',[['Votre achat',eur(c.budget)],[c.offerts?'Frais de notaire (offerts)':'Frais de notaire '+(d.type==='neuf'?'neuf':'ancien'),c.offerts?'0 € · '+eur(c.notaireOffert)+' offerts':eur(c.notaire)],['Frais de garantie',eur(fraisG)],['Frais de dossier',eur(dossier)]],eur(c.budget+c.notaire+fraisG+dossier))}
      ${boite('Financement',[['Apport',eur(d.apport)],['Prêt principal',eur(c.pret)],['Prêts aidés / autres',eur((z.montant||0)+c.totExt)]],eur(d.apport+emprunte))}
      ${boite('Coût du crédit',[['Intérêts + assurance',eur(cout)],['Reste à vivre',eur(c.reste)]])}</div></div>
+   <div class="srt-row" style="margin-top:12px"><button type="button" class="srt-btn prim" data-srt="solv">Fiche de solvabilité</button><button type="button" class="srt-btn" data-srt="tout">Sorties client…</button></div>
    <p class="note">Glissez la barre noire pour changer la mensualité ; cliquez une durée pour la choisir. Prêt bancaire lissé avec le PTZ et les autres prêts : la mensualité totale reste constante.</p></div>`;
   lierRemb(d,racine,surEndet,surDuree);
+  ctx=ctx||{};
+  racine.querySelector('[data-srt="solv"]').onclick=()=>presenterDoc('Fiche de solvabilité',[['Fiche de solvabilité',ficheSolvabilite(d,c,ctx)]],ctx.nom);
+  racine.querySelector('[data-srt="tout"]').onclick=()=>ouvrirSorties(d,c,ctx);
   return c;
 }
+// =====================================================================
+// SORTIES CLIENT : fiche de solvabilité, simulation, graphique, échéanciers
+// =====================================================================
+/** Échéancier mois par mois de chaque prêt (prêt bancaire lissé, PTZ, autres prêts). */
+function echeancier(c){
+  const z=c.ptz||{montant:0},deb=(z.differe||0)*12,fin=(z.duree||0)*12,mensZ=z.montant&&fin>deb?z.montant/(fin-deb):0;
+  const ext=c.ext||[],mois=Math.max(c.n,z.montant?fin:0,...ext.map(x=>x.mois));
+  const prets=[];
+  if(z.montant){const p={nom:'PTZ',montant:z.montant,taux:0,mois:fin,lignes:[]};let crd=z.montant;
+    for(let t=1;t<=fin;t++){const ins=t<=Math.min(fin,c.n)?z.montant*c.ins:0,cap=t>deb?mensZ:0;crd=Math.max(0,crd-cap);p.lignes.push({pay:cap+ins,lis:cap+ins,int:0,ins,cap,crd})}prets.push(p)}
+  ext.forEach(x=>{const p={nom:x.nom,montant:x.montant,taux:x.taux||0,mois:x.mois,lignes:[],horsLissage:x.horsLissage};let crd=x.montant;const r=(x.taux||0)/1200,relais=/relais/i.test(x.nom);
+    for(let t=1;t<=x.mois;t++){const int=crd*r;let cap=relais?0:Math.max(0,x.mens-int);if(relais&&t===x.mois)cap=crd;crd=Math.max(0,crd-cap);p.lignes.push({lis:x.mens,pay:relais?(x.mens+(t===x.mois?cap+(x.final||0):0)):x.mens,int:relais&&!x.mens?(t===x.mois?(x.final||0):0):int,ins:0,cap,crd})}prets.push(p)});
+  const banque={nom:'Prêt bancaire'+(z.montant||ext.length?' lissé':''),montant:c.pret,taux:c.taux,mois:c.n,lignes:[]};let crd=c.pret;
+  for(let t=1;t<=c.n;t++){const autres=prets.reduce((a,p)=>a+(p.horsLissage?0:(p.lignes[t-1]?.lis||0)),0);
+    const pay=Math.max(0,c.mensualite-autres),ins=c.pret*c.ins,int=crd*c.r;let cap=Math.max(0,pay-ins-int);if(t===c.n)cap=crd;crd=Math.max(0,crd-cap);banque.lignes.push({pay:cap+ins+int,lis:cap+ins+int,int,ins,cap,crd})}
+  prets.push(banque);
+  return {prets,mois};
+}
+/** Paliers : périodes pendant lesquelles chaque mensualité reste la même. */
+function paliers(ech){
+  const out=[];for(let t=0;t<ech.mois;t++){const v=ech.prets.map(p=>Math.round(p.lignes[t]?.lis||0));const der=out[out.length-1];
+    if(der&&v.every((x,i)=>Math.abs(x-der.v[i])<=1))der.t1=t+1;else out.push({t0:t,t1:t+1,v})}
+  return out.filter(p=>p.t1-p.t0>=1);
+}
+const moisTxt=(a,b)=>`mois ${a+1} à ${b}`;
+/** Contexte d'affichage (identité, revenus, charges) de l'écran Budget max. */
+function ctxRapide(d){
+  const cur=window.ptDossierCourant&&window.ptDossierCourant(),saisi=($('client')?.value||'').trim();
+  return {nom:cur?.client||(saisi&&saisi!=='Simulation test'?saisi:''),situation:d.adultes>1?'En couple':'Seul(e)',enfants:d.enfants,rev1:num(m('dg-rev1').value),rev2:num(m('dg-rev2').value),autres:num(m('dg-autres').value),loyer:num(m('dg-loyer').value),terrain:0,travaux:0,usage:'Résidence principale'};
+}
+function ficheSolvabilite(d,c,ctx){
+  const ech=echeancier(c),pal=paliers(ech).slice(0,4),z=c.ptz||{montant:0},p=c.p;
+  const fraisG=c.fraisPct*c.pret,dossier=p.frais.dossier,total=(ctx.terrain||0)+c.budget+(ctx.travaux||0)+c.notaire+fraisG+dossier;
+  const besoin=Math.max(0,total-d.apport),emprunte=c.pret+(z.montant||0)+c.totExt;
+  const mensMax=Math.max(...pal.map(x=>x.v.reduce((a,b)=>a+b,0)),c.mensualite);
+  const avantH=d.charges,avantL=d.charges+(ctx.loyer||0),apres=d.charges+mensMax;
+  const tx=v=>d.revenus?pc(v/d.revenus*100):'—',reste=v=>eur(d.revenus-v);
+  const dureeMax=c.n/12,hcsfDuree=dureeMax<=25||(d.type==='neuf'&&dureeMax<=27),hcsfEndet=apres/d.revenus*100<=35.0001;
+  const l=(a,b)=>`<tr><td>${a}</td><td class="n">${b}</td></tr>`;
+  const ligPret=pr=>`<tr><td>${esc(pr.nom)}</td><td class="n">${eur(pr.montant)}</td><td class="n">${pc(pr.taux,2)}</td><td class="n">${pr.mois} mois</td>${pal.map((x,i)=>`<td class="n">${x.v[ech.prets.indexOf(pr)]?eur(x.v[ech.prets.indexOf(pr)]):'—'}</td>`).join('')}</tr>`;
+  return `<style>.fs{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;margin-bottom:12px}.fs th{background:#f3e9e2;color:#8e3f29;text-align:left;padding:6px 8px;font-size:12.5px}.fs td{padding:4px 8px;border-bottom:1px solid #f1e6df}.fs td.n,.fs th.n{text-align:right}.fs tr.tot td{font-weight:700;border-top:1.5px solid #c9b2a5}.fs-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.fs-hcsf{display:flex;gap:18px;border:1.5px solid #2b2320;border-radius:8px;padding:8px 12px;font-size:13px;margin-top:6px}.fs-ok{color:#2f8a5a;font-weight:700}.fs-ko{color:#b04d3e;font-weight:700}.fs-note{font-size:10.5px;color:#7b6b62;line-height:1.45}</style>
+  <div style="text-align:center;font:600 17px Inter,Arial,sans-serif;color:#2b2320;margin:0 0 12px;letter-spacing:.3px">FICHE DE SOLVABILITÉ · ACCÉDANT À LA PROPRIÉTÉ${ctx.nom?'<div style="font-weight:400;font-size:14px;color:#7b6b62;margin-top:3px">'+esc(ctx.nom)+'</div>':''}</div>
+  <div class="fs-grid">
+   <table class="fs"><tr><th colspan="2">Revenus du foyer</th></tr>${l('Situation familiale',esc(ctx.situation||'—'))}${l("Nombre d'enfants à charge",(ctx.enfants||0)+' enfant'+((ctx.enfants||0)>1?'s':''))}${l("Salaire de l'emprunteur",eur(ctx.rev1))}${l('Salaire du co-emprunteur',ctx.rev2?eur(ctx.rev2):'—')}${l('Autres revenus',ctx.autres?eur(ctx.autres):'—')}<tr class="tot"><td>Revenus mensuels retenus</td><td class="n">${eur(d.revenus)}</td></tr></table>
+   <table class="fs"><tr><th>Charges existantes</th><th class="n">Avant projet</th><th class="n">Après projet</th></tr><tr><td>Loyer versé</td><td class="n">${ctx.loyer?eur(ctx.loyer):'—'}</td><td class="n">—</td></tr><tr><td>Crédits en cours</td><td class="n">${d.charges?eur(d.charges):'—'}</td><td class="n">${d.charges?eur(d.charges):'—'}</td></tr><tr class="tot"><td>Charges mensuelles</td><td class="n">${eur(avantL)}</td><td class="n">${eur(d.charges)}</td></tr></table>
+  </div>
+  <div class="fs-grid">
+   <table class="fs"><tr><th colspan="2">Projet d'acquisition à financer · ${d.type==='neuf'?'neuf':'ancien'}</th></tr>${ctx.terrain?l('Terrain',eur(ctx.terrain)):''}${l('Logement',eur(c.budget))}${ctx.travaux?l('Travaux',eur(ctx.travaux)):''}${l('Frais de notaire (estimés)',c.offerts?'offerts ('+eur(c.notaireOffert)+')':eur(c.notaire))}${l('Frais de garantie (estimés)',eur(fraisG))}${l('Frais de dossier',eur(dossier))}<tr class="tot"><td>Total des dépenses du projet</td><td class="n">${eur(total)}</td></tr></table>
+   <table class="fs"><tr><th colspan="2">Apport et besoin</th></tr>${l('Apport en numéraire',eur(d.apport))}${(c.ext||[]).filter(x=>/relais/i.test(x.nom)).map(x=>l('Avance sur vente (prêt relais)',eur(x.montant))).join('')}<tr class="tot"><td>Besoin de financement</td><td class="n">${eur(besoin)}</td></tr></table>
+  </div>
+  <table class="fs"><tr><th>Financement du projet</th><th class="n">Montant</th><th class="n">Taux</th><th class="n">Durée</th>${pal.map((x,i)=>`<th class="n">Palier ${i+1}<div style="font-weight:400;font-size:10.5px">${moisTxt(x.t0,x.t1)}</div></th>`).join('')}</tr>
+   ${ech.prets.map(ligPret).join('')}
+   <tr class="tot"><td>Total</td><td class="n">${eur(emprunte)}</td><td></td><td></td>${pal.map(x=>`<td class="n">${eur(x.v.reduce((a,b)=>a+b,0))}</td>`).join('')}</tr></table>
+  <p class="fs-note" style="margin:-6px 0 12px">Mensualités assurance comprise (${pc(c.ins*1200,2)} par an du capital${d.assDetail?' · '+esc(d.assDetail):''}).</p>
+  <table class="fs"><tr><th>Contrôle de l'endettement</th><th class="n">Avant projet<div style="font-weight:400;font-size:10.5px">hors loyer</div></th><th class="n">Avant projet<div style="font-weight:400;font-size:10.5px">avec loyer</div></th><th class="n">Après projet</th></tr>
+   <tr><td>Mensualités</td><td class="n">${eur(avantH)}</td><td class="n">${eur(avantL)}</td><td class="n">${eur(apres)}</td></tr>
+   <tr><td>Taux d'endettement</td><td class="n">${tx(avantH)}</td><td class="n">${tx(avantL)}</td><td class="n">${tx(apres)}</td></tr>
+   <tr><td>Reste à vivre mensuel</td><td class="n">${reste(avantH)}</td><td class="n">${reste(avantL)}</td><td class="n">${reste(apres)}</td></tr>
+   <tr><td>Supplément de charge lié au projet</td><td class="n">—</td><td class="n">—</td><td class="n">${eur(apres-avantL)}</td></tr>
+   <tr><td>Reste à vivre minimum (repère équipe)</td><td class="n" colspan="3">${eur(c.resteMin)}</td></tr></table>
+  <div class="fs-hcsf"><b>Critères HCSF :</b><span class="${hcsfDuree?'fs-ok':'fs-ko'}">${hcsfDuree?'✓':'✕'} Durée maximale (${dureeMax} ans${d.type==='neuf'?', 27 ans possible dans le neuf':''})</span><span class="${hcsfEndet?'fs-ok':'fs-ko'}">${hcsfEndet?'✓':'✕'} Endettement maximal 35 % (${tx(apres)})</span></div>`;
+}
+function simulationDoc(d,c,ctx){
+  const z=c.ptz||{montant:0},fraisG=c.fraisPct*c.pret;
+  const ech=echeancier(c);
+  return `<div class="hero"><div><small>Budget d'achat maximum · ${d.type==='neuf'?'neuf':'ancien'}</small><strong>${eur(c.budget)}</strong><span>sur ${d.ans} ans à ${pc(c.taux,2)} · mensualité maximale ${eur(c.mensualite)} assurance comprise</span></div></div>
+  <div class="card"><h2>Plan de financement</h2><table class="prets"><tr><th>Prêt</th><th>Montant</th><th>Taux</th><th>Durée</th><th>Coût (intérêts + assurance)</th></tr>
+  ${ech.prets.map(p=>`<tr><td>${esc(p.nom)}</td><td>${eur(p.montant)}</td><td>${pc(p.taux,2)}</td><td>${p.mois} mois</td><td>${eur(p.lignes.reduce((a,l)=>a+l.int+l.ins,0))}</td></tr>`).join('')}
+  <tr><td><b>Apport</b></td><td><b>${eur(d.apport)}</b></td><td></td><td></td><td></td></tr></table></div>
+  <div class="tiles"><div class="tile"><small>Frais de notaire</small><b>${c.offerts?'offerts':eur(c.notaire)}</b></div><div class="tile"><small>Garantie et dossier</small><b>${eur(fraisG+c.p.frais.dossier)}</b></div><div class="tile"><small>Coût total des crédits</small><b>${eur(ech.prets.reduce((a,p)=>a+p.lignes.reduce((s,l)=>s+l.int+l.ins,0),0))}</b></div></div>`;
+}
+function tableauRemb(c,parPret){
+  const ech=echeancier(c),ans=Math.ceil(ech.mois/12);
+  const bloc=(titre,ps)=>{let h=`<div class="card longue"><h2>${esc(titre)}</h2><table class="prets"><tr><th>Année</th><th>Mensualité moyenne</th><th>Intérêts</th><th>Assurance</th><th>Capital remboursé</th><th>Capital restant dû</th></tr>`;
+    for(let a=0;a<ans;a++){let pay=0,int=0,ins=0,cap=0,crd=0,nb=0;ps.forEach(p=>{for(let t=a*12;t<Math.min(a*12+12,p.lignes.length);t++){const l=p.lignes[t];pay+=l.pay;int+=l.int;ins+=l.ins;cap+=l.cap}const last=p.lignes[Math.min(a*12+11,p.lignes.length-1)];crd+=a*12<p.lignes.length?last.crd:0});nb=12;if(pay<0.5&&crd<0.5)continue;
+      h+=`<tr><td>${a+1}</td><td>${eur(pay/nb)}</td><td>${eur(int)}</td><td>${eur(ins)}</td><td>${eur(cap)}</td><td>${eur(crd)}</td></tr>`}
+    return h+'</table></div>'};
+  return parPret?ech.prets.map(p=>bloc(p.nom+' · '+eur(p.montant)+' à '+pc(p.taux,2)+' sur '+p.mois+' mois',[p])).join(''):bloc('Tous les prêts, année par année',ech.prets);
+}
+function pageGarde(d,c,ctx){
+  const conseiller=(window.ptUtilisateur&&window.ptUtilisateur.nom)||'';
+  return `<div style="text-align:center;padding:60px 20px"><img src="${location.origin}/logo-premiere-terre.png?v=2" alt="Première Terre" style="height:110px"><div style="font:34px Georgia,serif;color:#2b2320;margin:30px 0 8px">Étude de financement</div><div style="font-size:18px;color:#a34d31">${esc(ctx.nom||'')}</div>
+  <div style="margin:40px auto 0;max-width:420px;border:1px solid #eaded7;border-radius:14px;padding:18px;text-align:left;font-size:14px;line-height:1.9">Projet : <b>${d.type==='neuf'?'logement neuf':'logement ancien'}</b><br>Budget d'achat maximum : <b>${eur(c.budget)}</b><br>Mensualité : <b>${eur(c.mensualite)}</b> sur <b>${d.ans} ans</b><br>${conseiller?'Votre conseiller : <b>'+esc(conseiller)+'</b><br>':''}Date : <b>${new Date().toLocaleDateString('fr-FR')}</b></div></div>`;
+}
+const SORTIES=[['garde','Page de garde',false],['solv','Fiche de solvabilité',true],['simu','Simulation de financement',true],['graph','Présentation graphique',true],['remb','Tableau de remboursement (tous les prêts)',false],['echeanciers','Échéanciers par prêt',false]];
+function sectionsSorties(choix,d,c,ctx){
+  const s=[];
+  if(choix.includes('garde'))s.push(['Votre étude',pageGarde(d,c,ctx)]);
+  if(choix.includes('solv'))s.push(['Fiche de solvabilité',ficheSolvabilite(d,c,ctx)]);
+  if(choix.includes('simu'))s.push(['Simulation de financement',simulationDoc(d,c,ctx)]);
+  if(choix.includes('graph'))s.push(['Présentation graphique',`<div class="card"><h2>Évolution des remboursements</h2>${grapheRemb(d,c).replace(/Mensualité maximale : glissez la barre/,'Mensualité maximale')}</div><div class="card"><h2>Budget selon la durée</h2>${tableEnveloppe(d)}</div>`]);
+  if(choix.includes('remb'))s.push(['Tableau de remboursement',tableauRemb(c,false)]);
+  if(choix.includes('echeanciers'))s.push(['Échéanciers de prêt',tableauRemb(c,true)]);
+  return s;
+}
+/** Fenêtre « Sorties client » : choix des documents puis présentation à l'écran ou impression. */
+function ouvrirSorties(d,c,ctx){
+  let el=$('pt-sorties');if(!el){el=document.createElement('div');el.id='pt-sorties';document.body.appendChild(el)}
+  let memo=[];try{memo=JSON.parse(localStorage.getItem('pt-sorties-choix')||'null')||[]}catch(e){}
+  el.innerHTML=`<div class="srt-win"><div class="srt-tete"><h2>Sorties client</h2><button type="button" class="srt-x" aria-label="Fermer">✕</button></div>
+   <p class="srt-sub">${ctx.nom?esc(ctx.nom)+' · ':''}budget ${eur(c.budget)} · ${d.ans} ans</p>
+   <div class="srt-liste">${SORTIES.map(([k,l,def])=>`<label><input type="checkbox" value="${k}" ${(memo.length?memo.includes(k):def)?'checked':''}> ${l}</label>`).join('')}</div>
+   <div class="srt-act"><button type="button" class="srt-btn prim" data-a="voir">Afficher (présenter au client)</button><button type="button" class="srt-btn" data-a="imprimer">Imprimer / PDF</button></div></div>`;
+  el.classList.add('open');
+  const choix=()=>{const v=[...el.querySelectorAll('input:checked')].map(i=>i.value);try{localStorage.setItem('pt-sorties-choix',JSON.stringify(v))}catch(e){}return v};
+  el.querySelector('.srt-x').onclick=()=>el.classList.remove('open');
+  el.onclick=e=>{if(e.target===el)el.classList.remove('open')};
+  el.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const v=choix();if(!v.length)return alert('Cochez au moins un document.');const sec=sectionsSorties(v,d,c,ctx);
+    if(b.dataset.a==='voir'){el.classList.remove('open');presenterDoc('Étude de financement',sec,ctx.nom)}else imprimerDoc('Étude de financement',sec)});
+}
+/** Présentation plein écran du document, avec impression possible. */
+function presenterDoc(titre,sections,nom){
+  let el=$('pt-apercu');if(!el){el=document.createElement('div');el.id='pt-apercu';document.body.appendChild(el)}
+  el.innerHTML=`<div class="apc-barre"><button type="button" class="srt-btn" data-a="fermer">← Retour</button><span>${esc(titre)}${nom?' · '+esc(nom):''}</span><button type="button" class="srt-btn prim" data-a="imprimer">Imprimer / PDF</button></div><iframe title="Aperçu du document"></iframe>`;
+  el.classList.add('open');
+  const f=el.querySelector('iframe');f.srcdoc=docHtml(titre,sections).replace('</style>','body{background:#ece6e1!important}#pt-studio{max-width:880px;margin:24px auto!important;background:#fff;padding:36px 42px!important;box-shadow:0 6px 30px #0002;border-radius:6px}.doc-section+.doc-section{border-top:1px dashed #d9c5b9;padding-top:26px}@media print{body{background:#fff!important}#pt-studio{box-shadow:none;margin:0!important;padding:0!important;max-width:none}.doc-section+.doc-section{border-top:0;padding-top:0}}</style>');
+  el.querySelector('[data-a="fermer"]').onclick=()=>el.classList.remove('open');
+  el.querySelector('[data-a="imprimer"]').onclick=()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){alert('Impression impossible : '+e.message)}};
+}
+window.ptSortiesClient=ouvrirSorties;
 window.ptResultatDetaille=resultatDetaille;
 function resDiag(){
   const d=lireDiag(),p=P();
@@ -1559,7 +1694,8 @@ function resDiag(){
    <div class="tile"><small>Reste à vivre</small><b>${eur(c.reste)}</b>${statut(okReste?'ok':'bad',okReste?'minimum '+eur(c.resteMin):'sous le minimum de '+eur(c.resteMin))}</div>
   </div>
   <div class="card"><h2>Évolution des remboursements</h2><p class="sub">Attrapez la barre noire et montez-la ou descendez-la : la mensualité, le taux d'endettement et le budget suivent. Cliquez une durée dans le tableau pour la choisir.</p>
-   <div class="remb-grid"><div>${tableEnveloppe(d)}</div><div>${grapheRemb(d,c)}</div></div></div>
+   <div class="remb-grid"><div>${tableEnveloppe(d)}</div><div>${grapheRemb(d,c)}</div></div>
+   <div class="srt-row" style="margin:14px 0 0"><button type="button" class="srt-btn prim" id="sd-solv">Fiche de solvabilité</button><button type="button" class="srt-btn" id="sd-sorties">Sorties client…</button></div></div>
   <div class="card"><h2>Neuf ou ancien : la différence de budget</h2><p class="sub">Même foyer, même mensualité. ${ecart>0?`Dans le neuf, votre client peut viser <b style="color:#a34d31">${eur(ecart)} de plus</b> : frais de notaire ${neuf.offerts?'offerts':'réduits'}${neuf.ptz.montant?' et PTZ à 0 %':''}.`:'Avec ces critères, le neuf n\'apporte pas de budget supplémentaire.'}${neuf.ptz.motif&&d.primo?' '+esc(neuf.ptz.motif)+(d.rfr?'':` (RFR non saisi, estimé à ${eur(d.revenus*12*0.9)} : saisissez le RFR N-2 réel dans le bloc PTZ)`):''}${!d.primo?' PTZ non retenu : le client n\'est pas primo-accédant.':''}</p>
    <div class="cols">${colonne(neuf,'Neuf',C.main)}${colonne(ancien,'Ancien',C.frais)}</div></div>
   <div class="card"><h2>À prix égal (${eur(prixRef)}) : le neuf s'amortit plus vite</h2><p class="sub">Moins de frais de notaire${sn.ptz.montant?' et un PTZ sans intérêts':''} : on emprunte moins à la banque, la dette baisse plus vite et coûte moins cher.</p>
@@ -1577,6 +1713,9 @@ function resDiag(){
   <button type="button" class="cta" id="sd-vers-plan">Construire le plan de financement avec ce budget →</button>
   <p class="note">Estimation indicative : taux ${pc(c.taux,2)}, assurance ${pc(d.ass==null?assDefaut():d.ass,2)} par emprunteur, frais et seuils de l'équipe, barème PTZ (${d.ptzType==='indiv'?'maison individuelle':'logement collectif'}, ${d.occupants||d.adultes+d.enfants} occupant${(d.occupants||d.adultes+d.enfants)>1?'s':''}). Avec un PTZ, le prêt bancaire est lissé : la mensualité totale reste au niveau maximum pendant toute la durée. Elle ne vaut pas accord de financement.</p>`;
   lierRemb(d,$('st-res'));
+  const nm=$('sd-notmt');if(nm)nm.innerHTML=c.offerts?`<b>${eur(c.notaireOffert)}</b> offerts par le promoteur`:`Soit <b>${eur(c.notaire)}</b> sur un bien à ${eur(c.budget)}. Vide = taux de l'équipe.`;
+  $('sd-solv').onclick=()=>presenterDoc('Fiche de solvabilité',[['Fiche de solvabilité',ficheSolvabilite(d,c,ctxRapide(d))]],ctxRapide(d).nom);
+  $('sd-sorties').onclick=()=>ouvrirSorties(d,c,ctxRapide(d));
   const b=$('sd-vers-plan');if(b)b.onclick=()=>{
     poser('v9operation',d.type==='neuf'?'new':'old');poser('threshold',c.seuil);poser('price',Math.floor(c.budget/1000)*1000);poser('deposit',d.apport);poser('income',d.revenus);
     fixerPrincipal(c.taux,d.ans,Math.round(c.ins*1200*1000)/1000);
@@ -1586,7 +1725,7 @@ function resDiag(){
 function bindDiag(){
   const f=$('st-form');
   $('sd-detail')?.addEventListener('click',versDiagDetaille);
-  f.querySelectorAll('[data-memo]').forEach(i=>i.addEventListener('input',()=>{m(i.dataset.memo).value=i.id==='sd-taux'||i.id==='sd-ass'?i.value.replace(',','.').trim():i.value;resDiag()}));
+  f.querySelectorAll('[data-memo]').forEach(i=>i.addEventListener('input',()=>{m(i.dataset.memo).value=i.id==='sd-taux'||i.id==='sd-ass'||i.id==='sd-notpct'?i.value.replace(',','.').trim():i.value;resDiag()}));
   lierDuree('sd-duree',a=>{m('dg-duree').value=a;$('sd-taux').placeholder=String(tauxDuree(a)).replace('.',',');resDiag()});
   // Curseur du taux d'endettement : ajuste le budget en direct.
   const er=$('sd-endet'),en=$('sd-endet-n');
@@ -1594,7 +1733,7 @@ function bindDiag(){
   er.addEventListener('input',()=>{en.value=er.value;majE(+er.value)});
   en.addEventListener('input',()=>{const v=num(en.value);if(v>=20&&v<=45){er.value=v;majE(v)}});
   const rz=$('sd-endet-reset');if(rz)rz.onclick=()=>{m('dg-endet').value='';rafraichir()};
-  f.querySelectorAll('[data-dseg] button').forEach(b=>b.onclick=()=>{const k=b.closest('[data-dseg]').dataset.dseg;m(k).value=b.dataset.v;b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));if(k==='dg-type')rafraichir();else resDiag()});
+  f.querySelectorAll('[data-dseg] button').forEach(b=>b.onclick=()=>{const k=b.closest('[data-dseg]').dataset.dseg;m(k).value=b.dataset.v;b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));if(k==='dg-type'){m('dg-notpct').value='';rafraichir()}else if(k==='dg-notoff')rafraichir();else resDiag()});
 }
 
 // =====================================================================
@@ -1683,11 +1822,12 @@ function versDiagDetaille(){
   const poser=(k,v)=>{const el=champ(k);if(!el||v==null||v==='')return;if(el.type==='checkbox')el.checked=!!v;else el.value=v};
   if(dlg){
     poser('propertyType',d.type==='neuf'?'new':'old');poser('primo',d.primo);poser('zone',d.zone);
-    const cap=capacite(d,d.type);if(cap.budget>0){poser('price',Math.round(cap.budget));poser('land',0);poser('works',0)}
+    const cap=capacite(d,d.type);if(cap.budget>0){poser('price',Math.round(cap.budget));poser('land',0);poser('works',0);poser('notary',Math.round(cap.offerts?cap.notaireOffert:cap.notaire))}
     if(d.rfr)poser('rfr',d.rfr);if(d.occupants)poser('occupants',d.occupants);poser('excludeNotary',d.type==='neuf'&&d.notaireOfferts);poser('ptzType',d.ptzType);poser('deposit',d.apport);poser('years',d.ans);
     if(d.taux!=null)poser('rate',d.taux);if(d.endet!=null)poser('threshold',d.endet);
     const r1=num(m('dg-rev1').value),r2=num(m('dg-rev2').value);
     if(r1)poser('income',r1);if(r2){poser('co',true);poser('coincome',r2)}
+    poser('otherIncome',num(m('dg-autres').value));poser('rentCharge',0);poser('enfants',d.enfants);
     const ass=d.ass==null?assDefaut():d.ass,q=r2?P().assurance.quotiteCouple:100;
     poser('insured1','p1');poser('contract1','standard');poser('q1',q);poser('ar1',ass);
     if(r2){poser('insured2','p2');poser('contract2','standard');poser('q2',q);poser('ar2',ass)}else{poser('insured2','none');poser('q2',0)}
@@ -1733,7 +1873,7 @@ function genererPDF(){
   imprimerDoc('Étude de financement',sections);
 }
 /** Page imprimable commune (étude client, fiche de solvabilité, tableau d'amortissement). */
-function imprimerDoc(titreDoc,sections){
+function docHtml(titreDoc,sections){
   const c=window.ptDossierCourant&&window.ptDossierCourant(),saisi=($('client')?.value||'').trim(),client=c?.client||(saisi&&saisi!=='Simulation test'?saisi:'');
   const conseiller=(window.ptUtilisateur&&window.ptUtilisateur.nom)||'',date=new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
   const css=($('st-style')?.textContent||'').replace(/@media print\{[^}]*\}\}?/g,'');
@@ -1755,6 +1895,10 @@ function imprimerDoc(titreDoc,sections){
   ${sections.map(([t,h])=>`<div class="doc-section"><h2>${esc(t)}</h2><div class="st-res">${h}</div></div>`).join('')}
   <div class="doc-pied">Simulation indicative et non contractuelle, établie à partir des informations communiquées et des conditions de marché à la date du document. Elle ne constitue ni une offre de prêt ni un accord de financement : les conditions définitives (taux, assurance, garanties, frais, éligibilité aux prêts aidés) sont fixées par les établissements prêteurs après étude du dossier. Un crédit vous engage et doit être remboursé : vérifiez vos capacités de remboursement avant de vous engager.</div>
   </div></body></html>`;
+  return html;
+}
+function imprimerDoc(titreDoc,sections){
+  const html=docHtml(titreDoc,sections);
   const f=document.createElement('iframe');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(f);
   const doc=f.contentDocument;doc.open();doc.write(html);doc.close();
   const imprimer=()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){alert('Impression impossible : '+e.message)}setTimeout(()=>f.remove(),60000)};
@@ -1838,9 +1982,11 @@ window.ptDiagVisuel=function(){
   if(d('usePEL')?.checked)prets.push(...pretsEpargne());
   const relais=pretRelais();if(relais)prets.push(relais);
   const ac=assuranceContrats();
-  const dd={revenus:inc,charges,apport:n('deposit')+n('grants'),ans,enfants:Math.max(0,occ-adultes),adultes,occupants:occ,type:neuf()?'neuf':'ancien',zone:d('zone')?.value||'B1',rfr:n('rfr'),primo:!!d('primo')?.checked,ptzType:d('ptzType')?.value||'coll',taux:d('rate')?.value===''?null:n('rate'),ass:null,endet:n('threshold')||null,notaireOfferts:!!d('excludeNotary')?.checked,ptzFixe,prets,assTotal:ac?ac.total:null,assDetail:ac?ac.detail:'taux de l’équipe'};
+  const dd={revenus:inc,charges,apport:n('deposit')+n('grants'),ans,enfants:Math.max(0,occ-adultes),adultes,occupants:occ,type:neuf()?'neuf':'ancien',zone:d('zone')?.value||'B1',rfr:n('rfr'),primo:!!d('primo')?.checked,ptzType:d('ptzType')?.value||'coll',taux:d('rate')?.value===''?null:n('rate'),ass:null,endet:n('threshold')||null,notairePct:(n('price')+n('land'))>0&&n('notary')?n('notary')/(n('price')+n('land'))*100:null,notaireOfferts:!!d('excludeNotary')?.checked,ptzFixe,prets,assTotal:ac?ac.total:null,assDetail:ac?ac.detail:'taux de l’équipe'};
   const recalcul=()=>{try{document.getElementById('pt-calculate').click()}catch(e){}};
-  const c=window.ptResultatDetaille(dd,box,v=>{d('threshold').value=v;window.ptDiagVisuel()},a=>{d('years').value=a;recalcul()});
+  const nom=[d('firstname')?.value,d('surname')?.value].filter(Boolean).join(' '),conom=[d('cofirstname')?.value,d('cosurname')?.value].filter(Boolean).join(' ');
+  const ctx={nom:[nom,d('co')?.checked?conom:''].filter(Boolean).join(' et '),situation:d('family')?.value||(adultes>1?'En couple':'Seul(e)'),enfants:Math.max(0,occ-adultes),rev1:n('income'),rev2:d('co')?.checked?n('coincome'):0,autres:n('otherIncome')+n('rents'),loyer:n('rentCharge'),terrain:0,travaux:0};
+  const c=window.ptResultatDetaille(dd,box,v=>{d('threshold').value=v;window.ptDiagVisuel()},a=>{d('years').value=a;recalcul()},ctx);
   // Contrôle du prix saisi, avec le même calcul (lissage compris) que le budget maximum.
   const prix=n('price')+n('land')+n('works');
   if(c&&prix){const ecart=c.budget-prix,ok=ecart>=-1;
