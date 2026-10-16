@@ -726,14 +726,47 @@ function nouvelle(){
   location.reload();
 }
 window.ptNouvelleSimulation=nouvelle;
+// ---------- Fermer la simulation ----------
+// En quittant une simulation : proposer de l'enregistrer ; sans enregistrement, le simulateur repart de zéro.
+function remiseAZero(){
+  setCourant(null);
+  try{localStorage.removeItem('pt-finance-v17-borrower');localStorage.removeItem('pt-brouillon-simulation');sessionStorage.setItem('pt-vierge','1')}catch{}
+  location.reload();
+}
+// Saisies réelles de l'utilisateur (les écrans pré-remplissent des valeurs à l'ouverture).
+let saisie=false;
+document.addEventListener('input',e=>{if(e.isTrusted&&!e.target.closest('#pt-fermer,#pt-dos,#pt-par,#pt-sorties,#pt-ptz'))saisie=true},true);
+document.addEventListener('click',e=>{if(e.isTrusted&&e.target.closest('[data-dseg] button,[data-seg] button,.st-env tr[data-ans],#brouillon-oui,#pt-transfer'))saisie=true},true);
+document.addEventListener('pointerdown',e=>{if(e.isTrusted&&e.target.closest('.remb-barre'))saisie=true},true);
+function modifiee(){if(courant?.simId)return saisie&&etatActuel()!==dernierServeur;return saisie}
+function fermerSimulation(){
+  if(!modifiee())return remiseAZero();
+  let el=document.getElementById('pt-fermer');if(!el){el=document.createElement('div');el.id='pt-fermer';document.body.appendChild(el)}
+  el.innerHTML=`<div class="fer-win"><h2>Fermer la simulation</h2><p>${courant?.simId?'Les dernières modifications de « '+esc(courant.simNom||'cette simulation')+' » ('+esc(courant.client)+') ne sont pas enregistrées.':'Cette simulation n’est enregistrée dans aucun dossier client.'}</p><p class="fer-sub">Sans enregistrement, le simulateur repart de zéro.</p>
+   <div class="fer-act"><button type="button" class="fer-b prim" data-a="oui">${courant?.simId?'Enregistrer et fermer':'Enregistrer dans un dossier…'}</button><button type="button" class="fer-b" data-a="non">Fermer sans enregistrer</button><button type="button" class="fer-b sec" data-a="annuler">Annuler</button></div></div>`;
+  el.classList.add('open');
+  el.onclick=e=>{if(e.target===el)el.classList.remove('open')};
+  el.querySelector('[data-a="annuler"]').onclick=()=>el.classList.remove('open');
+  el.querySelector('[data-a="non"]').onclick=()=>{el.classList.remove('open');remiseAZero()};
+  el.querySelector('[data-a="oui"]').onclick=async e=>{
+    const b=e.currentTarget;
+    if(courant?.simId){b.disabled=true;b.textContent='Enregistrement…';
+      try{await api('/api/simulations/'+courant.simId,{method:'PUT',body:JSON.stringify({data:capturer()})});remiseAZero()}
+      catch(err){alert('Enregistrement impossible : '+err.message);b.disabled=false;b.textContent='Enregistrer et fermer'}}
+    else{el.classList.remove('open');fermerApres=true;enregistrerRapide()}
+  };
+}
+window.ptFermerSimulation=fermerSimulation;
+// Fenêtre des dossiers refermée sans enregistrer : on ne ferme plus la simulation ensuite.
+new MutationObserver(()=>{if(!dialog.classList.contains('open'))fermerApres=false}).observe(dialog,{attributes:true,attributeFilter:['class']});
 
 // ---------- Enregistrement automatique ----------
 // Simulation rattachée à un dossier : mise à jour sur le serveur toutes les 30 s si elle a changé,
 // et au moment de quitter la page. Sinon : brouillon de secours dans le navigateur, proposé au retour.
 const CLE_BROUILLON='pt-brouillon-simulation';
-let dernierEtat=null,dernierAuto=null,autoEnCours=false;
+let dernierEtat=null,dernierAuto=null,autoEnCours=false,dernierServeur=null,etatInitial=null,fermerApres=false;
 const etatActuel=()=>{try{return JSON.stringify(capturer())}catch{return null}};
-function marquerEnregistre(){dernierEtat=etatActuel()}
+function marquerEnregistre(){dernierEtat=etatActuel();dernierServeur=dernierEtat;if(typeof saisie!=='undefined')saisie=false;if(fermerApres){fermerApres=false;setTimeout(remiseAZero,900)}}
 window.ptMarquerEnregistre=marquerEnregistre;
 async function autoEnregistrer(sortie){
   const etat=etatActuel();if(!etat||etat===dernierEtat||autoEnCours)return;
@@ -741,7 +774,7 @@ async function autoEnregistrer(sortie){
     autoEnCours=true;
     try{
       const r=await fetch('/api/simulations/'+courant.simId,{method:'PUT',credentials:'same-origin',keepalive:!!sortie,headers:{'Content-Type':'application/json'},body:JSON.stringify({data:JSON.parse(etat)})});
-      if(r.ok){dernierEtat=etat;dernierAuto=new Date();if(window.ptStudioDossier)window.ptStudioDossier();barreAuto()}
+      if(r.ok){dernierEtat=etat;dernierServeur=etat;dernierAuto=new Date();if(window.ptStudioDossier)window.ptStudioDossier();barreAuto()}
     }catch{}finally{autoEnCours=false}
   }else{
     try{localStorage.setItem(CLE_BROUILLON,JSON.stringify({at:new Date().toISOString(),data:JSON.parse(etat)}));dernierEtat=etat}catch{}
@@ -767,7 +800,7 @@ function proposerBrouillon(){
 }
 setTimeout(proposerBrouillon,1500);
 // État de référence une fois la page prête (paramètres appliqués) : rien n'est enregistré tant qu'on n'a rien modifié.
-setTimeout(()=>{if(dernierEtat===null)marquerEnregistre()},2500);
+setTimeout(()=>{etatInitial=etatActuel();if(dernierEtat===null)marquerEnregistre()},2500);
 window.ptEnregistrerSimulation=enregistrerRapide;
 window.ptDossierCourant=()=>courant;
 // Page rechargée pour une nouvelle simulation : tous les montants repartent de zéro.
@@ -992,6 +1025,9 @@ window.ptParametresPrets=charger().then(()=>{if(!courant?.simId)appliquer(0)}).c
 #pt-studio{display:none;position:fixed;left:0;right:0;bottom:0;top:38px;z-index:9250;background:#faf7f3;overflow:auto;font-family:Inter,Arial,sans-serif;color:#2b2320}
 #pt-studio.open{display:block}
 #pt-dos-bar{display:none!important}
+#pt-fermer{display:none;position:fixed;inset:0;z-index:9750;background:#261b17a6;align-items:center;justify-content:center;padding:16px;font-family:Inter,Arial,sans-serif}#pt-fermer.open{display:flex}
+#pt-fermer .fer-win{background:#fffdfb;border-radius:16px;max-width:480px;width:100%;padding:22px 24px;box-shadow:0 20px 60px #0004;color:#2b2320}#pt-fermer h2{margin:0 0 8px;font:22px Georgia,serif}#pt-fermer p{margin:0 0 6px;font-size:14px;line-height:1.45}#pt-fermer .fer-sub{color:#7b6b62;font-size:13px;margin-bottom:16px}
+#pt-fermer .fer-act{display:flex;gap:8px;flex-wrap:wrap}#pt-fermer .fer-b{border:0;border-radius:9px;padding:10px 14px;cursor:pointer;font:600 13.5px Inter,Arial,sans-serif;background:#f5e6de;color:#8e3f29}#pt-fermer .fer-b.prim{background:#a34d31;color:#fff}#pt-fermer .fer-b.sec{background:transparent;color:#7b6b62}
 #pt-studio .remb-grid{display:grid;grid-template-columns:230px 1fr;gap:16px;align-items:start}
 @media(max-width:900px){#pt-studio .remb-grid{grid-template-columns:1fr}}
 #pt-studio .st-env{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
@@ -1854,7 +1890,7 @@ function ouvrir(nom){
   studio.classList.add('open');studio.scrollTop=0;rafraichir();
 }
 function fermer(){studio.classList.remove('open');tip.style.display='none'}
-$('st-home').onclick=()=>{fermer();const h=$('pt-home');if(h)h.style.display=''};
+$('st-home').onclick=()=>{if(window.ptFermerSimulation)return window.ptFermerSimulation();fermer();const h=$('pt-home');if(h)h.style.display=''};
 $('st-expert').onclick=()=>VUES[vue].expert();
 $('st-save').onclick=()=>window.ptEnregistrerSimulation&&window.ptEnregistrerSimulation();
 $('st-list').onclick=()=>window.ptOpenDossiers&&window.ptOpenDossiers();
@@ -2030,6 +2066,9 @@ aidesAuto();
 <script>
 /* Retour à l'accueil depuis n'importe quel écran (bouton de la barre du haut). */
 window.ptAllerAccueil=function(){
+  const ouvert=id=>document.getElementById(id)?.classList.contains('open'),h0=document.getElementById('pt-home');
+  const surSimulation=ouvert('pt-studio')||ouvert('pt-diagnostic')||document.body.classList.contains('v9clientmode')||(h0&&getComputedStyle(h0).display==='none'&&!['pt-ptz','pt-dos','pt-par'].some(ouvert));
+  if(surSimulation&&window.ptFermerSimulation)return window.ptFermerSimulation();
   ['pt-studio','pt-diagnostic','pt-ptz','pt-dos','pt-par'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('open')});
   if(document.body.classList.contains('v9clientmode')){document.body.classList.remove('v9clientmode');const b=document.getElementById('v9present');if(b)b.textContent='Présentation client'}
   const h=document.getElementById('pt-home');if(h)h.style.display='block';
