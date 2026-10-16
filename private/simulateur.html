@@ -965,8 +965,8 @@ window.ptParametresPrets=charger().then(()=>{if(!courant?.simId)appliquer(0)}).c
 <div id="st-tip"></div>
 <!-- Champs mémorisés avec le dossier (diagnostic et optimiseur fiscal) -->
 <div hidden id="st-memo">
-<input id="dg-rev1"><input id="dg-rev2"><input id="dg-autres"><input id="dg-charges"><input id="dg-apport"><input id="dg-duree"><input id="dg-enfants"><input id="dg-type"><input id="dg-zone"><input id="dg-rfr"><input id="dg-primo"><input id="dg-etat">
-<input id="of-prix"><input id="of-travaux"><input id="of-apport"><input id="of-loyer"><input id="of-tf"><input id="of-copro"><input id="of-pno"><input id="of-gestion"><input id="of-vacance"><input id="of-tmi"><input id="of-ps"><input id="of-mobilier"><input id="of-duree">
+<input id="dg-rev1"><input id="dg-rev2"><input id="dg-autres"><input id="dg-charges"><input id="dg-apport"><input id="dg-duree"><input id="dg-enfants"><input id="dg-type"><input id="dg-taux"><input id="dg-ass"><input id="dg-zone"><input id="dg-rfr"><input id="dg-primo"><input id="dg-etat">
+<input id="of-prix"><input id="of-travaux"><input id="of-apport"><input id="of-loyer"><input id="of-tf"><input id="of-copro"><input id="of-pno"><input id="of-gestion"><input id="of-vacance"><input id="of-tmi"><input id="of-ps"><input id="of-mobilier"><input id="of-duree"><input id="of-taux"><input id="of-ass">
 </div>
 <script>
 (function(){
@@ -1119,15 +1119,19 @@ function initDiag(){
 function lireDiag(){
   const g=id=>num(m(id).value),rev2=g('dg-rev2');
   return {revenus:g('dg-rev1')+rev2+g('dg-autres'),charges:g('dg-charges'),apport:g('dg-apport'),ans:g('dg-duree')||25,enfants:g('dg-enfants'),adultes:rev2>0?2:1,
-    type:m('dg-type').value||'neuf',zone:m('dg-zone').value||'B1',rfr:g('dg-rfr'),primo:m('dg-primo').value!=='non'};
+    type:m('dg-type').value||'neuf',zone:m('dg-zone').value||'B1',rfr:g('dg-rfr'),primo:m('dg-primo').value!=='non',
+    taux:m('dg-taux').value===''?null:g('dg-taux'),ass:m('dg-ass').value===''?null:g('dg-ass')};
 }
+/** Taux saisi par le vendeur s'il y en a un (sinon grille de l'équipe) ; l'écart saisi est conservé pour les autres durées. */
+function tauxDiag(d,ans){return d.taux==null?tauxDuree(ans):Math.max(0,d.taux+(tauxDuree(ans)-tauxDuree(d.ans)))}
+const assDefaut=()=>P().assurance.tranches[1]?.taux||.15;
 function bases(d){
-  const p=P(),r=tauxDuree(d.ans)/1200,n=d.ans*12;
-  const ins=(d.adultes>1?2*p.assurance.quotiteCouple/100:1)*(p.assurance.tranches[1]?.taux||.15)/1200;
+  const p=P(),taux=tauxDiag(d,d.ans),r=taux/1200,n=d.ans*12;
+  const ins=(d.adultes>1?2*p.assurance.quotiteCouple/100:1)*(d.ass==null?assDefaut():d.ass)/1200;
   const facteur=r?r/(1-Math.pow(1+r,-n)):1/n;
   const resteMin=d.adultes*p.seuils.resteAdulte+d.enfants*p.seuils.resteEnfant;
   const parEndettement=d.revenus*p.seuils.endettement/100-d.charges,parReste=d.revenus-d.charges-resteMin;
-  return {p,r,n,ins,facteur,resteMin,mensualite:Math.max(0,Math.min(parEndettement,parReste)),limite:parReste<parEndettement?'reste':'endettement',fraisPct:(p.frais.garantieCreditLogement+p.frais.courtagePct)/100};
+  return {p,taux,r,n,ins,facteur,resteMin,mensualite:Math.max(0,Math.min(parEndettement,parReste)),limite:parReste<parEndettement?'reste':'endettement',fraisPct:(p.frais.garantieCreditLogement+p.frais.courtagePct)/100};
 }
 const ptzPour=(d,type,prix)=>type==='neuf'&&d.primo&&window.ptCalculPTZ?window.ptCalculPTZ(d.zone,d.adultes+d.enfants,'coll',prix,d.rfr||d.revenus*12*0.9):{montant:0};
 /** Budget d'achat maximum : la mensualité disponible fixe le prêt bancaire ; dans le neuf, le PTZ s'y ajoute. */
@@ -1144,7 +1148,7 @@ function capacite(d,type){
     budget=Math.max(0,(pret+ptz.montant+d.apport-b.p.frais.dossier-b.fraisPct*pret)/(1+notaire));
     const suivant=ptzPour(d,type,budget);if(Math.abs((suivant.montant||0)-ptz.montant)<1){ptz=suivant;break}ptz=suivant;
   }
-  return {...b,type,pret,budget,ptz,notairePct:notaire*100,notaire:budget*notaire,frais:b.p.frais.dossier+b.fraisPct*pret,reste:d.revenus-d.charges-b.mensualite,taux:tauxDuree(d.ans)};
+  return {...b,type,pret,budget,ptz,notairePct:notaire*100,notaire:budget*notaire,frais:b.p.frais.dossier+b.fraisPct*pret,reste:d.revenus-d.charges-b.mensualite,taux:b.taux};
 }
 /** À prix égal : ce qu'il faut emprunter, les intérêts et le capital restant dû année par année. */
 function aPrixEgal(d,type,prix){
@@ -1183,11 +1187,14 @@ function formDiag(){
   <div class="f"><div class="seg" data-dseg="dg-type"><button type="button" data-v="neuf" class="${d.type==='neuf'?'on':''}">Neuf</button><button type="button" data-v="ancien" class="${d.type==='ancien'?'on':''}">Ancien</button></div></div>
   <div class="f"><label for="sd-apport">Apport disponible</label><div class="euro" data-u="€"><input id="sd-apport" data-memo="dg-apport" inputmode="numeric" value="${v('dg-apport')}"></div></div>
   <div class="f"><label for="sd-duree">Durée <output id="sd-duree-o">${v('dg-duree')} ans</output></label><input id="sd-duree" data-memo="dg-duree" type="range" min="10" max="25" step="1" value="${v('dg-duree')}"></div>
+  <div class="duo"><div class="f"><label for="sd-taux">Taux</label><div class="euro" data-u="%"><input id="sd-taux" data-memo="dg-taux" inputmode="decimal" placeholder="${String(tauxDuree(d.ans)).replace('.',',')}" value="${v('dg-taux')}"></div></div>
+  <div class="f"><label for="sd-ass">Assurance <span style="font-weight:400;color:#8a7a70">/ emprunteur</span></label><div class="euro" data-u="%"><input id="sd-ass" data-memo="dg-ass" inputmode="decimal" placeholder="${String(assDefaut()).replace('.',',')}" value="${v('dg-ass')}"></div></div></div>
+  <div class="hint" style="margin-top:-6px;margin-bottom:10px">Vides : valeurs de l'équipe (taux de la grille pour la durée choisie). Saisissez-les pour une offre précise.</div>
   <h3>PTZ (neuf)</h3>
   <div class="duo"><div class="f"><label for="sd-zone">Zone</label><select id="sd-zone" data-memo="dg-zone">${['A','B1','B2','C'].map(z=>`<option value="${z}" ${d.zone===z?'selected':''}>${z==='A'?'A bis / A':z}</option>`).join('')}</select></div>
   <div class="f"><label for="sd-rfr">RFR N-2</label><div class="euro" data-u="€"><input id="sd-rfr" data-memo="dg-rfr" inputmode="numeric" placeholder="estimé" value="${v('dg-rfr')}"></div></div></div>
   <div class="f"><label>Primo-accédant</label><div class="seg" data-dseg="dg-primo"><button type="button" data-v="oui" class="${d.primo?'on':''}">Oui</button><button type="button" data-v="non" class="${d.primo?'':'on'}">Non</button></div></div>
-  <div class="hint">Taux, assurance, frais et seuils : paramètres de l'équipe. Sans RFR, il est estimé à 90 % des revenus annuels.</div>`;
+  <div class="hint">Frais et seuils : paramètres de l'équipe. Sans RFR, il est estimé à 90 % des revenus annuels.</div>`;
 }
 function resDiag(){
   const d=lireDiag(),p=P();
@@ -1195,7 +1202,7 @@ function resDiag(){
   const c=capacite(d,d.type),neuf=d.type==='neuf'?c:capacite(d,'neuf'),ancien=d.type==='ancien'?c:capacite(d,'ancien');
   const ecart=neuf.budget-ancien.budget,prixRef=Math.round(ancien.budget/1000)*1000;
   const sn=aPrixEgal(d,'neuf',prixRef),sa=aPrixEgal(d,'ancien',prixRef),gain=sa.coutCredit-sn.coutCredit;
-  const durees=[15,20,25].map(a=>({a,c:capacite({...d,ans:a},d.type)}));
+  const durees=[15,20,25].map(a=>({a,c:capacite({...d,ans:a,taux:d.taux==null?null:tauxDiag(d,a)},d.type)}));
   const okReste=c.reste>=c.resteMin-0.5;
   const colonne=(x,titre,coul)=>`<div style="border:1px solid #ecdfd8;border-radius:12px;padding:14px;border-top:4px solid ${coul}">
     <div style="font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:#7b6b62">${titre}</div>
@@ -1224,7 +1231,7 @@ function resDiag(){
    <div class="card"><h2>Budget selon la durée</h2><p class="sub">${d.type==='neuf'?'Neuf':'Ancien'}, même apport.</p>${barresH(durees.map(x=>({l:x.a+' ans',v:x.c.budget,c:x.a===d.ans?C.main:'#d9b9aa',d:'Prêt '+eur(x.c.pret)+(x.c.ptz.montant?' + PTZ '+eur(x.c.ptz.montant):'')+' · mensualité '+eur(x.c.mensualite)})))}</div>
   </div>
   <button type="button" class="cta" id="sd-vers-plan">Construire le plan de financement avec ce budget →</button>
-  <p class="note">Estimation indicative selon les paramètres de l'équipe (taux de la grille, assurance de la tranche 30-39 ans) et le barème PTZ (logement collectif). Avec un PTZ, le prêt bancaire est lissé : la mensualité totale reste au niveau maximum pendant toute la durée. Elle ne vaut pas accord de financement.</p>`;
+  <p class="note">Estimation indicative : taux ${pc(c.taux,2)}, assurance ${pc(d.ass==null?assDefaut():d.ass,2)} par emprunteur, frais et seuils de l'équipe, barème PTZ (logement collectif). Avec un PTZ, le prêt bancaire est lissé : la mensualité totale reste au niveau maximum pendant toute la durée. Elle ne vaut pas accord de financement.</p>`;
   const b=$('sd-vers-plan');if(b)b.onclick=()=>{
     poser('v9operation',d.type==='neuf'?'new':'old');poser('price',Math.floor(c.budget/1000)*1000);poser('deposit',d.apport);poser('income',d.revenus);
     window.mainSettings={rate:c.taux,years:d.ans,insurance:Math.round(c.ins*1200*1000)/1000};poser('mainIns',window.mainSettings.insurance);poser('mainYears',d.ans);poser('mainRate',c.taux);
@@ -1233,7 +1240,7 @@ function resDiag(){
 }
 function bindDiag(){
   const f=$('st-form');
-  f.querySelectorAll('[data-memo]').forEach(i=>i.addEventListener('input',()=>{m(i.dataset.memo).value=i.value;if(i.id==='sd-duree')$('sd-duree-o').textContent=i.value+' ans';resDiag()}));
+  f.querySelectorAll('[data-memo]').forEach(i=>i.addEventListener('input',()=>{m(i.dataset.memo).value=i.id==='sd-taux'||i.id==='sd-ass'?i.value.replace(',','.').trim():i.value;if(i.id==='sd-duree'){$('sd-duree-o').textContent=i.value+' ans';$('sd-taux').placeholder=String(tauxDuree(num(i.value))).replace('.',',')}resDiag()}));
   f.querySelectorAll('[data-dseg] button').forEach(b=>b.onclick=()=>{const k=b.closest('[data-dseg]').dataset.dseg;m(k).value=b.dataset.v;b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));resDiag()});
 }
 
@@ -1250,6 +1257,9 @@ function formFiscal(){
   <div class="duo">${champOF('of-prix','Prix','€')}${champOF('of-travaux','Travaux','€')}</div>
   <div class="duo">${champOF('of-apport','Apport','€')}${champOF('of-mobilier','Mobilier','€','si meublé')}</div>
   <div class="f"><label for="sof-duree">Durée du prêt <output id="sof-duree-o">${esc(m('of-duree').value)} ans</output></label><input id="sof-duree" data-memo="of-duree" type="range" min="10" max="25" step="1" value="${esc(m('of-duree').value)}"></div>
+  <div class="duo"><div class="f"><label for="sof-taux">Taux</label><div class="euro" data-u="%"><input id="sof-taux" data-memo="of-taux" inputmode="decimal" placeholder="${String(tauxDuree(num(m('of-duree').value)||20)).replace('.',',')}" value="${esc(m('of-taux').value)}"></div></div>
+  <div class="f"><label for="sof-ass">Assurance</label><div class="euro" data-u="%"><input id="sof-ass" data-memo="of-ass" inputmode="decimal" placeholder="${String(assDefaut()).replace('.',',')}" value="${esc(m('of-ass').value)}"></div></div></div>
+  <div class="hint" style="margin-top:-6px;margin-bottom:10px">Vides : valeurs de l'équipe.</div>
   <h3>Loyers et charges</h3>
   <div class="duo">${champOF('of-loyer','Loyer mensuel','€','hors charges')}${champOF('of-vacance','Vacance','mois','par an')}</div>
   <div class="duo">${champOF('of-tf','Taxe foncière','€','par an')}${champOF('of-copro','Copropriété','€','non récup.')}</div>
@@ -1264,7 +1274,8 @@ function resFiscal(){
   const prix=g('of-prix'),travaux=g('of-travaux'),apport=g('of-apport'),mobilier=g('of-mobilier'),ans=g('of-duree')||20;
   const notaire=prix*p.frais.notaireAncien/100,fraisB=p.frais.dossier;
   const coutTotal=prix+travaux+notaire+fraisB,pret=Math.max(0,coutTotal-apport);
-  const r=tauxDuree(ans)/1200,n=ans*12,ins=(p.assurance.tranches[1]?.taux||.15)/1200;
+  const tauxOF=m('of-taux').value===''?tauxDuree(ans):g('of-taux'),assOF=m('of-ass').value===''?assDefaut():g('of-ass');
+  const r=tauxOF/1200,n=ans*12,ins=assOF/1200;
   const mens=pret*(r?r/(1-Math.pow(1+r,-n)):1/n)+pret*ins;
   // Intérêts et assurance de la première année
   let crd=pret,int1=0;const annuite=pret*(r?r/(1-Math.pow(1+r,-n)):1/n);for(let i=0;i<12;i++){const it=crd*r;int1+=it;crd-=annuite-it}
@@ -1284,7 +1295,7 @@ function resFiscal(){
   const brut=(prix+travaux)?g('of-loyer')*12/(prix+travaux)*100:0,net=coutTotal?(loyersAn-charges)/coutTotal*100:0;
   $('st-res').innerHTML=`
   <div class="hero"><div><small>Régime le plus favorable</small><strong style="font-size:clamp(26px,3.4vw,38px)">${esc(best.l)}</strong><span>Cash-flow après impôt : <b>${eur(best.cf)}</b> par mois${best.cf<0?' (effort d\'épargne)':''}</span></div>
-  <div class="side">Mensualité du prêt <b>${eur(mens)}</b><br>Emprunt <b>${eur(pret)}</b> sur ${ans} ans</div></div>
+  <div class="side">Mensualité du prêt <b>${eur(mens)}</b><br>Emprunt <b>${eur(pret)}</b> sur ${ans} ans à ${pc(tauxOF,2)}</div></div>
   <div class="tiles">
    <div class="tile"><small>Rendement brut</small><b>${pc(brut,2)}</b><em class="ok" style="background:#f3ece8;color:#5e4f48">loyer annuel / prix + travaux</em></div>
    <div class="tile"><small>Rendement net de charges</small><b>${pc(net,2)}</b><em class="ok" style="background:#f3ece8;color:#5e4f48">sur le coût total</em></div>
@@ -1298,11 +1309,11 @@ function resFiscal(){
   </div>
   <button type="button" class="cta" id="sof-vers-plan">Envoyer ce projet dans le plan de financement →</button>
   <p class="note">Estimation simplifiée de la 1<sup>re</sup> année, à valider avec un expert-comptable. LMNP réel : amortissement du bâti (85 % du prix sur 30 ans), du mobilier (7 ans) et des travaux (10 ans) ; depuis 2025, les amortissements déduits sont réintégrés dans la plus-value à la revente. Déficit foncier non chiffré.</p>`;
-  const b=$('sof-vers-plan');if(b)b.onclick=()=>{poser('purpose','invest');poser('v9operation','old');poser('price',prix);poser('works',travaux);poser('deposit',apport);poser('futureRent',g('of-loyer'));window.mainSettings={rate:tauxDuree(ans),years:ans,insurance:window.mainSettings?.insurance||.15};poser('mainYears',ans);poser('mainRate',tauxDuree(ans));fraisAuto();ouvrir('plan')};
+  const b=$('sof-vers-plan');if(b)b.onclick=()=>{poser('purpose','invest');poser('v9operation','old');poser('price',prix);poser('works',travaux);poser('deposit',apport);poser('futureRent',g('of-loyer'));window.mainSettings={rate:tauxOF,years:ans,insurance:assOF};poser('mainYears',ans);poser('mainRate',tauxOF);poser('mainIns',assOF);fraisAuto();ouvrir('plan')};
 }
 function bindFiscal(){
   const f=$('st-form');
-  f.querySelectorAll('[data-memo]').forEach(i=>i.addEventListener('input',()=>{m(i.dataset.memo).value=i.value;if(i.id==='sof-duree')$('sof-duree-o').textContent=i.value+' ans';resFiscal()}));
+  f.querySelectorAll('[data-memo]').forEach(i=>i.addEventListener('input',()=>{m(i.dataset.memo).value=i.id==='sof-taux'||i.id==='sof-ass'?i.value.replace(',','.').trim():i.value;if(i.id==='sof-duree'){$('sof-duree-o').textContent=i.value+' ans';$('sof-taux').placeholder=String(tauxDuree(num(i.value))).replace('.',',')}resFiscal()}));
   f.querySelectorAll('[data-tmi] button').forEach(b=>b.onclick=()=>{m('of-tmi').value=b.dataset.v;f.querySelectorAll('[data-tmi] button').forEach(x=>x.classList.toggle('on',x===b));resFiscal()});
 }
 
