@@ -1125,7 +1125,7 @@ window.ptParametresPrets=charger().then(()=>{if(!courant?.simId)appliquer(0)}).c
 <div id="st-tip"></div>
 <!-- Champs mémorisés avec le dossier (diagnostic et optimiseur fiscal) -->
 <div hidden id="st-memo">
-<input id="dg-rev1"><input id="dg-rev2"><input id="dg-autres"><input id="dg-charges"><input id="dg-apport"><input id="dg-duree"><input id="dg-enfants"><input id="dg-type"><input id="dg-endet"><input id="dg-loyer"><input id="dg-taux"><input id="dg-ass"><input id="dg-zone"><input id="dg-rfr"><input id="dg-primo"><input id="dg-occ"><input id="dg-notoff"><input id="dg-notpct"><input id="dg-gar"><input id="dg-al"><input id="dg-almt"><input id="dg-altx"><input id="dg-alans"><input id="dg-ptztype"><input id="dg-etat">
+<input id="dg-rev1"><input id="dg-rev2"><input id="dg-autres"><input id="dg-charges"><input id="dg-apport"><input id="dg-duree"><input id="dg-enfants"><input id="dg-type"><input id="dg-endet"><input id="dg-loyer"><input id="dg-taux"><input id="dg-ass"><input id="dg-zone"><input id="dg-rfr"><input id="dg-primo"><input id="dg-occ"><input id="dg-notoff"><input id="dg-notpct"><input id="dg-gar"><input id="dg-rf"><input id="dg-pensr"><input id="dg-pensv"><input id="dg-credimmo"><input id="dg-al"><input id="dg-almt"><input id="dg-altx"><input id="dg-alans"><input id="dg-ptztype"><input id="dg-etat">
 <input id="of-prix"><input id="of-travaux"><input id="of-apport"><input id="of-loyer"><input id="of-tf"><input id="of-copro"><input id="of-pno"><input id="of-gestion"><input id="of-vacance"><input id="of-tmi"><input id="of-ps"><input id="of-mobilier"><input id="of-duree"><input id="of-taux"><input id="of-ass">
 </div>
 <script>
@@ -1429,7 +1429,8 @@ function initDiag(){
 }
 function lireDiag(){
   const g=id=>num(m(id).value),rev2=g('dg-rev2');
-  return {revenus:g('dg-rev1')+rev2+g('dg-autres'),charges:g('dg-charges'),apport:g('dg-apport'),ans:g('dg-duree')||25,enfants:g('dg-enfants'),adultes:rev2>0?2:1,
+  const RF_PCT=70;
+  return {rf:g('dg-rf'),rfPct:RF_PCT,pensRecue:g('dg-pensr'),pensVersee:g('dg-pensv'),creditsConso:g('dg-charges'),creditsImmo:g('dg-credimmo'),revenus:g('dg-rev1')+rev2+g('dg-autres')+g('dg-pensr')+g('dg-rf')*RF_PCT/100,charges:g('dg-charges')+g('dg-credimmo')+g('dg-pensv'),apport:g('dg-apport'),ans:g('dg-duree')||25,enfants:g('dg-enfants'),adultes:rev2>0?2:1,
     type:m('dg-type').value||'neuf',zone:m('dg-zone').value||'B1',rfr:g('dg-rfr'),primo:m('dg-primo').value!=='non',occupants:g('dg-occ')||null,notaireOfferts:m('dg-notoff').value==='oui',garantie:m('dg-gar').value||'cl_classic',prets:m('dg-al').value==='oui'?[{neufSeul:true,nom:'Prêt Action Logement',montant:g('dg-almt')||30000,taux:m('dg-altx').value===''?1:num(m('dg-altx').value.replace(',','.')),ans:g('dg-alans')||Math.min(25,g('dg-duree')||25)}]:[],notairePct:m('dg-notpct').value===''?null:num(m('dg-notpct').value.replace(',','.')),ptzType:m('dg-ptztype').value||'coll',
     taux:m('dg-taux').value===''?null:g('dg-taux'),ass:m('dg-ass').value===''?null:g('dg-ass'),endet:m('dg-endet').value===''?null:g('dg-endet')};
 }
@@ -1493,13 +1494,20 @@ function formDiag(){
   const v=id=>esc(m(id).value),d=lireDiag();
   $('st-form').innerHTML=`
   <h3>Revenus mensuels nets</h3>
-  <div class="duo"><div class="f"><label for="sd-rev1">Emprunteur</label><div class="euro" data-u="€"><input id="sd-rev1" data-memo="dg-rev1" inputmode="numeric" value="${v('dg-rev1')}"></div></div>
-  <div class="f"><label for="sd-rev2">Co-emprunteur</label><div class="euro" data-u="€"><input id="sd-rev2" data-memo="dg-rev2" inputmode="numeric" value="${v('dg-rev2')}"></div></div></div>
-  <div class="f"><label for="sd-autres">Autres revenus <span style="font-weight:400;color:#8a7a70">loyers, pensions…</span></label><div class="euro" data-u="€"><input id="sd-autres" data-memo="dg-autres" inputmode="numeric" value="${v('dg-autres')}"></div></div>
+  <div class="duo"><div class="f"><label for="sd-rev1">Salaire emprunteur</label><div class="euro" data-u="€"><input id="sd-rev1" data-memo="dg-rev1" inputmode="numeric" value="${v('dg-rev1')}"></div></div>
+  <div class="f"><label for="sd-rev2">Salaire co-emprunteur</label><div class="euro" data-u="€"><input id="sd-rev2" data-memo="dg-rev2" inputmode="numeric" value="${v('dg-rev2')}"></div></div></div>
+  <div class="duo"><div class="f"><label for="sd-rf">Revenus fonciers</label><div class="euro" data-u="€"><input id="sd-rf" data-memo="dg-rf" inputmode="numeric" value="${v('dg-rf')}"></div></div>
+  <div class="f"><label for="sd-pensr">Pension reçue</label><div class="euro" data-u="€"><input id="sd-pensr" data-memo="dg-pensr" inputmode="numeric" value="${v('dg-pensr')}"></div></div></div>
+  <div class="f"><label for="sd-autres">Autres revenus <span style="font-weight:400;color:#8a7a70">primes, allocations…</span></label><div class="euro" data-u="€"><input id="sd-autres" data-memo="dg-autres" inputmode="numeric" value="${v('dg-autres')}"></div></div>
+  <div class="hint" style="margin:-6px 0 6px">Revenus fonciers : loyers perçus, retenus à 70 %. Pensions : alimentaires.</div>
+  <div class="hint" id="sd-revtot" style="margin:-4px 0 12px"></div>
   <h3>Charges et foyer</h3>
   <div class="f"><label for="sd-loyer">Loyer actuel <span style="font-weight:400;color:#8a7a70">avant l'achat, pour le saut de charge</span></label><div class="euro" data-u="€/mois"><input id="sd-loyer" data-memo="dg-loyer" inputmode="numeric" value="${v('dg-loyer')}" style="padding-right:56px"></div></div>
-  <div class="duo"><div class="f"><label for="sd-charges">Crédits en cours</label><div class="euro" data-u="€/mois"><input id="sd-charges" data-memo="dg-charges" inputmode="numeric" value="${v('dg-charges')}" style="padding-right:56px"></div></div>
-  <div class="f"><label for="sd-enfants">Enfants</label><input id="sd-enfants" data-memo="dg-enfants" type="number" min="0" max="10" value="${v('dg-enfants')}"></div></div>
+  <div class="duo"><div class="f"><label for="sd-charges">Crédits conso / auto</label><div class="euro" data-u="€/mois"><input id="sd-charges" data-memo="dg-charges" inputmode="numeric" value="${v('dg-charges')}" style="padding-right:56px"></div></div>
+  <div class="f"><label for="sd-credimmo">Crédits immobiliers</label><div class="euro" data-u="€/mois"><input id="sd-credimmo" data-memo="dg-credimmo" inputmode="numeric" value="${v('dg-credimmo')}" style="padding-right:56px"></div></div></div>
+  <div class="duo"><div class="f"><label for="sd-pensv">Pension versée</label><div class="euro" data-u="€/mois"><input id="sd-pensv" data-memo="dg-pensv" inputmode="numeric" value="${v('dg-pensv')}" style="padding-right:56px"></div></div>
+  <div class="f"><label for="sd-enfants">Enfants à charge</label><input id="sd-enfants" data-memo="dg-enfants" type="number" min="0" max="10" value="${v('dg-enfants')}"></div></div>
+  <div class="hint" id="sd-chtot" style="margin:-4px 0 12px"></div>
   <h3>Projet</h3>
   <div class="f"><div class="seg" data-dseg="dg-type"><button type="button" data-v="neuf" class="${d.type==='neuf'?'on':''}">Neuf</button><button type="button" data-v="ancien" class="${d.type==='ancien'?'on':''}">Ancien</button></div></div>
   <div class="f"><label for="sd-notpct">Frais de notaire ${d.type==='neuf'?'neuf':'ancien'} <span style="font-weight:400;color:#8a7a70">${d.notaireOfferts&&d.type==='neuf'?'offerts':'du prix'}</span></label><div class="euro" data-u="%"><input id="sd-notpct" data-memo="dg-notpct" inputmode="decimal" placeholder="${String(d.type==='neuf'?P().frais.notaireNeuf:P().frais.notaireAncien).replace('.',',')}" value="${v('dg-notpct')}"></div><div class="hint" id="sd-notmt" style="margin:4px 0 0"></div></div>
@@ -1623,7 +1631,7 @@ const moisTxt=(a,b)=>`mois ${a+1} à ${b}`;
 /** Contexte d'affichage (identité, revenus, charges) de l'écran Budget max. */
 function ctxRapide(d){
   const cur=window.ptDossierCourant&&window.ptDossierCourant(),saisi=($('client')?.value||'').trim();
-  return {nom:cur?.client||(saisi&&saisi!=='Simulation test'?saisi:''),situation:d.adultes>1?'En couple':'Seul(e)',enfants:d.enfants,rev1:num(m('dg-rev1').value),rev2:num(m('dg-rev2').value),autres:num(m('dg-autres').value),loyer:num(m('dg-loyer').value),terrain:0,travaux:0,usage:'Résidence principale'};
+  return {nom:cur?.client||(saisi&&saisi!=='Simulation test'?saisi:''),situation:d.adultes>1?'En couple':'Seul(e)',enfants:d.enfants,rev1:num(m('dg-rev1').value),rev2:num(m('dg-rev2').value),autres:num(m('dg-autres').value),rf:d.rf,rfPct:d.rfPct,pensRecue:d.pensRecue,pensVersee:d.pensVersee,creditsConso:d.creditsConso,creditsImmo:d.creditsImmo,loyer:num(m('dg-loyer').value),terrain:0,travaux:0,usage:'Résidence principale'};
 }
 function ficheSolvabilite(d,c,ctx){
   const ech=echeancier(c),pal=paliers(ech).slice(0,4),z=c.ptz||{montant:0},p=c.p;
@@ -1638,8 +1646,8 @@ function ficheSolvabilite(d,c,ctx){
   return `<style>.fs{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;margin-bottom:12px}.fs th{background:#f3e9e2;color:#8e3f29;text-align:left;padding:6px 8px;font-size:12.5px}.fs td{padding:4px 8px;border-bottom:1px solid #f1e6df}.fs td.n,.fs th.n{text-align:right}.fs tr.tot td{font-weight:700;border-top:1.5px solid #c9b2a5}.fs-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.fs-hcsf{display:flex;gap:18px;border:1.5px solid #2b2320;border-radius:8px;padding:8px 12px;font-size:13px;margin-top:6px}.fs-ok{color:#2f8a5a;font-weight:700}.fs-ko{color:#b04d3e;font-weight:700}.fs-note{font-size:10.5px;color:#7b6b62;line-height:1.45}</style>
   <div style="text-align:center;font:600 17px Inter,Arial,sans-serif;color:#2b2320;margin:0 0 12px;letter-spacing:.3px">FICHE DE SOLVABILITÉ · ACCÉDANT À LA PROPRIÉTÉ${ctx.nom?'<div style="font-weight:400;font-size:14px;color:#7b6b62;margin-top:3px">'+esc(ctx.nom)+'</div>':''}</div>
   <div class="fs-grid">
-   <table class="fs"><tr><th colspan="2">Revenus du foyer</th></tr>${l('Situation familiale',esc(ctx.situation||'—'))}${l("Nombre d'enfants à charge",(ctx.enfants||0)+' enfant'+((ctx.enfants||0)>1?'s':''))}${l("Salaire de l'emprunteur",eur(ctx.rev1))}${l('Salaire du co-emprunteur',ctx.rev2?eur(ctx.rev2):'—')}${l('Autres revenus',ctx.autres?eur(ctx.autres):'—')}<tr class="tot"><td>Revenus mensuels retenus</td><td class="n">${eur(d.revenus)}</td></tr></table>
-   <table class="fs"><tr><th>Charges existantes</th><th class="n">Avant projet</th><th class="n">Après projet</th></tr><tr><td>Loyer versé</td><td class="n">${ctx.loyer?eur(ctx.loyer):'—'}</td><td class="n">—</td></tr><tr><td>Crédits en cours</td><td class="n">${d.charges?eur(d.charges):'—'}</td><td class="n">${d.charges?eur(d.charges):'—'}</td></tr><tr class="tot"><td>Charges mensuelles</td><td class="n">${eur(avantL)}</td><td class="n">${eur(d.charges)}</td></tr></table>
+   <table class="fs"><tr><th colspan="2">Revenus du foyer</th></tr>${l('Situation familiale',esc(ctx.situation||'—'))}${l("Nombre d'enfants à charge",(ctx.enfants||0)+' enfant'+((ctx.enfants||0)>1?'s':''))}${l("Salaire de l'emprunteur",eur(ctx.rev1))}${l('Salaire du co-emprunteur',ctx.rev2?eur(ctx.rev2):'—')}${l('Autres revenus',ctx.autres?eur(ctx.autres):'—')}${ctx.pensRecue?l('Pension alimentaire reçue',eur(ctx.pensRecue)):''}${ctx.rf?l('Revenus fonciers ('+ctx.rfPct+' % de '+eur(ctx.rf)+')',eur(ctx.rf*ctx.rfPct/100)):''}<tr class="tot"><td>Revenus mensuels retenus</td><td class="n">${eur(d.revenus)}</td></tr></table>
+   <table class="fs"><tr><th>Charges existantes</th><th class="n">Avant projet</th><th class="n">Après projet</th></tr><tr><td>Loyer versé</td><td class="n">${ctx.loyer?eur(ctx.loyer):'—'}</td><td class="n">—</td></tr>${ctx.creditsConso!=null?`<tr><td>Pension alimentaire versée</td><td class="n">${ctx.pensVersee?eur(ctx.pensVersee):'—'}</td><td class="n">${ctx.pensVersee?eur(ctx.pensVersee):'—'}</td></tr><tr><td>Prêts auto / conso</td><td class="n">${ctx.creditsConso?eur(ctx.creditsConso):'—'}</td><td class="n">${ctx.creditsConso?eur(ctx.creditsConso):'—'}</td></tr><tr><td>Prêts immobiliers en cours</td><td class="n">${ctx.creditsImmo?eur(ctx.creditsImmo):'—'}</td><td class="n">${ctx.creditsImmo?eur(ctx.creditsImmo):'—'}</td></tr>`:`<tr><td>Crédits en cours</td><td class="n">${d.charges?eur(d.charges):'—'}</td><td class="n">${d.charges?eur(d.charges):'—'}</td></tr>`}<tr class="tot"><td>Charges mensuelles</td><td class="n">${eur(avantL)}</td><td class="n">${eur(d.charges)}</td></tr></table>
   </div>
   <div class="fs-grid">
    <table class="fs"><tr><th colspan="2">Projet d'acquisition à financer · ${d.type==='neuf'?'neuf':'ancien'}</th></tr>${ctx.terrain?l('Terrain',eur(ctx.terrain)):''}${l('Logement',eur(c.budget))}${ctx.travaux?l('Travaux',eur(ctx.travaux)):''}${l('Frais de notaire (estimés)',c.offerts?'offerts ('+eur(c.notaireOffert)+')':eur(c.notaire))}${l('Frais de garantie (estimés) · '+esc(nomGarantie(c.garCle))+' '+pc(c.garPct*100,2),eur(c.fraisGarantie))}${c.courtage?l('Frais de courtage',eur(c.courtage)):''}${l('Frais de dossier',eur(dossier))}<tr class="tot"><td>Total des dépenses du projet</td><td class="n">${eur(total)}</td></tr></table>
@@ -1718,6 +1726,8 @@ window.ptSortiesClient=ouvrirSorties;
 window.ptResultatDetaille=resultatDetaille;
 function resDiag(){
   const d=lireDiag(),p=P();
+  const rt=$('sd-revtot');if(rt)rt.innerHTML=`Revenus retenus : <b>${eur(d.revenus)}</b> / mois${d.rf?` (revenus fonciers retenus à ${d.rfPct} %)`:''}`;
+  const ct=$('sd-chtot');if(ct)ct.innerHTML=`Charges retenues : <b>${eur(d.charges)}</b> / mois${d.charges&&d.revenus?' · endettement actuel '+pc(d.charges/d.revenus*100):''}`;
   if(d.revenus<=0){$('st-res').innerHTML=`<div class="card"><h2>Indiquez les revenus du foyer</h2><p class="sub">Le budget maximum se calcule à partir des revenus nets mensuels.</p></div>`;return}
   const c=capacite(d,d.type),neuf=d.type==='neuf'?c:capacite(d,'neuf'),ancien=d.type==='ancien'?c:capacite(d,'ancien');
   const ecart=neuf.budget-ancien.budget,prixRef=Math.round(ancien.budget/1000)*1000;
@@ -1873,7 +1883,7 @@ function versDiagDetaille(){
     if(d.taux!=null)poser('rate',d.taux);if(d.endet!=null)poser('threshold',d.endet);
     const r1=num(m('dg-rev1').value),r2=num(m('dg-rev2').value);
     if(r1)poser('income',r1);if(r2){poser('co',true);poser('coincome',r2)}
-    poser('otherIncome',num(m('dg-autres').value));const gk=d.garantie;['gMain','gPTZ','gAction','gOther'].forEach(k=>poser(k,gk));
+    poser('otherIncome',num(m('dg-autres').value)+num(m('dg-pensr').value));poser('rents',num(m('dg-rf').value));poser('rentWeight',70);poser('otherCharges',d.charges);const gk=d.garantie;['gMain','gPTZ','gAction','gOther'].forEach(k=>poser(k,gk));
     if(d.prets.length){const a=d.prets[0];poser('alElig',true);poser('useAction',true);poser('action',a.montant);poser('actionRate',a.taux);poser('actionYears',a.ans)}else{poser('alElig',false);poser('useAction',false);poser('action',0)}
     poser('rentCharge',0);poser('enfants',d.enfants);
     const ass=d.ass==null?assDefaut():d.ass,q=r2?P().assurance.quotiteCouple:100;
