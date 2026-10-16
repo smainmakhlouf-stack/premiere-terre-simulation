@@ -570,20 +570,20 @@ function barre(){
   if(courant){
     el.innerHTML=`<span>Dossier : <b>${esc(courant.client)}</b>${courant.simNom?' · '+esc(courant.simNom):''}</span><button type="button" id="dos-bar-save">${courant.simId?'Enregistrer':'Enregistrer la simulation'}</button><button type="button" class="sec" id="dos-bar-open">Dossiers</button><button type="button" class="sec" id="dos-bar-new" title="Repartir d'une simulation vierge">Nouvelle</button>`;
     $('dos-bar-save').onclick=enregistrerRapide;
-    $('dos-bar-new').onclick=()=>{if(!confirm('Commencer une nouvelle simulation vierge ? Pensez à enregistrer la simulation en cours.'))return;setCourant(null);location.reload()};
+    $('dos-bar-new').onclick=()=>nouvelle();
   }else{
     el.innerHTML=`<button type="button" class="sec" id="dos-bar-open">Dossiers clients</button>`;
   }
   $('dos-bar-open').onclick=()=>ouvrir(courant?.clientId);
 }
-function setCourant(c){courant=c;try{c?sessionStorage.setItem('pt-dossier-courant',JSON.stringify(c)):sessionStorage.removeItem('pt-dossier-courant')}catch{}barre()}
+function setCourant(c){courant=c;try{c?sessionStorage.setItem('pt-dossier-courant',JSON.stringify(c)):sessionStorage.removeItem('pt-dossier-courant')}catch{}barre();if(window.ptStudioDossier)window.ptStudioDossier()}
 
 async function enregistrerRapide(){
-  if(!courant)return ouvrir();
+  if(!courant){await ouvrir();const d=$('dos-droite');if(d&&!selection)d.innerHTML='<div class="vide"><b>Pour enregistrer cette simulation</b>, choisissez le client à gauche, ou créez-le avec « + Client ».</div>';return}
   if(!courant.simId)return ouvrir(courant.clientId,true);
-  const b=$('dos-bar-save');b.disabled=true;b.textContent='Enregistrement…';
-  try{await api('/api/simulations/'+courant.simId,{method:'PUT',body:JSON.stringify({data:capturer()})});b.textContent='Enregistré ✓';setTimeout(barre,1500)}
-  catch(e){alert('Enregistrement impossible : '+e.message);barre()}
+  const boutons=[$('dos-bar-save'),$('st-save')].filter(Boolean);boutons.forEach(b=>{b.disabled=true;b.dataset.txt=b.textContent;b.textContent='Enregistrement…'});
+  try{await api('/api/simulations/'+courant.simId,{method:'PUT',body:JSON.stringify({data:capturer()})});boutons.forEach(b=>b.textContent='Enregistré ✓');setTimeout(()=>{barre();boutons.forEach(b=>{b.disabled=false;b.textContent=b.dataset.txt})},1500)}
+  catch(e){alert('Enregistrement impossible : '+e.message);barre();boutons.forEach(b=>{b.disabled=false;b.textContent=b.dataset.txt})}
 }
 
 // --- Liste des clients ---
@@ -673,7 +673,7 @@ $('dos-droite').addEventListener('click',async e=>{
       restaurer(s.data);
       setCourant({clientId:c.id,client:nomClient(c),simId:s.id,simNom:s.nom});
       fermer();
-      const plan=document.querySelector('#pt-home [data-go="plan"]');if(plan)plan.click();
+      if(window.ptOpenStudio)window.ptOpenStudio('plan');else{const plan=document.querySelector('#pt-home [data-go="plan"]');if(plan)plan.click()}
     }else if(b.dataset.maj){
       if(!confirm('Remplacer cette simulation par ce qui est affiché dans le simulateur ?'))return;
       await api('/api/simulations/'+b.dataset.maj,{method:'PUT',body:JSON.stringify({data:capturer()})});await choisir(c.id);message('Simulation mise à jour.');
@@ -696,6 +696,24 @@ async function ouvrir(clientId,proposerEnregistrement){
   if(clientId)await choisir(clientId,proposerEnregistrement);
 }
 window.ptOpenDossiers=()=>ouvrir(courant?.clientId);
+/** Ferme la simulation en cours et repart d'un formulaire vide (après confirmation). */
+function nouvelle(){
+  if(!confirm(courant?.simId?'Fermer « '+(courant.simNom||'cette simulation')+' » et commencer une nouvelle simulation vierge ?\n\nLes modifications non enregistrées seront perdues.':'Commencer une nouvelle simulation vierge ?\n\nLes saisies non enregistrées seront perdues.'))return;
+  setCourant(null);
+  try{localStorage.removeItem('pt-finance-v17-borrower');sessionStorage.setItem('pt-vierge','1')}catch{}
+  location.reload();
+}
+window.ptNouvelleSimulation=nouvelle;
+window.ptEnregistrerSimulation=enregistrerRapide;
+window.ptDossierCourant=()=>courant;
+// Page rechargée pour une nouvelle simulation : tous les montants repartent de zéro.
+try{if(sessionStorage.getItem('pt-vierge')){sessionStorage.removeItem('pt-vierge');
+  ['price','notary','works','deposit','income','rents','futureRent','currentRent','guaranteeFee','brokerFee','refund','v9rfr'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=0});
+  const nom=document.getElementById('client');if(nom)nom.value='';
+  if(typeof loans!=='undefined')loans.splice(0);if(typeof existing!=='undefined')existing.splice(0);
+  window.ptVierge=true;
+  if(typeof render==='function')render();
+}}catch(e){}
 // Après un rechargement, le formulaire revient aux valeurs par défaut : on recharge la simulation
 // en cours, sinon « Enregistrer » écraserait le dossier avec un formulaire vide.
 if(courant?.simId){api('/api/simulations/'+courant.simId).then(j=>{restaurer(j.simulation.data);setCourant({...courant,simNom:j.simulation.nom})}).catch(()=>setCourant(null))}
@@ -913,6 +931,7 @@ window.ptParametresPrets=charger().then(()=>{if(!courant?.simId)appliquer(0)}).c
 #pt-studio .st-back{background:#f5e6de;color:#8e3f29;border:0;border-radius:9px;padding:9px 13px;cursor:pointer;font:600 13px Inter,Arial,sans-serif}
 #pt-studio .st-title{flex:1;min-width:200px}#pt-studio .st-title h1{font:26px Georgia,serif;color:#2b2320;margin:0}#pt-studio .st-title p{margin:2px 0 0;color:#7b6b62;font-size:13px}
 #pt-studio .st-expert{background:transparent;border:1px solid #d9c5b9;color:#7e412f;border-radius:9px;padding:8px 12px;cursor:pointer;font:13px Inter,Arial,sans-serif}
+#pt-studio .st-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}#pt-studio #st-dossier{font-size:12px;color:#7b6b62;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#pt-studio .st-act{background:#f5e6de;color:#8e3f29;border:0;border-radius:9px;padding:8px 12px;cursor:pointer;font:600 13px Inter,Arial,sans-serif}#pt-studio .st-act.prim{background:#a34d31;color:#fff}#pt-studio .st-act:disabled{opacity:.6}
 #pt-studio .st-switch{display:flex;gap:4px;background:#f3e9e2;border-radius:11px;padding:4px}
 #pt-studio .st-switch button{border:0;background:transparent;border-radius:8px;padding:8px 12px;cursor:pointer;font:13px Inter,Arial,sans-serif;color:#6b5a52}
 #pt-studio .st-switch button.on{background:#fff;color:#a34d31;font-weight:700;box-shadow:0 1px 4px #8e3f2922}
@@ -970,7 +989,7 @@ window.ptParametresPrets=charger().then(()=>{if(!courant?.simId)appliquer(0)}).c
 <div id="pt-studio" aria-live="polite">
 <div class="st-top"><button class="st-back" type="button" id="st-home">← Accueil</button><div class="st-title"><h1 id="st-h1"></h1><p id="st-p"></p></div>
 <div class="st-switch" id="st-switch"><button type="button" data-st="diag" title="Point de départ : les revenus. Résultat : le budget maximum.">1 · Budget max</button><button type="button" data-st="plan" title="Point de départ : le prix d'un bien. Résultat : le financement et la mensualité.">2 · Plan de financement</button><button type="button" data-st="fiscal" title="Investissement locatif : rendement, cash-flow, régime fiscal.">Optimiseur fiscal</button></div>
-<button class="st-expert" type="button" id="st-expert">Mode détaillé →</button></div>
+<div class="st-actions"><span id="st-dossier"></span><button class="st-act prim" type="button" id="st-save">Enregistrer</button><button class="st-act" type="button" id="st-list">Mes simulations</button><button class="st-act" type="button" id="st-new">Nouvelle simulation</button><button class="st-expert" type="button" id="st-expert">Mode détaillé →</button></div></div>
 <div class="st-body"><div class="st-form" id="st-form"></div><div class="st-res" id="st-res"></div></div>
 </div>
 <div id="st-tip"></div>
@@ -1109,6 +1128,7 @@ function formPlan(){
 }
 function resPlan(){
   recalc();
+  if(fv('price')<=0){$('st-res').innerHTML=`<div class="card"><h2>Nouvelle simulation</h2><p class="sub" style="margin:0">Saisissez le prix du bien à gauche : le financement, la mensualité et le taux d'endettement s'afficheront ici. Pas encore de bien ? Commencez par l'onglet « 1 · Budget max ».</p></div>`;return}
   const out=window.loanOutputs||[],defs=window.loanDefinitions||[],rows=window.lastRows||[];
   const pret=out[0]?.amount||0,aides=out.slice(1).reduce((s,o)=>s+(o.amount||0),0);
   const mens=rows[0]?.[1]||0,peak=Math.max(0,...rows.map(r=>+r[4]||0)),seuil=fv('threshold')||P().seuils.endettement;
@@ -1413,11 +1433,18 @@ function ouvrir(nom){
 function fermer(){studio.classList.remove('open');tip.style.display='none'}
 $('st-home').onclick=()=>{fermer();const h=$('pt-home');if(h)h.style.display=''};
 $('st-expert').onclick=()=>VUES[vue].expert();
+$('st-save').onclick=()=>window.ptEnregistrerSimulation&&window.ptEnregistrerSimulation();
+$('st-list').onclick=()=>window.ptOpenDossiers&&window.ptOpenDossiers();
+$('st-new').onclick=()=>window.ptNouvelleSimulation&&window.ptNouvelleSimulation();
+window.ptStudioDossier=()=>{const c=window.ptDossierCourant&&window.ptDossierCourant();$('st-dossier').innerHTML=c?`Dossier : <b>${esc(c.client)}</b>${c.simNom?' · '+esc(c.simNom):''}`:'Simulation non enregistrée';$('st-save').textContent=c?.simId?'Enregistrer':'Enregistrer…'};
+window.ptStudioDossier();
 studio.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>ouvrir(b.dataset.st));
 // Le PTZ ajouté depuis le barème doit apparaître tout de suite dans le plan.
 const ajoutOrigine=window.addLoan;
 if(typeof ajoutOrigine==='function'){window.addLoan=function(){const r=ajoutOrigine.apply(this,arguments);if(studio.classList.contains('open')&&vue==='plan')setTimeout(()=>{fraisAuto();rafraichir()},0);return r};try{addLoan=window.addLoan}catch(e){}}
 window.ptOpenStudio=ouvrir;
+// Nouvelle simulation vierge : les champs du diagnostic et de l'optimiseur repartent aussi de zéro.
+if(window.ptVierge)document.querySelectorAll('#st-memo input').forEach(i=>i.value='');
 })();
 </script>
 </html>
