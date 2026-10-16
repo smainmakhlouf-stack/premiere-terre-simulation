@@ -21,8 +21,10 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  sessions Session[]
-  accounts Account[]
+  sessions    Session[]
+  accounts    Account[]
+  clients     Client[]
+  simulations Simulation[]
 
   @@map("users")
 }
@@ -86,4 +88,42 @@ model RateLimit {
 
   @@unique([key])
   @@map("rateLimit")
+}
+
+// Dossiers clients : chaque client appartient au vendeur qui l'a créé (les administrateurs voient tout).
+// Si le compte du vendeur est supprimé, ses dossiers sont conservés sans conseiller (ownerId vide).
+
+model Client {
+  id        String   @id @default(cuid())
+  nom       String
+  prenom    String?
+  email     String?
+  telephone String?
+  notes     String?
+  ownerId   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner       User?        @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  simulations Simulation[]
+
+  @@index([ownerId])
+  @@map("clients")
+}
+
+model Simulation {
+  id        String   @id @default(cuid())
+  clientId  String
+  nom       String
+  /// État complet du simulateur (formulaire, prêts, diagnostic, emprunteurs).
+  data      Json
+  authorId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  author User?  @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([clientId])
+  @@map("simulations")
 }
