@@ -24,6 +24,7 @@ export async function GET(request: Request) {
 
   const admin = session.user.role === "admin"
   const barre = `
+<script>addEventListener("pageshow",function(e){if(e.persisted)location.reload()})</script>
 <style>body{padding-top:38px}#pt-home{top:38px!important}@media print{#pt-barre-compte{display:none!important}body{padding-top:0!important}}</style>
 <div id="pt-barre-compte" style="position:fixed;top:0;left:0;right:0;height:38px;z-index:9600;display:flex;justify-content:flex-end;align-items:center;gap:14px;padding:0 5%;background:#754338;color:#fff;font:13px Inter,system-ui,sans-serif;white-space:nowrap;overflow:hidden">
   <span>Connecté : <strong>${escapeHtml(session.user.name || session.user.email)}</strong></span>
