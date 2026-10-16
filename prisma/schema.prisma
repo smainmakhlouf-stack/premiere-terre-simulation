@@ -127,3 +127,13 @@ model Simulation {
   @@index([clientId])
   @@map("simulations")
 }
+
+// Paramètres de l'équipe (une seule ligne, id "equipe"), modifiables par les administrateurs.
+model Parametres {
+  id        String   @id
+  data      Json
+  majPar    String?
+  updatedAt DateTime @updatedAt
+
+  @@map("parametres")
+}
