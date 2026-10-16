@@ -3,6 +3,27 @@
  * Taux en % annuels ; assurance en % annuel du capital initial, par emprunteur ; frais de garantie
  * et de courtage en % du montant emprunté.
  */
+/** Organismes de garantie (mêmes clés que le diagnostic détaillé). Coût total en % du capital garanti. */
+export const GARANTIES: { cle: string; nom: string; defaut: number }[] = [
+  { cle: "cl_classic", nom: "Crédit Logement · Classic", defaut: 1.2 },
+  { cle: "cl_initio", nom: "Crédit Logement · Initio", defaut: 1.0 },
+  { cle: "saccef", nom: "SACCEF", defaut: 1.1 },
+  { cle: "camca", nom: "CAMCA", defaut: 1.0 },
+  { cle: "cmh", nom: "CMH", defaut: 0.9 },
+  { cle: "socami", nom: "SOCAMI", defaut: 1.0 },
+  { cle: "cnp", nom: "CNP Caution", defaut: 1.2 },
+  { cle: "casden", nom: "CASDEN", defaut: 0.3 },
+  { cle: "bred", nom: "BRED Habitat", defaut: 1.0 },
+  { cle: "mutual", nom: "Caution mutuelle / employeur", defaut: 0.8 },
+  { cle: "simple", nom: "Caution simple", defaut: 0.5 },
+  { cle: "hyp", nom: "Hypothèque conventionnelle", defaut: 1.5 },
+  { cle: "legal", nom: "Hypothèque légale spéciale (prêteur de deniers)", defaut: 1.0 },
+  { cle: "rank2", nom: "Hypothèque 2e rang", defaut: 1.5 },
+  { cle: "rank3", nom: "Hypothèque 3e rang", defaut: 1.5 },
+  { cle: "pledge", nom: "Nantissement / gage", defaut: 0.3 },
+  { cle: "other", nom: "Autre garantie", defaut: 1.0 },
+]
+
 export const PARAMETRES_DEFAUT = {
   taux: [{ nom: "Grille équipe", t10: 3.0, t15: 3.1, t20: 3.2, t25: 3.35 }],
   assurance: {
@@ -20,10 +41,8 @@ export const PARAMETRES_DEFAUT = {
     notaireAncien: 7.5,
     dossier: 1000,
     courtagePct: 1,
-    garantieCreditLogement: 1.2,
-    garantieCaution: 1,
-    garantieHypotheque: 1.5,
   },
+  garanties: Object.fromEntries(GARANTIES.map((g) => [g.cle, g.defaut])) as Record<string, number>,
   seuils: { endettement: 35, resteAdulte: 800, resteEnfant: 300, apportMin: 10 },
 }
 
@@ -49,7 +68,13 @@ export function normaliser(brut: unknown): Parametres {
   }) : D.taux
   const a = objet(b.assurance)
   const tr = Array.isArray(a.tranches) && a.tranches.length === D.assurance.tranches.length ? a.tranches : D.assurance.tranches
-  const f = objet(b.frais), s = objet(b.seuils)
+  const f = objet(b.frais), s = objet(b.seuils), gar = objet(b.garanties)
+  // Anciens enregistrements : trois taux (Crédit Logement, cautions, hypothèque) servent de point de départ.
+  const ancien = (cle: string) => {
+    if (cle.startsWith("cl_")) return f.garantieCreditLogement
+    if (["hyp", "rank2", "rank3"].includes(cle)) return f.garantieHypotheque
+    return ["legal", "pledge", "casden", "simple"].includes(cle) ? undefined : f.garantieCaution
+  }
   return {
     taux: taux.length ? taux : D.taux,
     assurance: {
@@ -57,6 +82,7 @@ export function normaliser(brut: unknown): Parametres {
       quotiteCouple: nombre(a.quotiteCouple, D.assurance.quotiteCouple, 100),
     },
     frais: Object.fromEntries(Object.entries(D.frais).map(([k, v]) => [k, nombre(f[k], v, k === "dossier" ? 1e6 : 100)])) as Parametres["frais"],
+    garanties: Object.fromEntries(GARANTIES.map((g) => [g.cle, nombre(gar[g.cle] ?? ancien(g.cle), g.defaut, 20)])),
     seuils: {
       endettement: nombre(s.endettement, D.seuils.endettement, 100),
       resteAdulte: nombre(s.resteAdulte, D.seuils.resteAdulte, 1e5),

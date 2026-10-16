@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import type { Prisma } from "@prisma/client"
 import { db } from "@/lib/db"
 import { ErreurApi, lireJson, traiter, utilisateur } from "@/lib/api"
-import { normaliser } from "@/lib/parametres"
+import { GARANTIES, normaliser } from "@/lib/parametres"
 
 export const dynamic = "force-dynamic"
 
@@ -10,7 +10,7 @@ export function GET(request: Request) {
   return traiter(async () => {
     const u = await utilisateur(request)
     const ligne = await db.parametres.findUnique({ where: { id: "equipe" } })
-    return NextResponse.json({ admin: u.admin, parametres: normaliser(ligne?.data), majLe: ligne?.updatedAt ?? null, majPar: ligne?.majPar ?? null })
+    return NextResponse.json({ admin: u.admin, parametres: normaliser(ligne?.data), garanties: GARANTIES.map(({ cle, nom }) => ({ cle, nom })), majLe: ligne?.updatedAt ?? null, majPar: ligne?.majPar ?? null })
   })
 }
 
