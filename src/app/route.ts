@@ -31,8 +31,15 @@ export async function GET(request: Request) {
   <button type="button" id="pt-btn-accueil" onclick="window.ptAllerAccueil&&window.ptAllerAccueil()" style="visibility:hidden;order:-1;margin-right:auto;background:#fff;color:#754338;border:0;border-radius:6px;padding:4px 12px;cursor:pointer;font:600 13px Inter,system-ui,sans-serif">← Accueil</button>
   <span>Connecté : <strong>${escapeHtml(session.user.name || session.user.email)}</strong></span>
   ${admin ? '<a href="/comptes" style="color:#fff">Comptes vendeurs</a>' : ""}
-  <form method="post" action="/deconnexion" style="margin:0"><button type="submit" style="background:none;border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font:inherit">Déconnexion</button></form>
-</div>`
+  <form method="post" action="/deconnexion" id="pt-logout" style="margin:0"><button type="submit" style="background:none;border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font:inherit">Déconnexion</button></form>
+</div>
+<script>
+// Déconnexion automatique après 30 minutes sans activité (postes partagés en agence), avertissement 5 minutes avant.
+(function(){var DELAI=30*60*1000,AVERT=25*60*1000,der=Date.now(),bandeau=null;
+function activite(){der=Date.now();if(bandeau){bandeau.remove();bandeau=null}}
+['mousemove','keydown','click','touchstart','scroll','wheel'].forEach(function(e){addEventListener(e,activite,{passive:true,capture:true})});
+setInterval(function(){var t=Date.now()-der;if(t>=DELAI){var f=document.getElementById('pt-logout');if(f){try{dispatchEvent(new Event('pagehide'))}catch(e){}f.action='/deconnexion?inactif=1';f.submit()}}else if(t>=AVERT&&!bandeau){bandeau=document.createElement('div');bandeau.style.cssText='position:fixed;left:50%;top:48px;transform:translateX(-50%);z-index:9900;background:#a14a32;color:#fff;padding:10px 16px;border-radius:10px;font:600 14px Inter,system-ui,sans-serif;box-shadow:0 8px 30px #0004';bandeau.textContent='Sans activité, vous serez déconnecté dans 5 minutes. Bougez la souris pour rester connecté.';document.body.appendChild(bandeau)}},15000)})();
+</script>`
   // Le fichier n'a pas de balise <body> : la barre est placée juste avant l'en-tête du simulateur.
   const page = await simulateur()
   const html = page.includes("<header") ? page.replace("<header", barre + "<header") : barre + page

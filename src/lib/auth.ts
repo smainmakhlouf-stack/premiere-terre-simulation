@@ -52,6 +52,9 @@ export const auth = betterAuth({
     resetPasswordTokenExpiresIn: 60 * 60 * 24,
   },
 
+  // Session de 12 h, prolongée tant que le vendeur utilise le site.
+  session: { expiresIn: 60 * 60 * 12, updateAge: 60 * 30 },
+
   rateLimit: {
     enabled: true,
     // Limites par adresse IP : plusieurs vendeurs d'un même bureau partagent la même.
