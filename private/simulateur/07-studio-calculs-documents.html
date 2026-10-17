@@ -898,7 +898,8 @@ function projeterOF(x,regime){
     const loyerBase=(x.nvloyer&&x.nvapres&&y>x.nvapres)?x.nvloyer:loyerReg;
     const loyers=(loyerBase+x.parkloyer)*mois*idx*(1-x.vacance/100);
     const tf=(x.type==='vefa'&&x.exotf&&y<=2)?0:x.tf*idx;
-    const charges=x.copro*12*idx+tf+x.pno*idx+loyers*(x.gestion+x.gli)/100;
+    const copro=x.copro*12*idx,pno=x.pno*idx,gestion=loyers*(x.gestion+x.gli)/100;
+    const charges=copro+tf+pno+gestion;
     let int=0,cap=0;for(let k=0;k<12;k++){const t=(y-1)*12+k;if(t>=n||crd<=0)break;const i=crd*r;int+=i;cap+=ann-i;crd=Math.max(0,crd-(ann-i))}
     const ass=(y-1)*12<n?insM*Math.min(12,n-(y-1)*12):0,credit=int+cap+ass;
     // Travaux déductibles en location nue (ancien, hors Denormandie / Malraux / Jeanbrun) : année 1
@@ -928,7 +929,7 @@ function projeterOF(x,regime){
     const cf=loyers-charges-credit-impot+reduction;
     effort+=Math.min(0,cf);res.impotTot+=impot;res.reductionsTot+=reduction;
     const valeur=(x.prix+x.parkval+x.travaux)*Math.pow(1+x.valo/100,y);
-    res.lignes.push({y,loyers,charges,int,ass,cap,credit,impot,reduction,cf,crd,valeur});
+    res.lignes.push({y,loyers,charges,copro,tf,pno,gestion,int,ass,cap,credit,impot,reduction,cf,crd,valeur});
   }
   // Revente à l'horizon : plus-value des particuliers
   const V=res.lignes[H-1]?.valeur||0,ansDet=H;
@@ -980,6 +981,7 @@ function resFiscal(){
    <div class="tile"><small>Rendement net</small><b>${pc(net,2)}</b><em class="ok" style="background:#f3ece8;color:#5e4f48">après charges, sur le coût total</em></div>
    <div class="tile"><small>Rendement net-net</small><b>${pc(netnet,2)}</b><em class="ok" style="background:#f3ece8;color:#5e4f48">après impôt, 1<sup>re</sup> année</em></div>
   </div>
+  ${ret.ok?participation(ret,x):''}
   <div class="card"><h2>Comparaison des régimes sur ${H} ans</h2><p class="sub">Enrichissement = valeur nette à la revente (après impôt sur la plus-value et capital restant dû) + cash-flows cumulés − apport.</p>
    <div style="overflow-x:auto"><table class="prets" style="min-width:720px"><tr><th>Régime</th><th>Loyer retenu</th><th>Cash-flow / mois (an 1)</th><th>Impôt cumulé</th><th>Réductions</th><th>Plus-value taxée</th><th>Enrichissement</th><th>TRI</th></tr>
    ${liste.map(r=>`<tr style="${r===ret?'background:#fbf3ee;font-weight:600':''}"><td>${esc(nom(r.regime))}${r.ok?(r.engagement?` <span style="color:#7b6b62;font-weight:400">· engagement ${r.engagement} ans${r.info?' · '+esc(r.info):''}</span>`:''):` <span style="color:#b04d3e;font-weight:400">· ${esc(r.motif)}</span>`}</td><td>${r.ok?eur(r.loyerReg)+(r.niveau?' <span style="color:#7b6b62;font-weight:400">maximum</span>':''):'—'}</td><td>${r.ok?eur(r.cf1):'—'}</td><td>${r.ok?eur(r.impotTot):'—'}</td><td>${r.ok&&r.reductionsTot?eur(r.reductionsTot):'—'}</td><td>${r.ok?eur(r.impotPV):'—'}</td><td>${r.ok?eur(r.enrichissement):'—'}</td><td>${r.ok&&r.tri!=null?pc(r.tri,1):'—'}</td></tr>`).join('')}</table></div></div>
@@ -991,15 +993,59 @@ function resFiscal(){
   <div class="srt-row"><button type="button" class="srt-btn prim" id="sof-etude">Étude d'investissement (présenter / PDF)</button></div>
   <button type="button" class="cta" id="sof-vers-plan">Envoyer ce projet dans le plan de financement →</button>
   <p class="note">Estimation indicative, à valider avec un expert-comptable. Location nue au réel : déficit hors intérêts imputable sur le revenu global jusqu'à 10 700 €/an, le reste reportable. LMNP réel : amortissement du bâti (85 % sur 30 ans), du mobilier (7 ans) et des travaux (10 ans), réintégré dans la plus-value à la revente. Jeanbrun (loi de finances 2026, art. 47) : amortissement de 80 % du prix (ancien : prix + travaux, travaux ≥ 30 %) au taux de 3,5/4,5/5,5 % dans le neuf et 3/3,5/4 % dans l'ancien, plafonné à 8 000/10 000/12 000 €/an, immeuble collectif, acquisitions jusqu'au 31/12/2028, engagement 9 ans. Denormandie : réduction de 12/18/21 % (plafond 300 000 € et 5 500 €/m², travaux ≥ 25 % du coût total, acquisitions jusqu'au 31/12/2027). Malraux : réduction de 22 ou 30 % des travaux (plafond 400 000 €). LLI : TVA à 10 % (art. 279-0 bis A), achat par une personne morale (SCI possible), engagement 20 ans ; l'exonération de taxe foncière ne vaut plus pour les logements achevés après 2023. Denormandie outre-mer : 23/29 % sur 6/9 ans, 32 % sur 12 ans (taux des investissements réalisés jusqu'en 2025). Girardin social : non chiffré (montage par société de portage). Réductions outre-mer plafonnées à 18 000 €/an. Réductions limitées à l'impôt saisi et, hors Malraux, au plafond des niches de 10 000 €. Prélèvements sociaux : 17,2 % en location nue, 18,6 % en meublé (revenus 2025 et suivants). Loyers plafonnés 2026 (Jeanbrun, LLI, Denormandie) : surface habitable + moitié des annexes (8 m² max) × plafond de zone × coefficient min(1,2 ; 0,7 + 19/S) ; plafonds social et très social à vérifier selon la localisation (Loc'Avantages) ; plafonds outre-mer non intégrés. Plus-value : abattements pour durée de détention, 19 % + 17,2 %.</p>`;
+  $('st-res').querySelectorAll('#sof-partvue button').forEach(b=>b.onclick=()=>{m('of-partvue').value=b.dataset.v;resFiscal()});
   const et=$('sof-etude');if(et)et.onclick=()=>{
     const res=$('st-res').cloneNode(true);res.querySelectorAll('button,.srt-row,.cta').forEach(e=>e.remove());res.querySelectorAll('details').forEach(e=>e.setAttribute('open',''));
     const enfants=[...res.children].filter(e=>!e.matches('p.note'));const note=res.querySelector('p.note')?.outerHTML||'';
     const synth=enfants.filter(e=>e.matches('.hero,.tiles')).map(e=>e.outerHTML).join('');
     const autres=enfants.filter(e=>!e.matches('.hero,.tiles')).map(e=>e.outerHTML);
     const projet=`<div class="card"><h2>Le projet</h2><div class="lignes" style="margin-top:8px"><div><span>Type d'achat</span><b>${{vefa:'Neuf (VEFA)',ancien:'Ancien',ancien_tx:'Ancien avec travaux'}[x.type]}</b></div><div><span>Zone · surface</span><b>${x.zone==='Abis'?'A bis':x.zone}${x.surface?' · '+x.surface+' m²':''}</b></div><div><span>Coût total</span><b>${eur(x.coutTotal)}</b></div><div><span>Apport · emprunt</span><b>${eur(x.apport)} · ${eur(x.pret)}</b></div><div><span>Prêt</span><b>${x.duree} ans à ${pc(x.taux,2)} (assurance ${pc(x.ass,2)})</b></div><div><span>Loyer retenu</span><b>${eur(ret.loyerReg)} / mois</b></div></div></div>`;
-    presenterDoc('Étude d’investissement locatif',[['Synthèse',synth+projet],...autres.map((h,i)=>[['Comparaison des régimes','Patrimoine','Année par année'][i]||'Détail',h]),['Hypothèses',note]],ctxRapide(lireDiag()).nom);
+    // La participation mensuelle figure dans l'étude sous ses deux formes : moyenne et année par année.
+    const vueAvant=m('of-partvue').value,part=v=>{m('of-partvue').value=v;const h=participation(ret,x).replace(/<div class="seg" id="sof-partvue"[\s\S]*?<\/div><\/div>/,'</div>');return h};
+    const partMoy=part('moyenne'),partAns=part('annees').replace('max-height:460px;overflow:auto;','');m('of-partvue').value=vueAvant;
+    const sansPart=autres.filter(h=>!h.includes('id="sof-part"'));
+    presenterDoc('Étude d’investissement locatif',[['Synthèse',synth+projet],['Participation mensuelle',partMoy+partAns],...sansPart.map((h,i)=>[['Comparaison des régimes','Patrimoine','Année par année'][i]||'Détail',h]),['Hypothèses',note]],ctxRapide(lireDiag()).nom);
   };
   const b=$('sof-vers-plan');if(b)b.onclick=()=>{poser('purpose','invest');poser('v9operation',x.type==='vefa'?'new':'old');poser('price',x.prix);poser('works',x.travaux);poser('deposit',x.apport);poser('futureRent',x.loyer);fixerPrincipal(x.taux,x.duree,x.ass);fraisAuto();ouvrir('plan')};
+}
+/**
+ * Participation mensuelle (effort d'épargne) : ce que l'investisseur met de sa poche chaque mois,
+ * toutes charges confondues — mensualité du crédit (assurance comprise), copropriété, taxe foncière,
+ * assurance PNO, gestion et loyers impayés — moins les loyers encaissés, plus l'impôt supplémentaire
+ * (ou moins l'économie d'impôt) et moins les réductions d'impôt. Deux vues : moyenne ou année par année.
+ */
+function participation(ret,x){
+  const L=ret.lignes,H=L.length,vue=m('of-partvue').value==='annees'?'annees':'moyenne';
+  const pm=l=>(l.credit+l.charges+l.impot-l.reduction-l.loyers)/12;
+  const sg=v=>v>0.5?eur(v):v<-0.5?'+ '+eur(-v):'0 €';
+  const mo=(v,sgn)=>Math.abs(v)<0.5?'—':(v<0?(sgn==='− '?'+ ':'− '):sgn)+eur(Math.abs(v));
+  const moy=(f,ls=L)=>ls.length?ls.reduce((s,l)=>s+f(l),0)/ls.length/12:0;
+  const ansCredit=Math.min(H,Math.ceil(x.duree)),pendant=L.slice(0,ansCredit);
+  const ligne=(lib,v,signe,fort)=>`<div${fort?' style="border-top:2px solid #e3d3c8;font-weight:700"':''}><span>${lib}</span><b style="${fort?'font-size:16px':''}">${signe}${eur(Math.abs(v))}</b></div>`;
+  const imp=moy(l=>l.impot),red=moy(l=>l.reduction),part=moy(l=>pm(l)*12);
+  let corps;
+  if(vue==='moyenne'){
+    corps=`<div class="tiles" style="margin:12px 0">
+     <div class="tile"><small>Participation moyenne sur ${H} ans</small><b>${sg(moy(l=>pm(l)*12))}</b><em class="ok" style="background:#f3ece8;color:#5e4f48">par mois</em></div>
+     <div class="tile"><small>Pendant le crédit (${ansCredit} ans)</small><b>${sg(moy(l=>pm(l)*12,pendant))}</b><em class="ok" style="background:#f3ece8;color:#5e4f48">par mois</em></div>
+     <div class="tile"><small>1<sup>re</sup> année</small><b>${sg(pm(L[0]))}</b><em class="ok" style="background:#f3ece8;color:#5e4f48">par mois</em></div></div>
+    <div class="lignes">${ligne('Loyers encaissés (vacance déduite)',moy(l=>l.loyers),'+ ')}
+     ${ligne('Mensualité du crédit (assurance comprise)',moy(l=>l.credit),'− ')}
+     ${ligne('Charges de copropriété',moy(l=>l.copro),'− ')}
+     ${ligne('Taxe foncière',moy(l=>l.tf),'− ')}
+     ${ligne('Assurance PNO',moy(l=>l.pno),'− ')}
+     ${moy(l=>l.gestion)?ligne('Gestion locative et loyers impayés (GLI)',moy(l=>l.gestion),'− '):''}
+     ${ligne(imp>=0?'Impôt et prélèvements sociaux sur les loyers':'Économie d’impôt (déficit / amortissement)',imp,imp>=0?'− ':'+ ')}
+     ${red?ligne('Réduction d’impôt',red,'+ '):''}
+     ${ligne(part>=0?'Participation mensuelle moyenne':'Gain mensuel moyen',part,'',true)}</div>`;
+  }else{
+    const max=Math.max(1,...L.map(l=>Math.abs(pm(l))));
+    corps=`<div class="amort-box" style="max-height:460px;overflow:auto;margin-top:12px"><table class="prets"><tr><th>Année</th><th>Loyers</th><th>Crédit</th><th>Charges</th><th>Impôt</th><th>Réduction</th><th>Participation / mois</th><th style="min-width:140px"></th></tr>
+     ${L.map(l=>{const v=pm(l);return `<tr><td>${l.y}</td><td>${mo(l.loyers/12,'+ ')}</td><td>${mo(l.credit/12,'− ')}</td><td>${mo(l.charges/12,'− ')}</td><td>${mo(l.impot/12,'− ')}</td><td>${mo(l.reduction/12,'+ ')}</td><td style="font-weight:700;color:${v>0.5?'#a34d31':'#2f8a5a'}">${sg(v)}</td><td><span style="display:inline-block;height:10px;border-radius:3px;width:${Math.round(Math.abs(v)/max*130)}px;background:${v>0?'#a34d31':'#2f8a5a'}"></span></td></tr>`}).join('')}
+     <tr style="font-weight:700;background:#fbf3ee"><td>Moyenne</td><td>${mo(moy(l=>l.loyers),'+ ')}</td><td>${mo(moy(l=>l.credit),'− ')}</td><td>${mo(moy(l=>l.charges),'− ')}</td><td>${mo(imp,'− ')}</td><td>${mo(red,'+ ')}</td><td>${sg(moy(l=>pm(l)*12))}</td><td></td></tr></table></div>`;
+  }
+  return `<div class="card" id="sof-part"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap"><div><h2>Participation mensuelle</h2><p class="sub">Ce que le client met de sa poche chaque mois : crédit et toutes charges, moins les loyers, impôt compris. Montant précédé de « + » : le bien rapporte plus qu'il ne coûte.</p></div>
+   <div class="seg" id="sof-partvue" style="min-width:270px;white-space:nowrap"><button type="button" data-v="moyenne" class="${vue==='moyenne'?'on':''}">Moyenne</button><button type="button" data-v="annees" class="${vue==='annees'?'on':''}">Année par année</button></div></div>${corps}</div>`;
 }
 function bindFiscal(){
   const f=$('st-form');
