@@ -30,6 +30,7 @@ export async function GET(request: Request) {
 <div id="pt-barre-compte" style="position:fixed;top:0;left:0;right:0;height:38px;z-index:9600;display:flex;justify-content:flex-end;align-items:center;gap:14px;padding:0 5%;background:#754338;color:#fff;font:13px Inter,system-ui,sans-serif;white-space:nowrap;overflow:hidden">
   <button type="button" id="pt-btn-accueil" onclick="window.ptAllerAccueil&&window.ptAllerAccueil()" style="visibility:hidden;order:-1;margin-right:auto;background:#fff;color:#754338;border:0;border-radius:6px;padding:4px 12px;cursor:pointer;font:600 13px Inter,system-ui,sans-serif">← Accueil</button>
   <span>Connecté : <strong>${escapeHtml(session.user.name || session.user.email)}</strong></span>
+  <a href="/securite" style="color:#fff">Sécurité</a>
   ${admin ? '<a href="/comptes" style="color:#fff">Comptes vendeurs</a>' : ""}
   <form method="post" action="/deconnexion" id="pt-logout" style="margin:0"><button type="submit" style="background:none;border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font:inherit">Déconnexion</button></form>
 </div>

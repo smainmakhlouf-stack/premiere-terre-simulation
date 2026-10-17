@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth"
 import { prismaAdapter } from "better-auth/adapters/prisma"
-import { admin } from "better-auth/plugins"
+import { admin, twoFactor } from "better-auth/plugins"
 import { nextCookies } from "better-auth/next-js"
 import { db } from "./db"
 import { sendPasswordLinkEmail } from "./email"
@@ -65,12 +65,16 @@ export const auth = betterAuth({
       "/sign-in/email": { window: 60 * 15, max: 20 },
       "/request-password-reset": { window: 60 * 15, max: 10 },
       "/reset-password": { window: 60 * 15, max: 10 },
+      "/two-factor/verify-totp": { window: 60 * 15, max: 10 },
+      "/two-factor/verify-backup-code": { window: 60 * 15, max: 10 },
       "/get-session": false,
       "/sign-out": false,
     },
   },
 
   plugins: [
+    // Double authentification par application (TOTP), activable par chaque utilisateur depuis /securite.
+    twoFactor({ issuer: "Première Terre Finance" }),
     admin({
       defaultRole: "user",
       adminRoles: ["admin"],

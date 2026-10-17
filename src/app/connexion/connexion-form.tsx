@@ -13,7 +13,7 @@ export function ConnexionForm() {
     const form = new FormData(e.currentTarget)
     setLoading(true)
     setError("")
-    const { error } = await authClient.signIn.email({
+    const { data, error } = await authClient.signIn.email({
       email: String(form.get("email")).trim(),
       password: String(form.get("password")),
     })
@@ -22,6 +22,11 @@ export function ConnexionForm() {
       if (error.status === 429) setError("Trop de tentatives. Réessayez dans quelques minutes.")
       else if (error.status === 403) setError(error.message || "Ce compte a été désactivé.")
       else setError("E-mail ou mot de passe incorrect.")
+      return
+    }
+    // Double authentification activée : saisie du code de l'application.
+    if (data && "twoFactorRedirect" in data && data.twoFactorRedirect) {
+      window.location.href = "/connexion/verification"
       return
     }
     // Rechargement complet : la page du simulateur est servie par le serveur, pas par le routeur.

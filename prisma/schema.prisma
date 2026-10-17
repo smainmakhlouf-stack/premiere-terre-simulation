@@ -20,8 +20,10 @@ model User {
   banExpires    DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  twoFactorEnabled Boolean? @default(false)
 
   sessions    Session[]
+  twoFactors  TwoFactor[]
   accounts    Account[]
   clients     Client[]
   simulations Simulation[]
@@ -136,4 +138,21 @@ model Parametres {
   updatedAt DateTime @updatedAt
 
   @@map("parametres")
+}
+
+/// Double authentification (application d'authentification), gérée par Better Auth.
+model TwoFactor {
+  id                      String    @id @default(cuid())
+  secret                  String
+  backupCodes             String
+  userId                  String
+  verified                Boolean?  @default(true)
+  failedVerificationCount Int?      @default(0)
+  lockedUntil             DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([secret])
+  @@index([userId])
+  @@map("two_factors")
 }
