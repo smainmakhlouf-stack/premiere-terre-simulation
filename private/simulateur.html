@@ -1923,7 +1923,7 @@ function projeterOF(x,regime){
   const mal={mal22:22,mal30:30}[regime];
   const meuble=regime.startsWith('lmnp');
   const niveau=NIVEAU_LOYER[regime],lm=niveau?loyerMax(x,niveau):null;
-  const loyerReg=niveau&&lm?(x.loyer>0?Math.min(x.loyer,lm.max):lm.max):x.loyer;
+  const loyerReg=niveau&&lm?lm.max:x.loyer;
   res.loyerReg=loyerReg;res.lm=lm;res.niveau=niveau;
   if(niveau&&!lm){res.ok=false;res.motif='Saisissez la surface habitable pour calculer le loyer plafonné.'}
   if(!niveau&&x.loyer<=0){res.ok=false;res.motif='Saisissez le loyer de marché.'}
@@ -2016,7 +2016,7 @@ function resFiscal(){
   const x=lireOF();
   const ct=$('sof-cout');if(ct)ct.innerHTML=x.prix?`Coût total : <b>${eur(x.coutTotal)}</b> (notaire ${x.notaire?eur(x.notaire):'offert'}, garantie ${eur(x.garantie)}, dossier ${eur(x.dossier)}) · emprunt <b>${eur(x.pret)}</b>`:'';
   const choixR=m('of-regime').value||'auto',nivChoix=NIVEAU_LOYER[choixR],lmChoix=nivChoix?loyerMax(x,nivChoix):null;
-  const pf=$('sof-plafond');if(pf)pf.innerHTML=nivChoix?(lmChoix?`Loyer plafonné ${NOM_NIVEAU[nivChoix]} 2026, zone ${x.zone==='Abis'?'A bis':x.zone} : ${dec2(lmChoix.plafond)} €/m² × ${String(lmChoix.S).replace('.',',')} m² × coef ${dec2(lmChoix.coef)} = <b>${dec2(lmChoix.max)} €</b> / mois hors charges.${x.loyer>lmChoix.max+0.5?` <span style="color:#b04d3e;font-weight:600">Le loyer saisi (${eur(x.loyer)}) dépasse le plafond : ${dec2(lmChoix.max)} € est retenu.</span>`:x.loyer?'':' Laissez le loyer vide pour appliquer le plafond.'}`:'Saisissez la surface habitable : le loyer plafonné se calcule automatiquement.'):'';
+  const pf=$('sof-plafond');if(pf)pf.innerHTML=nivChoix?(lmChoix?`Loyer plafonné ${NOM_NIVEAU[nivChoix]} 2026, zone ${x.zone==='Abis'?'A bis':x.zone} : ${dec2(lmChoix.plafond)} €/m² × ${String(lmChoix.S).replace('.',',')} m² × coef ${dec2(lmChoix.coef)} = <b>${dec2(lmChoix.max)} €</b> / mois hors charges. C'est ce loyer maximum qui est appliqué.${x.loyer>lmChoix.max+0.5?` <span style="color:#b04d3e;font-weight:600">Le loyer saisi (${eur(x.loyer)}) dépasse le plafond.</span>`:''}${x.loyer?' Le loyer saisi sert de loyer de marché pour les régimes sans plafond.':''}`:'Saisissez la surface habitable : le loyer plafonné se calcule automatiquement.'):'';
   if(x.prix<=0||(x.loyer<=0&&!(nivChoix&&lmChoix))){$('st-res').innerHTML=`<div class="card"><h2>Indiquez le prix du logement et le loyer</h2><p class="sub">Le rendement, le cash-flow, l'impôt et l'enrichissement à la revente se calculent dès que le prix et le loyer mensuel sont saisis.</p></div>`;return}
   const choix=m('of-regime').value||'auto',droitCommun=['nu_micro','nu_reel','lmnp_micro','lmnp_reel'];
   const liste=[...new Set([...droitCommun,...(choix==='auto'?[]:[choix])])].map(r=>projeterOF(x,r));
