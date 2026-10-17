@@ -875,7 +875,7 @@ window.ptTauxGarantie=function(cle){
 </style>
 <div id="pt-par" role="dialog" aria-modal="true" aria-labelledby="pt-par-title"><div class="win">
 <div class="head"><div><small>PREMIÈRE TERRE FINANCE</small><h2 id="pt-par-title">Paramètres de l'équipe</h2></div><button class="x" id="par-close" aria-label="Fermer">×</button></div>
-<div class="tabs"><button class="tab active" data-ptab="taux" type="button">Taux par durée</button><button class="tab" data-ptab="assurance" type="button">Assurance emprunteur</button><button class="tab" data-ptab="frais" type="button">Frais et garanties</button><button class="tab" data-ptab="seuils" type="button">Seuils d'analyse</button><button class="tab" data-ptab="appliquer" type="button">Appliquer à la simulation</button></div>
+<div class="tabs"><button class="tab active" data-ptab="taux" type="button">Taux par durée</button><button class="tab" data-ptab="assurance" type="button">Assurance emprunteur</button><button class="tab" data-ptab="frais" type="button">Frais et garanties</button><button class="tab" data-ptab="seuils" type="button">Seuils d'analyse</button><button class="tab" data-ptab="defauts" type="button">Valeurs par défaut et loyers</button><button class="tab" data-ptab="mentions" type="button">Mentions légales</button><button class="tab" data-ptab="appliquer" type="button">Appliquer à la simulation</button></div>
 <div class="body">
 <div id="par-alerte"></div>
 <div class="pane active" data-ppane="taux"><p class="info">Taux nominaux annuels hors assurance, par durée. La première ligne sert par défaut ; les autres permettent de comparer plusieurs banques.</p><div class="bloc" style="overflow-x:auto"><table id="par-taux"></table><div id="par-taux-add"></div></div></div>
@@ -891,7 +891,7 @@ window.ptTauxGarantie=function(cle){
 <div class="champ"><span>Apport minimum<small>% du coût du projet</small></span><span class="unite"><input type="number" step="any" min="0" max="100" data-p="seuils.apportMin"><em>%</em></span></div>
 <div class="champ"><span>Reste à vivre minimum · par adulte</span><span class="unite"><input type="number" step="any" min="0" data-p="seuils.resteAdulte"><em>€</em></span></div>
 <div class="champ"><span>Reste à vivre minimum · par enfant</span><span class="unite"><input type="number" step="any" min="0" data-p="seuils.resteEnfant"><em>€</em></span></div></div></div></div>
-<div class="pane" data-ppane="appliquer"><p class="info">Les paramètres sont appliqués automatiquement à chaque nouvelle simulation. Ce bouton les réapplique à la simulation affichée (taux, assurance, frais, garantie et seuils), par exemple après une mise à jour de la grille.</p>
+<div class="pane" data-ppane="defauts"><p class="info">Valeurs proposées au départ sur tous les écrans (Budget max, plan de financement, optimiseur, diagnostic détaillé). Le vendeur peut toujours les modifier.</p><div class="bloc"><div class="grille"><div class="champ"><span>Taux du prêt par défaut</span><span class="unite"><input type="number" step="0.01" min="0" data-p="defauts.taux"><em>%</em></span></div><div class="champ"><span>Assurance par défaut<small>par emprunteur</small></span><span class="unite"><input type="number" step="0.01" min="0" data-p="defauts.assurance"><em>%</em></span></div><div class="champ"><span>Zone par défaut</span><select data-ps="defauts.zone" style="max-width:160px"><option value="Abis">A bis</option><option value="A">A</option><option value="B1">B1</option><option value="B2">B2</option><option value="C">C</option></select></div></div></div><p class="info">Plafonds de loyer mensuels hors charges, en €/m², avant coefficient de surface min(1,2 ; 0,7 + 19/S). À mettre à jour chaque année.</p><div class="bloc" style="overflow-x:auto"><table><tr><th>Niveau de loyer</th><th>A bis</th><th>A</th><th>B1</th><th>B2</th><th>C</th></tr><tr><td>Intermédiaire (Jeanbrun, LLI, Denormandie)</td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.intermediaire.Abis"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.intermediaire.A"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.intermediaire.B1"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.intermediaire.B2"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.intermediaire.C"><em>€</em></span></td></tr><tr><td>Social (Jeanbrun)</td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.social.Abis"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.social.A"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.social.B1"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.social.B2"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.social.C"><em>€</em></span></td></tr><tr><td>Très social (Jeanbrun)</td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.tres_social.Abis"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.tres_social.A"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.tres_social.B1"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.tres_social.B2"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.tres_social.C"><em>€</em></span></td></tr></table></div></div><div class="pane" data-ppane="mentions"><p class="info">Imprimées en pied de tous les documents client (fiche de solvabilité, études, sorties).</p><div class="bloc"><div class="grille"><div class="champ"><span>Raison sociale</span><input data-ps="mentions.raisonSociale" maxlength="120" style="max-width:320px"></div><div class="champ"><span>N° ORIAS</span><input data-ps="mentions.orias" maxlength="40" style="max-width:200px"></div><div class="champ"><span>Adresse</span><input data-ps="mentions.adresse" maxlength="200" style="max-width:420px"></div></div><div class="champ" style="margin-top:10px"><span>Autres mentions<small>statut (courtier, mandataire…), médiateur, RCP</small></span><textarea data-ps="mentions.complement" maxlength="600" rows="3" style="width:100%;max-width:620px;font:inherit;border:1px solid #d9c5b9;border-radius:8px;padding:8px"></textarea></div></div></div><div class="pane" data-ppane="appliquer"><p class="info">Les paramètres sont appliqués automatiquement à chaque nouvelle simulation. Ce bouton les réapplique à la simulation affichée (taux, assurance, frais, garantie et seuils), par exemple après une mise à jour de la grille.</p>
 <div class="bloc"><div class="champ"><span>Grille de taux à utiliser</span><select id="par-banque" style="max-width:280px"></select></div></div>
 <button class="b1" id="par-appliquer" type="button">Appliquer à la simulation affichée</button><div id="par-resultat"></div></div>
 </div>
@@ -910,7 +910,7 @@ let P=null,admin=false,majLe=null,majPar=null,modifie=false,CATALOGUE=[];
 async function charger(){
   const r=await fetch('/api/parametres',{credentials:'same-origin'});
   if(!r.ok)throw new Error('Paramètres indisponibles');
-  const j=await r.json();P=j.parametres;admin=j.admin;majLe=j.majLe;majPar=j.majPar;CATALOGUE=j.garanties||[];window.ptCatalogueGaranties=CATALOGUE;window.ptParametres=P;if(window.ptGuaranteeCompute)try{window.ptGuaranteeCompute()}catch(e){}return P;
+  const j=await r.json();P=j.parametres;admin=j.admin;majLe=j.majLe;majPar=j.majPar;CATALOGUE=j.garanties||[];window.ptCatalogueGaranties=CATALOGUE;if(j.parametres?.defauts)window.ptDefauts=j.parametres.defauts;window.ptParametres=P;if(window.ptGuaranteeCompute)try{window.ptGuaranteeCompute()}catch(e){}return P;
 }
 const lire=(chemin)=>chemin.split('.').reduce((o,k)=>o?.[k],P);
 function ecrire(chemin,v){const k=chemin.split('.');let o=P;for(let i=0;i<k.length-1;i++)o=o[k[i]];o[k[k.length-1]]=v}
@@ -922,7 +922,8 @@ function afficher(){
   if(admin)$('par-taux-plus').onclick=()=>{P.taux.push({nom:'Nouvelle banque',...Object.fromEntries(['t10','t15','t20','t25'].map(k=>[k,P.taux[0][k]]))});modifie=true;afficher()};
   $('par-gar').innerHTML='<tr><th>Garantie</th><th>Coût</th></tr>'+CATALOGUE.map(g=>`<tr><td>${esc(g.nom)}</td><td><span class="unite"><input type="number" step="0.01" min="0" data-g="${esc(g.cle)}" value="${P.garanties?.[g.cle]??''}"${dis}><em>%</em></span></td></tr>`).join('');
   $('par-ass').innerHTML='<tr><th>Âge de l\'emprunteur</th><th>Taux annuel</th></tr>'+P.assurance.tranches.map((t,i)=>`<tr><td>${TRANCHES[i]}</td><td><span class="unite"><input type="number" step="0.01" min="0" data-a="${i}" value="${t.taux}"${dis}><em>%</em></span></td></tr>`).join('');
-  dialog.querySelectorAll('[data-p]').forEach(el=>{el.value=lire(el.dataset.p);el.disabled=!admin});
+  dialog.querySelectorAll('[data-p]').forEach(el=>{el.value=lire(el.dataset.p)??'';el.disabled=!admin});
+  dialog.querySelectorAll('[data-ps]').forEach(el=>{el.value=lire(el.dataset.ps)??'';el.disabled=!admin});
   $('par-banque').innerHTML=P.taux.map((l,i)=>`<option value="${i}">${esc(l.nom)}</option>`).join('');
   $('par-alerte').innerHTML=majLe?'':'<div class="alerte"><b>Valeurs d\'exemple.</b> '+(admin?'Vérifiez-les et enregistrez-les : elles seront alors utilisées par toute l\'équipe.':'L\'administrateur ne les a pas encore validées.')+'</div>';
   etat();
@@ -934,7 +935,8 @@ function etat(){
 }
 dialog.addEventListener('input',e=>{
   const t=e.target;if(!admin)return;
-  if(t.dataset.p){ecrire(t.dataset.p,Number(t.value)||0)}
+  if(t.dataset.ps){ecrire(t.dataset.ps,t.value)}
+  else if(t.dataset.p){ecrire(t.dataset.p,Number(t.value)||0)}
   else if(t.dataset.t){const [i,k]=t.dataset.t.split('.');P.taux[+i][k]=k==='nom'?t.value:Number(t.value)||0}
   else if(t.dataset.a){P.assurance.tranches[+t.dataset.a].taux=Number(t.value)||0}
   else if(t.dataset.g){P.garanties[t.dataset.g]=Number(t.value)||0}
@@ -947,7 +949,7 @@ async function enregistrer(){
   try{
     const r=await fetch('/api/parametres',{method:'PUT',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({parametres:P})});
     const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.message||'Erreur '+r.status);
-    P=j.parametres;majLe=j.majLe;majPar=j.majPar;modifie=false;window.ptParametres=P;afficher();
+    P=j.parametres;majLe=j.majLe;majPar=j.majPar;modifie=false;window.ptParametres=P;if(P.defauts)window.ptDefauts=P.defauts;afficher();
     $('par-etat').textContent='Enregistré ✓ · utilisé par toute l\'équipe';
   }catch(err){alert('Enregistrement impossible : '+err.message);etat()}
 }
@@ -1433,7 +1435,7 @@ function initDiag(){
   // Première ouverture : on part du dossier en cours.
   m('dg-rev1').value=fv('income')||'';m('dg-apport').value=fv('deposit')||'';m('dg-duree').value=fv('mainYears')||25;m('dg-autres').value=0;m('dg-charges').value=0;m('dg-rev2').value=0;m('dg-enfants').value=0;
   m('dg-type').value=$('v9operation')?.value==='old'?'ancien':'neuf';
-  m('dg-zone').value=window.ptDefauts?.zone||'A';if(m('dg-taux').value==='')m('dg-taux').value=String(window.ptDefauts?.taux??'');if(m('dg-ass').value==='')m('dg-ass').value=String(window.ptDefauts?.assurance??'');
+  m('dg-zone').value=(window.ptDefauts?.zone==='Abis'?'A':window.ptDefauts?.zone)||'A';if(m('dg-taux').value==='')m('dg-taux').value=String(window.ptDefauts?.taux??'');if(m('dg-ass').value==='')m('dg-ass').value=String(window.ptDefauts?.assurance??'');
   m('dg-rfr').value=fv('v9rfr')||'';m('dg-primo').value=$('v9first')?.value==='no'?'non':'oui';m('dg-etat').value='1';
 }
 function lireDiagBase(){
@@ -1844,11 +1846,11 @@ function bindDiag(){
 // 3. OPTIMISEUR FISCAL (investissement locatif)
 // =====================================================================
 // À l'ouverture, tous les montants sont à zéro ; seuls les paramètres d'évolution, de fiscalité et du prêt ont une valeur de départ.
-const DEF_OF={'of-type':'ancien','of-regime':'auto','of-zone':'A','of-surface':0,'of-annexes':0,'of-prix':0,'of-travaux':0,'of-mobilier':0,'of-agence':0,'of-notpct':'','of-notoff':'non','of-crd':0,'of-apport':0,'of-horizon':15,
+const DEF_OF={'of-type':'ancien','of-regime':'auto','of-zone':'','of-surface':0,'of-annexes':0,'of-prix':0,'of-travaux':0,'of-mobilier':0,'of-agence':0,'of-notpct':'','of-notoff':'non','of-crd':0,'of-apport':0,'of-horizon':15,
   'of-loyer':0,'of-copro':0,'of-tf':0,'of-exotf':'non','of-pno':0,'of-gestion':0,'of-gli':0,'of-vacance':0,'of-index':1,'of-valo':1,'of-delai':0,
   'of-tmi':30,'of-ps':17.2,'of-psm':18.6,'of-rfexist':0,'of-ir':0,'of-duree':20,'of-taux':3.6,'of-ass':0.3,
   'of-parkval':0,'of-parkloyer':0,'of-nvloyer':0,'of-nvapres':0,'of-constr':0};
-function initFiscal(){Object.entries(DEF_OF).forEach(([k,v])=>{const el=m(k);if(el&&el.value==='')el.value=v})}
+function initFiscal(){const D=window.ptDefauts||{};Object.entries({...DEF_OF,'of-zone':D.zone||'A','of-taux':D.taux??DEF_OF['of-taux'],'of-ass':D.assurance??DEF_OF['of-ass']}).forEach(([k,v])=>{const el=m(k);if(el&&el.value==='')el.value=v})}
 function champOF(id,label,u,aide){return `<div class="f"><label for="s${id}">${label}${aide?` <span style="font-weight:400;color:#8a7a70">${aide}</span>`:''}</label><div class="euro" data-u="${u}"><input id="s${id}" data-memo="${id}" inputmode="decimal" value="${esc(m(id).value)}"></div></div>`}
 /** Plafonds de loyer 2026 (€/m²/mois hors charges), avant coefficient de surface. */
 const PLAFONDS_LOYER_2026={
@@ -1862,7 +1864,7 @@ const NOM_NIVEAU={intermediaire:'intermédiaire',social:'social',tres_social:'tr
 const surfaceRetenue=x=>x.surface+Math.min(8,(x.annexes||0)/2);
 /** Coefficient de surface : min(1,2 ; 0,7 + 19/S), arrondi à deux décimales. */
 const coefSurface=S=>S>0?Math.min(1.2,Math.round((0.7+19/S)*100)/100):0;
-function loyerMax(x,niveau){const S=surfaceRetenue(x),pl=PLAFONDS_LOYER_2026[niveau]?.[x.zone];if(!S||!pl)return null;const c=coefSurface(S);return {S,plafond:pl,coef:c,max:Math.round(S*pl*c*100)/100}}
+function loyerMax(x,niveau){const S=surfaceRetenue(x),pl=(window.ptParametres?.plafondsLoyer||PLAFONDS_LOYER_2026)[niveau]?.[x.zone];if(!S||!pl)return null;const c=coefSurface(S);return {S,plafond:pl,coef:c,max:Math.round(S*pl*c*100)/100}}
 const REGIMES_OF=[
   ['auto','Droit commun · le plus favorable','Compare location nue (micro et réel) et LMNP (micro-BIC et réel).'],
   ['nu_micro','Location nue · micro-foncier',''],['nu_reel','Location nue · réel',''],['lmnp_micro','LMNP · micro-BIC',''],['lmnp_reel','LMNP · réel',''],
@@ -2142,7 +2144,7 @@ function docHtml(titreDoc,sections){
   </style></head><body><div id="pt-studio">
   <div class="doc-tete"><div><h1>${esc(titreDoc)}${client?' · '+esc(client):''}</h1><p>Établie le ${esc(date)}${conseiller?' par '+esc(conseiller):''} · Première Terre</p></div><img src="${location.origin}/logo-premiere-terre.png?v=2" alt="Première Terre"></div>
   ${sections.map(([t,h])=>`<div class="doc-section"><h2>${esc(t)}</h2><div class="st-res">${h}</div></div>`).join('')}
-  <div class="doc-pied">Simulation indicative et non contractuelle, établie à partir des informations communiquées et des conditions de marché à la date du document. Elle ne constitue ni une offre de prêt ni un accord de financement : les conditions définitives (taux, assurance, garanties, frais, éligibilité aux prêts aidés) sont fixées par les établissements prêteurs après étude du dossier. Un crédit vous engage et doit être remboursé : vérifiez vos capacités de remboursement avant de vous engager.</div>
+  <div class="doc-pied">${(()=>{const me=window.ptParametres?.mentions||{};const l=[me.raisonSociale,me.orias?'ORIAS n° '+me.orias:'',me.adresse].filter(Boolean).map(esc).join(' · ');return (l?'<b>'+l+'</b><br>':'')+(me.complement?esc(me.complement)+'<br>':'')})()}Simulation indicative et non contractuelle, établie à partir des informations communiquées et des conditions de marché à la date du document. Elle ne constitue ni une offre de prêt ni un accord de financement : les conditions définitives (taux, assurance, garanties, frais, éligibilité aux prêts aidés) sont fixées par les établissements prêteurs après étude du dossier. Un crédit vous engage et doit être remboursé : vérifiez vos capacités de remboursement avant de vous engager.</div>
   </div></body></html>`;
   return html;
 }

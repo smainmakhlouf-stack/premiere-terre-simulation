@@ -44,7 +44,19 @@ export const PARAMETRES_DEFAUT = {
   },
   garanties: Object.fromEntries(GARANTIES.map((g) => [g.cle, g.defaut])) as Record<string, number>,
   seuils: { endettement: 35, resteAdulte: 800, resteEnfant: 300, apportMin: 10 },
+  /** Valeurs proposées sur les écrans (toujours modifiables par le vendeur). */
+  defauts: { taux: 3.6, assurance: 0.3, zone: "A" },
+  /** Plafonds de loyer 2026, €/m²/mois hors charges, avant coefficient de surface. */
+  plafondsLoyer: {
+    intermediaire: { Abis: 19.71, A: 14.64, B1: 11.8, B2: 10.26, C: 10.26 },
+    social: { Abis: 13.78, A: 10.6, B1: 9.13, B2: 8.76, C: 8.13 },
+    tres_social: { Abis: 10.74, A: 8.27, B1: 7.11, B2: 6.81, C: 6.32 },
+  },
+  /** Mentions imprimées en pied des documents client. */
+  mentions: { raisonSociale: "", orias: "", adresse: "", complement: "" },
 }
+
+export const ZONES = ["Abis", "A", "B1", "B2", "C"] as const
 
 export type Parametres = typeof PARAMETRES_DEFAUT
 
@@ -53,6 +65,7 @@ const nombre = (v: unknown, defaut: number, max = 1e7) => {
   return Number.isFinite(n) && n >= 0 && n <= max ? Math.round(n * 1000) / 1000 : defaut
 }
 const objet = (v: unknown) => (v && typeof v === "object" ? (v as Record<string, unknown>) : {})
+const texte = (v: unknown, max = 300) => (typeof v === "string" ? v.trim().slice(0, max) : "")
 
 /** Valide et complète des paramètres reçus (ou stockés) ; tout champ invalide reprend la valeur par défaut. */
 export function normaliser(brut: unknown): Parametres {
@@ -75,7 +88,24 @@ export function normaliser(brut: unknown): Parametres {
     if (["hyp", "rank2", "rank3"].includes(cle)) return f.garantieHypotheque
     return ["legal", "pledge", "casden", "simple"].includes(cle) ? undefined : f.garantieCaution
   }
+  const df = objet(b.defauts), pl = objet(b.plafondsLoyer), me = objet(b.mentions)
+  const plafonds = Object.fromEntries(Object.entries(D.plafondsLoyer).map(([niveau, zones]) => {
+    const n = objet(pl[niveau])
+    return [niveau, Object.fromEntries(Object.entries(zones).map(([z, v]) => [z, nombre(n[z], v, 100)]))]
+  })) as Parametres["plafondsLoyer"]
   return {
+    defauts: {
+      taux: nombre(df.taux, D.defauts.taux, 20),
+      assurance: nombre(df.assurance, D.defauts.assurance, 5),
+      zone: ZONES.includes(df.zone as (typeof ZONES)[number]) ? (df.zone as string) : D.defauts.zone,
+    },
+    plafondsLoyer: plafonds,
+    mentions: {
+      raisonSociale: texte(me.raisonSociale, 120),
+      orias: texte(me.orias, 40),
+      adresse: texte(me.adresse, 200),
+      complement: texte(me.complement, 600),
+    },
     taux: taux.length ? taux : D.taux,
     assurance: {
       tranches: D.assurance.tranches.map((d, i) => ({ jusqua: d.jusqua, taux: nombre(objet(tr[i]).taux, d.taux, 10) })),
