@@ -293,7 +293,7 @@ function messageSms(c){
   const memeNom=!c.nom2||c.nom2.toLowerCase()===(c.nom||'').toLowerCase();
   const nom=c.civilite?(memeNom?c.nom:c.nom+' et '+c.nom2):nomClient(c);
   let t=modele;if(!c.secteur)t=t.replace(/\s*sur le secteur (de )?\{secteur\}/g,'');
-  const v={civilite:c.civilite||'',nom,secteur:c.secteur||'',conseiller:profil?.name||'',telephone:telFr(profil?.telephone),societe:S.societe||'Première Terre'};
+  const v={civilite:c.civilite||'',nom,secteur:c.secteur||'',conseiller:profil?.name||'',telephone:telFr(profil?.telephone),societe:S.societe||'Agence Première Terre Immobilier'};
   return t.replace(/\{(\w+)\}/g,(x,k)=>k in v?v[k]:x).replace(/ {2,}/g,' ').replace(/ ,/g,',').trim();
 }
 async function panneauSms(c){

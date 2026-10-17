@@ -55,7 +55,7 @@ export const PARAMETRES_DEFAUT = {
   /** Mentions imprimées en pied des documents client. */
   mentions: { raisonSociale: "", orias: "", adresse: "", complement: "" },
   sms: {
-    societe: "Première Terre",
+    societe: "Agence Première Terre Immobilier",
     modele: "Bonjour {civilite} {nom}, vous avez fait une demande de projet immobilier sur le secteur {secteur}. Nous avons essayé de vous joindre sans succès. Votre conseiller {conseiller} reste à votre disposition au {telephone}. {societe}",
   },
 }
