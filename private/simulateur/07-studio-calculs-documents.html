@@ -667,10 +667,10 @@ function ficheSolvabilite(d,c,ctx){
 function simulationDoc(d,c,ctx){
   const z=c.ptz||{montant:0},fraisG=c.fraisGarantie+c.courtage;
   const ech=echeancier(c);
-  return `<div class="hero"><div><small>Budget d'achat maximum · ${d.type==='neuf'?'neuf':'ancien'}</small><strong>${eur(c.budget)}</strong><span>sur ${d.ans} ans à ${pc(c.taux,2)} · mensualité maximale ${eur(c.mensualite)} assurance comprise</span></div></div>
+  return `<div class="hero"><div><small>Budget d'achat maximum · ${d.type==='neuf'?'neuf':'ancien'}</small><strong>${eur(c.budget)}</strong><span>sur ${d.ans} ans à ${pc(c.taux,2)} · mensualité maximale ${eur(c.mensualite)} assurance comprise${d.redevance?` · + redevance BRS ${eur(d.redevance)} / mois`:''}</span></div></div>
   <div class="card"><h2>Plan de financement</h2><table class="prets"><tr><th>Prêt</th><th>Montant</th><th>Taux</th><th>Durée</th><th>Coût (intérêts + assurance)</th></tr>
   ${ech.prets.map(p=>`<tr><td>${esc(p.nom)}</td><td>${eur(p.montant)}</td><td>${pc(p.taux,2)}</td><td>${p.mois} mois</td><td>${eur(p.lignes.reduce((a,l)=>a+l.int+l.ins,0))}</td></tr>`).join('')}
-  <tr><td><b>Apport</b></td><td><b>${eur(d.apport)}</b></td><td></td><td></td><td></td></tr></table></div>
+  <tr><td><b>Apport</b></td><td><b>${eur(d.apport)}</b></td><td></td><td></td><td></td></tr></table>${d.redevance?`<p class="sub" style="margin:10px 0 0">Programme en BRS : redevance foncière de <b>${eur(d.redevance)} par mois</b> (${String(d.brsSurf).replace('.',',')} m² × ${String(d.brsPrix).replace('.',',')} €/m²), soit <b>${eur(d.redevance*12*d.ans)}</b> sur ${d.ans} ans. Elle s'ajoute à la mensualité du crédit (total ${eur(c.mensualite+d.redevance)} / mois) et est comptée dans le taux d'endettement.</p>`:''}</div>
   <div class="tiles"><div class="tile"><small>Frais de notaire</small><b>${c.offerts?'offerts':eur(c.notaire)}</b></div><div class="tile"><small>Garantie et dossier</small><b>${eur(fraisG+c.p.frais.dossier)}</b></div><div class="tile"><small>Coût total des crédits</small><b>${eur(ech.prets.reduce((a,p)=>a+p.lignes.reduce((s,l)=>s+l.int+l.ins,0),0))}</b></div></div>`;
 }
 function tableauRemb(c,parPret){
@@ -684,7 +684,7 @@ function tableauRemb(c,parPret){
 function pageGarde(d,c,ctx){
   const conseiller=(window.ptUtilisateur&&window.ptUtilisateur.nom)||'';
   return `<div style="text-align:center;padding:60px 20px"><img src="${location.origin}/logo-premiere-terre.png?v=2" alt="Première Terre" style="height:110px"><div style="font:34px Georgia,serif;color:#2b2320;margin:30px 0 8px">Étude de financement</div><div style="font-size:18px;color:#a34d31">${esc(ctx.nom||'')}</div>
-  <div style="margin:40px auto 0;max-width:420px;border:1px solid #eaded7;border-radius:14px;padding:18px;text-align:left;font-size:14px;line-height:1.9">Projet : <b>${d.type==='neuf'?'logement neuf':'logement ancien'}</b><br>Budget d'achat maximum : <b>${eur(c.budget)}</b><br>Mensualité : <b>${eur(c.mensualite)}</b> sur <b>${d.ans} ans</b><br>${conseiller?'Votre conseiller : <b>'+esc(conseiller)+'</b><br>':''}Date : <b>${new Date().toLocaleDateString('fr-FR')}</b></div></div>`;
+  <div style="margin:40px auto 0;max-width:420px;border:1px solid #eaded7;border-radius:14px;padding:18px;text-align:left;font-size:14px;line-height:1.9">Projet : <b>${d.type==='neuf'?'logement neuf':'logement ancien'}</b><br>Budget d'achat maximum : <b>${eur(c.budget)}</b><br>Mensualité : <b>${eur(c.mensualite)}</b> sur <b>${d.ans} ans</b><br>${d.redevance?'Redevance BRS : <b>'+eur(d.redevance)+'</b> / mois<br>':''}${conseiller?'Votre conseiller : <b>'+esc(conseiller)+'</b><br>':''}Date : <b>${new Date().toLocaleDateString('fr-FR')}</b></div></div>`;
 }
 const SORTIES=[['garde','Page de garde',false],['solv','Fiche de solvabilité',true],['simu','Simulation de financement',true],['graph','Présentation graphique',true],['scen','Comparaison des scénarios',true],['remb','Tableau de remboursement (tous les prêts)',false],['echeanciers','Échéanciers par prêt',false]];
 function sectionsSorties(choix,d,c,ctx){
@@ -783,7 +783,7 @@ function resDiag(){
     fixerPrincipal(c.taux,d.ans,Math.round(c.ins*1200*1000)/1000);
     if(c.ptz.montant&&typeof loans!=='undefined'&&!loans.some(l=>l.type==='ptz'))addLoan({name:'PTZ · tranche '+c.ptz.tranche+' · zone '+d.zone,type:'ptz',amount:c.ptz.montant,rate:0,years:c.ptz.duree,delay:c.ptz.differe*12,insurance:Math.round(c.ins*1200*1000)/1000});
     if(typeof loans!=='undefined'){for(let i=loans.length-1;i>=0;i--)if(loans[i].source==='budget')loans.splice(i,1);(c.ext||[]).filter(x=>!x.existant).forEach(x=>{const rel=/relais/i.test(x.nom);addLoan({name:x.nom,type:/Action/.test(x.nom)?'action':'external',amount:x.montant,rate:x.taux||0,years:rel?Math.max(1,Math.ceil(x.mois/12)):Math.round(x.mois/12),mois:rel?x.mois:undefined,delay:rel?Math.max(0,x.mois-1):0,insurance:rel?0:Math.round(c.ins*1200*1000)/1000,lissable:rel?!x.horsLissage:true,relais:rel||undefined,source:'budget'})})}
-    if(typeof existing!=='undefined'){existing.splice(0);(d.credits||[]).forEach((x,i)=>existing.push({id:9000+i,name:NATURES[x.nature]||'Crédit',payment:+x.mens||0,months:+x.mois||0,balance:+x.crd||0,penalty:+x.ind||0,mode:x.mode==='repay'?'refinance':x.mode==='smooth'?'smooth':'keep'}))}
+    if(typeof existing!=='undefined'){existing.splice(0);(d.credits||[]).forEach((x,i)=>existing.push({id:9000+i,name:NATURES[x.nature]||'Crédit',payment:+x.mens||0,months:+x.mois||0,balance:+x.crd||0,penalty:+x.ind||0,mode:x.mode==='repay'?'refinance':x.mode==='smooth'?'smooth':'keep'}));if(d.redevance)existing.push({id:8990,name:'Redevance foncière BRS',payment:d.redevance,months:d.ans*12,balance:0,penalty:0,mode:'keep'});if(d.pensVersee)existing.push({id:8991,name:'Pension alimentaire versée',payment:d.pensVersee,months:d.ans*12,balance:0,penalty:0,mode:'keep'})}
     fraisAuto();ouvrir('plan')};
 }
 function bindDiag(){
