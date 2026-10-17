@@ -1135,7 +1135,7 @@ window.ptParametresPrets=charger().then(()=>{if(!courant?.simId)appliquer(0)}).c
 <div id="st-tip"></div>
 <!-- Champs mémorisés avec le dossier (diagnostic et optimiseur fiscal) -->
 <div hidden id="st-memo">
-<input id="dg-rev1"><input id="dg-rev2"><input id="dg-autres"><input id="dg-charges"><input id="dg-apport"><input id="dg-duree"><input id="dg-enfants"><input id="dg-type"><input id="dg-endet"><input id="dg-loyer"><input id="dg-taux"><input id="dg-ass"><input id="dg-zone"><input id="dg-rfr"><input id="dg-primo"><input id="dg-occ"><input id="dg-notoff"><input id="dg-notpct"><input id="dg-gar"><input id="dg-scen"><input id="dg-sitfam"><input id="dg-credits"><input id="pl-notoff"><input id="dg-rf"><input id="dg-pensr"><input id="dg-pensv"><input id="dg-credimmo"><input id="dg-al"><input id="dg-almt"><input id="dg-altx"><input id="dg-alans"><input id="dg-ptztype"><input id="dg-etat">
+<input id="dg-rev1"><input id="dg-rev2"><input id="dg-autres"><input id="dg-charges"><input id="dg-apport"><input id="dg-duree"><input id="dg-enfants"><input id="dg-type"><input id="dg-endet"><input id="dg-loyer"><input id="dg-taux"><input id="dg-ass"><input id="dg-zone"><input id="dg-rfr"><input id="dg-primo"><input id="dg-occ"><input id="dg-notoff"><input id="dg-notpct"><input id="dg-gar"><input id="dg-pc"><input id="dg-pcmt"><input id="dg-pctx"><input id="dg-pcans"><input id="dg-el"><input id="dg-pelint"><input id="dg-peltx"><input id="dg-pelans"><input id="dg-pelmt"><input id="dg-celint"><input id="dg-celtx"><input id="dg-celans"><input id="dg-celmt"><input id="dg-rl"><input id="dg-rlvente"><input id="dg-rlcrd"><input id="dg-rlquot"><input id="dg-rlmois"><input id="dg-rltx"><input id="dg-rltype"><input id="dg-rllisse"><input id="dg-naiss1"><input id="dg-naiss2"><input id="dg-scen"><input id="dg-sitfam"><input id="dg-credits"><input id="pl-notoff"><input id="dg-rf"><input id="dg-pensr"><input id="dg-pensv"><input id="dg-credimmo"><input id="dg-al"><input id="dg-almt"><input id="dg-altx"><input id="dg-alans"><input id="dg-ptztype"><input id="dg-etat">
 <input id="of-prix"><input id="of-type"><input id="of-regime"><input id="of-zone"><input id="of-surface"><input id="of-agence"><input id="of-notpct"><input id="of-notoff"><input id="of-crd"><input id="of-horizon"><input id="of-exotf"><input id="of-gli"><input id="of-index"><input id="of-valo"><input id="of-delai"><input id="of-rfexist"><input id="of-ir"><input id="of-annexes"><input id="of-psm"><input id="of-parkval"><input id="of-parkloyer"><input id="of-nvloyer"><input id="of-nvapres"><input id="of-constr"><input id="of-travaux"><input id="of-apport"><input id="of-loyer"><input id="of-tf"><input id="of-copro"><input id="of-pno"><input id="of-gestion"><input id="of-vacance"><input id="of-tmi"><input id="of-ps"><input id="of-mobilier"><input id="of-duree"><input id="of-taux"><input id="of-ass">
 </div>
 <script>
@@ -1456,8 +1456,31 @@ function lireCredits(){
   return l;
 }
 const NATURES={conso:'Crédit conso / auto',immo:'Crédit immobilier',revolving:'Crédit renouvelable',autre:'Autre crédit'};
+/** Droits à prêt d'épargne logement : intérêts du prêt ≤ 2,5 × intérêts acquis, dans la limite du plafond. */
+function droitsEpargne(interets,taux,ans,plafond){if(!interets)return 0;const n=Math.round(ans*12),r=taux/1200,f=r?r/(1-Math.pow(1+r,-n)):1/n,k=n*f-1;return Math.min(plafond,k>0?2.5*interets/k:plafond)}
+function autresPrets(d){
+  const g=id=>num(m(id).value),t=id=>m(id).value===''?null:num(String(m(id).value).replace(',','.')),l=[];
+  if(m('dg-pc').value==='oui'&&g('dg-pcmt'))l.push({nom:'Prêt complémentaire',montant:g('dg-pcmt'),taux:t('dg-pctx')??d.taux??3.6,ans:g('dg-pcans')||d.ans});
+  if(m('dg-el').value==='oui'){
+    const pelT=t('dg-peltx')??3.2,pelA=g('dg-pelans')||15,celT=t('dg-celtx')??2.25,celA=g('dg-celans')||15;
+    let pel=g('dg-pelmt')||droitsEpargne(g('dg-pelint'),pelT,pelA,92000),cel=g('dg-celmt')||droitsEpargne(g('dg-celint'),celT,celA,23000);if(pel+cel>92000)cel=Math.max(0,92000-pel);
+    if(pel)l.push({nom:'Prêt PEL',montant:Math.round(pel),taux:pelT,ans:pelA});if(cel)l.push({nom:'Prêt CEL',montant:Math.round(cel),taux:celT,ans:celA});
+  }
+  if(m('dg-rl').value==='oui'){
+    const mt=Math.max(0,g('dg-rlvente')*(t('dg-rlquot')??70)/100-g('dg-rlcrd'));
+    if(mt){const tx=t('dg-rltx')??d.taux??3.6,mois=g('dg-rlmois')||12,totale=m('dg-rltype').value==='totale';
+      l.push({nom:'Prêt relais',montant:Math.round(mt),taux:tx,mois,mens:totale?0:mt*tx/1200,final:totale?mt*tx/1200*mois:0,horsLissage:m('dg-rllisse').value!=='oui'})}
+  }
+  return l;
+}
+/** Âge à partir d'une date de naissance (aaaa-mm-jj). */
+const ageDe=v=>{if(!v)return null;const n=new Date(v);if(isNaN(n))return null;const a=new Date();let x=a.getFullYear()-n.getFullYear();if(a.getMonth()<n.getMonth()||(a.getMonth()===n.getMonth()&&a.getDate()<n.getDate()))x--;return x>=16&&x<=100?x:null};
+const tauxAgeAss=a=>{const tr=P().assurance.tranches;return (tr.find(x=>a<=x.jusqua)||tr[tr.length-1]).taux};
 function lireDiag(){
   const d=lireDiagBase(),cr=lireCredits();
+  d.prets=[...d.prets,...autresPrets(d)];
+  const a1=ageDe(m('dg-naiss1').value),a2=ageDe(m('dg-naiss2').value);
+  if(a1!=null||a2!=null){const t1=a1!=null?tauxAgeAss(a1):(d.ass??assDefaut()),t2=a2!=null?tauxAgeAss(a2):(d.ass??assDefaut());d.ass=d.adultes>1?(t1+t2)/2:t1;d.assAges={a1,a2,t1,t2}}
   const garde=cr.filter(c=>c.mode==='keep'),lisses=cr.filter(c=>c.mode==='smooth'&&c.mens>0&&c.mois>0),soldes=cr.filter(c=>c.mode==='repay');
   d.credits=cr;d.creditsConso=null;d.creditsImmo=null;
   d.charges=d.pensVersee+garde.reduce((a,c)=>a+(+c.mens||0),0);
@@ -1570,18 +1593,34 @@ function formDiag(){
   <div class="f"><label for="sd-ptztype">Logement</label><select id="sd-ptztype" data-memo="dg-ptztype"><option value="coll" ${d.ptzType!=='indiv'?'selected':''}>Appartement</option><option value="indiv" ${d.ptzType==='indiv'?'selected':''}>Maison</option></select></div></div>
   <div class="hint" style="margin:-6px 0 10px">Occupants : toutes les personnes qui vivront dans le logement (fixe le plafond du PTZ). Vide = emprunteurs + enfants.</div>
   <div class="f"><label>Primo-accédant</label><div class="seg" data-dseg="dg-primo"><button type="button" data-v="oui" class="${d.primo?'on':''}">Oui</button><button type="button" data-v="non" class="${d.primo?'':'on'}">Non</button></div></div>
-  <button type="button" id="sd-detail" style="width:100%;margin:2px 0 12px;background:#fff;border:1px solid #d9c5b9;color:#8e3f29;border-radius:9px;padding:9px;cursor:pointer;font:600 12.5px Inter,Arial,sans-serif">Diagnostic détaillé : PTZ, Action Logement, prêt complémentaire →</button></div>
+  </div>
   <h3>Garantie et autres prêts</h3>
   <div class="f"><label for="sd-gar">Garantie <span style="font-weight:400;color:#8a7a70">appliquée à tous les prêts</span></label><select id="sd-gar" data-memo="dg-gar">${[{cle:'none',nom:'Aucune'},...((window.ptCatalogueGaranties&&window.ptCatalogueGaranties.length)?window.ptCatalogueGaranties:[{cle:'cl_classic',nom:'Crédit Logement · Classic'}])].map(x=>`<option value="${x.cle}" ${(d.garantie||'cl_classic')===x.cle?'selected':''}>${esc(x.nom)}${window.ptTauxGarantie(x.cle)!=null&&x.cle!=='none'?' · '+String(window.ptTauxGarantie(x.cle)).replace('.',',')+' %':''}</option>`).join('')}</select><div class="hint" id="sd-garmt" style="margin:4px 0 0"></div></div>
   ${d.type==='neuf'?`<div class="f"><label>Prêt Action Logement <span style="font-weight:400;color:#8a7a70">neuf uniquement</span></label><div class="seg" data-dseg="dg-al"><button type="button" data-v="oui" class="${d.prets.some(x=>x.neufSeul)?'on':''}">Oui</button><button type="button" data-v="non" class="${d.prets.some(x=>x.neufSeul)?'':'on'}">Non</button></div></div>
   ${d.prets.some(x=>x.neufSeul)?`<div class="duo"><div class="f"><label for="sd-almt">Montant</label><div class="euro" data-u="€"><input id="sd-almt" data-memo="dg-almt" inputmode="numeric" placeholder="30000" value="${v('dg-almt')}"></div></div><div class="f"><label for="sd-altx">Taux</label><div class="euro" data-u="%"><input id="sd-altx" data-memo="dg-altx" inputmode="decimal" placeholder="1" value="${v('dg-altx')}"></div></div></div>
   <div class="f"><label for="sd-alans">Durée Action Logement</label><div class="euro" data-u="ans"><input id="sd-alans" data-memo="dg-alans" type="number" min="1" max="25" placeholder="${Math.min(25,d.ans)}" value="${v('dg-alans')}"></div><div class="hint" style="margin:4px 0 0">30 000 € maximum à 1 %, sous conditions (salarié du privé, entreprise de 10 salariés et plus, ressources). Lissé avec le prêt bancaire.</div></div>`:''}`:''}
+  <div class="f"><label>Prêt complémentaire</label><div class="seg" data-dseg="dg-pc"><button type="button" data-v="oui" class="${m('dg-pc').value==='oui'?'on':''}">Oui</button><button type="button" data-v="non" class="${m('dg-pc').value==='oui'?'':'on'}">Non</button></div></div>
+  ${m('dg-pc').value==='oui'?`<div class="duo"><div class="f"><label for="sd-pcmt">Montant</label><div class="euro" data-u="€"><input id="sd-pcmt" data-memo="dg-pcmt" inputmode="numeric" value="${v('dg-pcmt')}"></div></div><div class="f"><label for="sd-pctx">Taux</label><div class="euro" data-u="%"><input id="sd-pctx" data-memo="dg-pctx" inputmode="decimal" placeholder="${String(d.taux??'').replace('.',',')}" value="${v('dg-pctx')}"></div></div></div>
+  <div class="f"><label for="sd-pcans">Durée</label><div class="euro" data-u="ans"><input id="sd-pcans" data-memo="dg-pcans" type="number" min="1" max="30" placeholder="${d.ans}" value="${v('dg-pcans')}"></div></div>`:''}
+  <div class="f"><label>PEL / CEL</label><div class="seg" data-dseg="dg-el"><button type="button" data-v="oui" class="${m('dg-el').value==='oui'?'on':''}">Oui</button><button type="button" data-v="non" class="${m('dg-el').value==='oui'?'':'on'}">Non</button></div></div>
+  ${m('dg-el').value==='oui'?`<div class="duo"><div class="f"><label for="sd-pelint">Intérêts acquis PEL</label><div class="euro" data-u="€"><input id="sd-pelint" data-memo="dg-pelint" inputmode="numeric" value="${v('dg-pelint')}"></div></div><div class="f"><label for="sd-pelmt">Montant PEL</label><div class="euro" data-u="€"><input id="sd-pelmt" data-memo="dg-pelmt" inputmode="numeric" placeholder="droits" value="${v('dg-pelmt')}"></div></div></div>
+  <div class="duo"><div class="f"><label for="sd-peltx">Taux PEL</label><div class="euro" data-u="%"><input id="sd-peltx" data-memo="dg-peltx" inputmode="decimal" placeholder="3,2" value="${v('dg-peltx')}"></div></div><div class="f"><label for="sd-pelans">Durée PEL</label><div class="euro" data-u="ans"><input id="sd-pelans" data-memo="dg-pelans" type="number" min="2" max="15" placeholder="15" value="${v('dg-pelans')}"></div></div></div>
+  <div class="duo"><div class="f"><label for="sd-celint">Intérêts acquis CEL</label><div class="euro" data-u="€"><input id="sd-celint" data-memo="dg-celint" inputmode="numeric" value="${v('dg-celint')}"></div></div><div class="f"><label for="sd-celmt">Montant CEL</label><div class="euro" data-u="€"><input id="sd-celmt" data-memo="dg-celmt" inputmode="numeric" placeholder="droits" value="${v('dg-celmt')}"></div></div></div>
+  <div class="duo"><div class="f"><label for="sd-celtx">Taux CEL</label><div class="euro" data-u="%"><input id="sd-celtx" data-memo="dg-celtx" inputmode="decimal" placeholder="2,25" value="${v('dg-celtx')}"></div></div><div class="f"><label for="sd-celans">Durée CEL</label><div class="euro" data-u="ans"><input id="sd-celans" data-memo="dg-celans" type="number" min="2" max="15" placeholder="15" value="${v('dg-celans')}"></div></div></div>
+  <div class="hint" id="sd-elinfo" style="margin:-4px 0 12px">Droits : intérêts du prêt ≤ 2,5 × intérêts acquis ; plafonds 92 000 € (PEL) et 23 000 € (CEL). Montant vide = droits.</div>`:''}
+  <div class="f"><label>Prêt relais</label><div class="seg" data-dseg="dg-rl"><button type="button" data-v="oui" class="${m('dg-rl').value==='oui'?'on':''}">Oui</button><button type="button" data-v="non" class="${m('dg-rl').value==='oui'?'':'on'}">Non</button></div></div>
+  ${m('dg-rl').value==='oui'?`<div class="duo"><div class="f"><label for="sd-rlvente">Prix de revente</label><div class="euro" data-u="€"><input id="sd-rlvente" data-memo="dg-rlvente" inputmode="numeric" value="${v('dg-rlvente')}"></div></div><div class="f"><label for="sd-rlcrd">Capital restant dû</label><div class="euro" data-u="€"><input id="sd-rlcrd" data-memo="dg-rlcrd" inputmode="numeric" value="${v('dg-rlcrd')}"></div></div></div>
+  <div class="duo"><div class="f"><label for="sd-rlquot">Quotité</label><div class="euro" data-u="%"><input id="sd-rlquot" data-memo="dg-rlquot" inputmode="decimal" placeholder="70" value="${v('dg-rlquot')}"></div></div><div class="f"><label for="sd-rlmois">Durée</label><div class="euro" data-u="mois"><input id="sd-rlmois" data-memo="dg-rlmois" type="number" min="1" max="36" placeholder="12" value="${v('dg-rlmois')}" style="padding-right:44px"></div></div></div>
+  <div class="duo"><div class="f"><label for="sd-rltx">Taux relais</label><div class="euro" data-u="%"><input id="sd-rltx" data-memo="dg-rltx" inputmode="decimal" placeholder="${String(d.taux??'').replace('.',',')}" value="${v('dg-rltx')}"></div></div><div class="f"><label for="sd-rltype">Intérêts</label><select id="sd-rltype" data-memo="dg-rltype"><option value="partielle" ${m('dg-rltype').value!=='totale'?'selected':''}>Chaque mois</option><option value="totale" ${m('dg-rltype').value==='totale'?'selected':''}>À la vente</option></select></div></div>
+  <div class="f"><label>Lisser les intérêts du relais</label><div class="seg" data-dseg="dg-rllisse"><button type="button" data-v="oui" class="${m('dg-rllisse').value==='oui'?'on':''}">Oui</button><button type="button" data-v="non" class="${m('dg-rllisse').value==='oui'?'':'on'}">Non</button></div></div>
+  <div class="hint" id="sd-rlinfo" style="margin:-4px 0 12px"></div>`:''}
   <div class="f"><label for="sd-apport">Apport disponible</label><div class="euro" data-u="€"><input id="sd-apport" data-memo="dg-apport" inputmode="numeric" value="${v('dg-apport')}"></div></div>
   ${champDuree('sd-duree','Durée',v('dg-duree'),'')}
   <div class="f"><label for="sd-endet-n">Taux d'endettement visé</label><div class="duree"><input id="sd-endet" type="range" min="20" max="45" step="0.5" value="${d.endet??P().seuils.endettement}" aria-label="Taux d'endettement visé"><div class="euro" data-u="%"><input id="sd-endet-n" type="number" min="20" max="45" step="0.5" inputmode="decimal" value="${d.endet??P().seuils.endettement}" style="padding-right:30px"></div></div><div class="hint">Repère de l'équipe : ${pc(P().seuils.endettement,0)}. Faites glisser pour ajuster le budget. ${d.endet!=null?'<button type="button" class="lien" id="sd-endet-reset">Revenir au repère</button>':''}</div></div>
   <div class="duo"><div class="f"><label for="sd-taux">Taux</label><div class="euro" data-u="%"><input id="sd-taux" data-memo="dg-taux" inputmode="decimal" placeholder="${String(tauxDuree(d.ans)).replace('.',',')}" value="${v('dg-taux')}"></div></div>
   <div class="f"><label for="sd-ass">Assurance <span style="font-weight:400;color:#8a7a70">/ emprunteur</span></label><div class="euro" data-u="%"><input id="sd-ass" data-memo="dg-ass" inputmode="decimal" placeholder="${String(assDefaut()).replace('.',',')}" value="${v('dg-ass')}"></div></div></div>
-  <div class="hint" style="margin-top:-6px;margin-bottom:10px">Vides : valeurs de l'équipe (taux de la grille pour la durée choisie). Saisissez-les pour une offre précise.</div>
+  <div class="duo"><div class="f"><label for="sd-naiss1">Naissance emprunteur</label><input id="sd-naiss1" data-memo="dg-naiss1" type="date" value="${v('dg-naiss1')}"></div><div class="f"><label for="sd-naiss2">Naissance co-emprunteur</label><input id="sd-naiss2" data-memo="dg-naiss2" type="date" value="${v('dg-naiss2')}"></div></div>
+  <div class="hint" id="sd-assinfo" style="margin-top:-6px;margin-bottom:10px">Dates de naissance : l'assurance suit le barème par âge de l'équipe (Paramètres). Sans date, le taux saisi s'applique.</div>
   <div class="hint">Frais et seuils : paramètres de l'équipe. Sans RFR, il est estimé à 90 % des revenus annuels.</div>`;
 }
 /** Évolution des remboursements (prêt lissé + PTZ) avec la barre de mensualité déplaçable, et l'enveloppe par durée. */
@@ -1852,6 +1891,9 @@ function resDiag(){
   <p class="note">Estimation indicative : taux ${pc(c.taux,2)}, assurance ${pc(d.ass==null?assDefaut():d.ass,2)} par emprunteur, frais et seuils de l'équipe, barème PTZ (${d.ptzType==='indiv'?'maison individuelle':'logement collectif'}, ${d.occupants||d.adultes+d.enfants} occupant${(d.occupants||d.adultes+d.enfants)>1?'s':''}). Avec un PTZ, le prêt bancaire est lissé : la mensualité totale reste au niveau maximum pendant toute la durée. Elle ne vaut pas accord de financement.</p>`;
   lierRemb(d,$('st-res'));
   lierScenarios(d,c);
+  const ai=$('sd-assinfo');if(ai&&d.assAges){const x=d.assAges;ai.innerHTML=`Assurance selon l'âge : ${x.a1!=null?`<b>${pc(x.t1,2)}</b> (${x.a1} ans)`:''}${d.adultes>1&&x.a2!=null?` et <b>${pc(x.t2,2)}</b> (${x.a2} ans)`:''} · barème de l'équipe.`}
+  const ri=$('sd-rlinfo');if(ri){const rl=(c.ext||[]).find(x=>/relais/i.test(x.nom));ri.innerHTML=rl?`Relais : <b>${eur(rl.montant)}</b> (quotité de la revente − capital restant dû), intérêts ${rl.mens?eur(rl.mens)+' / mois':'payés à la vente'}.`:'Indiquez le prix de revente et le capital restant dû.'}
+  const ei=$('sd-elinfo');if(ei){const el=(c.ext||[]).filter(x=>/PEL|CEL/.test(x.nom));if(el.length)ei.innerHTML=el.map(x=>`${x.nom} : <b>${eur(x.montant)}</b> à ${pc(x.taux,2)} sur ${x.ans} ans`).join(' · ')+'. Montant vide = droits calculés.'}
   const gm=$('sd-garmt');if(gm)gm.innerHTML=c.garPct?`Soit <b>${eur(c.fraisGarantie)}</b> (${pc(c.garPct*100,2)} de ${eur(c.pret+(c.ptz.montant||0)+c.totExt)} empruntés), compté dans les frais du projet.`:'Aucun frais de garantie.';
   const nm=$('sd-notmt');if(nm)nm.innerHTML=c.offerts?`<b>${eur(c.notaireOffert)}</b> offerts par le promoteur`:`Soit <b>${eur(c.notaire)}</b> sur un bien à ${eur(c.budget)}. Vide = taux de l'équipe.`;
   $('sd-solv').onclick=()=>presenterDoc('Fiche de solvabilité',[['Fiche de solvabilité',ficheSolvabilite(d,c,ctxRapide(d))]],ctxRapide(d).nom);
@@ -1860,6 +1902,7 @@ function resDiag(){
     poser('v9operation',d.type==='neuf'?'new':'old');poser('threshold',c.seuil);poser('price',Math.floor(c.budget/1000)*1000);poser('deposit',d.apport);poser('income',d.revenus);
     fixerPrincipal(c.taux,d.ans,Math.round(c.ins*1200*1000)/1000);
     if(c.ptz.montant&&typeof loans!=='undefined'&&!loans.some(l=>l.type==='ptz'))addLoan({name:'PTZ · tranche '+c.ptz.tranche+' · zone '+d.zone,type:'ptz',amount:c.ptz.montant,rate:0,years:c.ptz.duree,delay:c.ptz.differe*12,insurance:Math.round(c.ins*1200*1000)/1000});
+    if(typeof loans!=='undefined'){for(let i=loans.length-1;i>=0;i--)if(loans[i].source==='budget')loans.splice(i,1);(c.ext||[]).filter(x=>!x.existant).forEach(x=>{const rel=/relais/i.test(x.nom);addLoan({name:x.nom,type:/Action/.test(x.nom)?'action':'external',amount:x.montant,rate:x.taux||0,years:rel?Math.max(1,Math.ceil(x.mois/12)):Math.round(x.mois/12),mois:rel?x.mois:undefined,delay:rel?Math.max(0,x.mois-1):0,insurance:rel?0:Math.round(c.ins*1200*1000)/1000,lissable:rel?!x.horsLissage:true,relais:rel||undefined,source:'budget'})})}
     if(typeof existing!=='undefined'){existing.splice(0);(d.credits||[]).forEach((x,i)=>existing.push({id:9000+i,name:NATURES[x.nature]||'Crédit',payment:+x.mens||0,months:+x.mois||0,balance:+x.crd||0,penalty:+x.ind||0,mode:x.mode==='repay'?'refinance':x.mode==='smooth'?'smooth':'keep'}))}
     fraisAuto();ouvrir('plan')};
 }
@@ -1867,7 +1910,7 @@ function bindDiag(){
   const f=$('st-form');
   lierCredits();
   $('sd-detail')?.addEventListener('click',versDiagDetaille);
-  f.querySelectorAll('[data-memo]').forEach(i=>i.addEventListener('input',()=>{m(i.dataset.memo).value=i.id==='sd-taux'||i.id==='sd-ass'||i.id==='sd-notpct'||i.id==='sd-altx'?i.value.replace(',','.').trim():i.value;resDiag()}));
+  f.querySelectorAll('[data-memo]').forEach(i=>i.addEventListener('input',()=>{m(i.dataset.memo).value=['sd-taux','sd-ass','sd-notpct','sd-altx','sd-pctx','sd-peltx','sd-celtx','sd-rltx','sd-rlquot'].includes(i.id)?i.value.replace(',','.').trim():i.value;resDiag()}));
   lierDuree('sd-duree',a=>{m('dg-duree').value=a;$('sd-taux').placeholder=String(tauxDuree(a)).replace('.',',');resDiag()});
   // Curseur du taux d'endettement : ajuste le budget en direct.
   const er=$('sd-endet'),en=$('sd-endet-n');
@@ -1875,7 +1918,7 @@ function bindDiag(){
   er.addEventListener('input',()=>{en.value=er.value;majE(+er.value)});
   en.addEventListener('input',()=>{const v=num(en.value);if(v>=20&&v<=45){er.value=v;majE(v)}});
   const rz=$('sd-endet-reset');if(rz)rz.onclick=()=>{m('dg-endet').value='';rafraichir()};
-  f.querySelectorAll('[data-dseg] button').forEach(b=>b.onclick=()=>{const k=b.closest('[data-dseg]').dataset.dseg;m(k).value=b.dataset.v;b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));if(k==='dg-type'){m('dg-notpct').value='';rafraichir()}else if(k==='dg-notoff'||k==='dg-al')rafraichir();else resDiag()});
+  f.querySelectorAll('[data-dseg] button').forEach(b=>b.onclick=()=>{const k=b.closest('[data-dseg]').dataset.dseg;m(k).value=b.dataset.v;b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));if(k==='dg-type'){m('dg-notpct').value='';rafraichir()}else if(['dg-notoff','dg-al','dg-pc','dg-el','dg-rl'].includes(k))rafraichir();else resDiag()});
 }
 
 // =====================================================================
@@ -2136,6 +2179,7 @@ function rafraichir(){const v=VUES[vue];v.form();v.bind();v.res()}
 function ouvrir(nom){
   vue=VUES[nom]?nom:'plan';principal();
   $('st-h1').textContent=VUES[vue].t;$('st-p').textContent=VUES[vue].p;
+  $('st-expert').style.display=vue==='plan'?'':'none';
   studio.querySelectorAll('[data-st]').forEach(b=>b.classList.toggle('on',b.dataset.st===vue));
   studio.classList.add('open');studio.scrollTop=0;rafraichir();
 }
