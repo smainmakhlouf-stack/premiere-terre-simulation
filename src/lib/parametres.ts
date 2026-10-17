@@ -56,7 +56,8 @@ export const PARAMETRES_DEFAUT = {
   mentions: { raisonSociale: "", orias: "", adresse: "", complement: "" },
   sms: {
     societe: "Agence Première Terre Immobilier",
-    modele: "Bonjour {civilite} {nom}, vous avez fait une demande de projet immobilier sur le secteur {secteur}. Nous avons essayé de vous joindre sans succès. Votre conseiller {conseiller} reste à votre disposition au {telephone}. {societe}",
+    site: "www.premiereterre.fr",
+    modele: "Bonjour {civilite} {nom}, vous avez fait une demande de projet immobilier sur le secteur {secteur}. Nous avons essayé de vous joindre sans succès. Votre conseiller {conseiller} reste à votre disposition au {telephone}. {societe} - {site}",
   },
 }
 
@@ -106,6 +107,7 @@ export function normaliser(brut: unknown): Parametres {
     plafondsLoyer: plafonds,
     sms: {
       societe: texte(sm.societe, 60) || D.sms.societe,
+      site: typeof sm.site === "string" ? texte(sm.site, 80) : D.sms.site,
       modele: texte(sm.modele, 640) || D.sms.modele,
     },
     mentions: {
