@@ -11,6 +11,13 @@ const eur = (n: number | null | undefined) =>
   n == null || !Number.isFinite(n) ? "—" : new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n)
 const jour = (d: Date) => new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(d)
 const moyenne = (v: number[]) => (v.length ? v.reduce((a, b) => a + b, 0) / v.length : null)
+/** « Julie et Marc Dupont », ou « Julie Dupont et Marc Martin » si les noms diffèrent. */
+const nomFoyer = (c: { nom: string; prenom: string | null; nom2: string | null; prenom2: string | null }) => {
+  const un = [c.prenom, c.nom].filter(Boolean).join(" ")
+  if (!c.nom2 && !c.prenom2) return un
+  if (!c.nom2 || c.nom2.toLowerCase() === c.nom.toLowerCase()) return `${c.prenom ?? ""} et ${c.prenom2 ?? ""} ${c.nom}`.replace(/\s+/g, " ").trim()
+  return `${un} et ${[c.prenom2, c.nom2].filter(Boolean).join(" ")}`
+}
 type Resume = { budget?: number; prix?: number; emprunte?: number; mensualite?: number }
 
 export default async function TableauDeBord({ searchParams }: { searchParams: Promise<{ periode?: string }> }) {
@@ -28,7 +35,7 @@ export default async function TableauDeBord({ searchParams }: { searchParams: Pr
     db.simulation.findMany({ where: { updatedAt: { gte: depuis }, client: perimetre }, select: { createdAt: true, resume: true, authorId: true, clientId: true } }),
     db.client.findMany({
       where: { ...perimetre, updatedAt: { gte: semaine } }, orderBy: { updatedAt: "desc" }, take: 50,
-      select: { id: true, nom: true, prenom: true, statut: true, updatedAt: true, owner: { select: { name: true } }, _count: { select: { simulations: true } }, simulations: { orderBy: { updatedAt: "desc" }, take: 1, select: { resume: true } } },
+      select: { id: true, nom: true, prenom: true, nom2: true, prenom2: true, statut: true, updatedAt: true, owner: { select: { name: true } }, _count: { select: { simulations: true } }, simulations: { orderBy: { updatedAt: "desc" }, take: 1, select: { resume: true } } },
     }),
     admin ? db.parametres.findUnique({ where: { id: "equipe" } }) : null,
   ])
@@ -111,7 +118,7 @@ export default async function TableauDeBord({ searchParams }: { searchParams: Pr
                 const r = c.simulations[0]?.resume as Resume | null
                 return (
                   <tr key={c.id}>
-                    <td><b>{[c.prenom, c.nom].filter(Boolean).join(" ")}</b></td>
+                    <td><b>{nomFoyer(c)}</b></td>
                     {admin && <td>{c.owner?.name ?? "—"}</td>}
                     <td><span className={`pastille statut-${c.statut}`}>{STATUT[c.statut] ?? c.statut}</span></td>
                     <td>{c._count.simulations}</td>

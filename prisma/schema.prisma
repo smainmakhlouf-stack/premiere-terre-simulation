@@ -99,6 +99,9 @@ model Client {
   id        String   @id @default(cuid())
   nom       String
   prenom    String?
+  /// Co-emprunteur (couple)
+  nom2      String?
+  prenom2   String?
   email     String?
   telephone String?
   notes     String?

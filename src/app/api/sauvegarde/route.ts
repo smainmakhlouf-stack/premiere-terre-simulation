@@ -42,7 +42,7 @@ export function POST(request: Request) {
     if (!(await db.client.findUnique({ where: { id }, select: { id: true } }))) {
       await db.client.create({
         data: {
-          id, nom, prenom: chaine(c.prenom, 100), email: chaine(c.email, 200), telephone: chaine(c.telephone, 40), notes: chaine(c.notes, 5000),
+          id, nom, prenom: chaine(c.prenom, 100), nom2: chaine(c.nom2, 100), prenom2: chaine(c.prenom2, 100), email: chaine(c.email, 200), telephone: chaine(c.telephone, 40), notes: chaine(c.notes, 5000),
           statut: STATUTS.includes(c.statut as (typeof STATUTS)[number]) ? (c.statut as string) : "en_cours",
           ownerId: owner?.id ?? u.id, createdAt: dateOu(c.creeLe),
         },

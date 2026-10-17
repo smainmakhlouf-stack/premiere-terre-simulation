@@ -23,7 +23,7 @@ export async function construireSauvegarde(where: Prisma.ClientWhereInput, par: 
     nbClients: clients.length,
     nbSimulations: clients.reduce((s, c) => s + c.simulations.length, 0),
     clients: clients.map((c) => ({
-      id: c.id, nom: c.nom, prenom: c.prenom, email: c.email, telephone: c.telephone, notes: c.notes, statut: c.statut,
+      id: c.id, nom: c.nom, prenom: c.prenom, nom2: c.nom2, prenom2: c.prenom2, email: c.email, telephone: c.telephone, notes: c.notes, statut: c.statut,
       conseiller: c.owner?.email ?? null, creeLe: c.createdAt, majLe: c.updatedAt,
       simulations: c.simulations.map((s) => ({
         id: s.id, nom: s.nom, data: s.data, resume: s.resume, auteur: s.author?.email ?? null, creeLe: s.createdAt, majLe: s.updatedAt,

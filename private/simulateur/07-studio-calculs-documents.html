@@ -426,7 +426,13 @@ function lierCredits(){
 function formDiag(){
   initDiag();
   const v=id=>esc(m(id).value),d=lireDiag();
+  const couple=/Mari|Pacs|Union/.test(m('dg-sitfam').value)||num(m('dg-rev2').value)>0||!!(m('dg-nom2').value||m('dg-prenom2').value);
   $('st-form').innerHTML=`
+  <h3 style="margin-top:0">Client</h3>
+  <div class="duo"><div class="f"><label for="sd-nom1">Nom</label><input autocomplete="off" id="sd-nom1" data-memo="dg-nom1" value="${v('dg-nom1')}" maxlength="100"></div>
+  <div class="f"><label for="sd-prenom1">Prénom</label><input autocomplete="off" id="sd-prenom1" data-memo="dg-prenom1" value="${v('dg-prenom1')}" maxlength="100"></div></div>
+  <div class="duo" id="sd-co" style="${couple?'':'display:none'}"><div class="f"><label for="sd-nom2">Nom co-emprunteur</label><input autocomplete="off" id="sd-nom2" data-memo="dg-nom2" value="${v('dg-nom2')}" maxlength="100" placeholder="${v('dg-nom1')}"></div>
+  <div class="f"><label for="sd-prenom2">Prénom co-emprunteur</label><input autocomplete="off" id="sd-prenom2" data-memo="dg-prenom2" value="${v('dg-prenom2')}" maxlength="100"></div></div>
   <div class="f"><label for="sd-sitfam">Situation familiale</label><select autocomplete="off" id="sd-sitfam" data-memo="dg-sitfam">${['','Célibataire','Marié(e)','Pacsé(e)','Union libre'].map(x=>`<option value="${x}" ${m('dg-sitfam').value===x?'selected':''}>${x||'— choisir —'}</option>`).join('')}</select></div>
   <h3>Revenus mensuels nets</h3>
   <div class="duo"><div class="f"><label for="sd-rev1">Salaire emprunteur</label><div class="euro" data-u="€"><input autocomplete="off" id="sd-rev1" data-memo="dg-rev1" inputmode="numeric" value="${v('dg-rev1')}"></div></div>
@@ -615,7 +621,8 @@ const moisTxt=(a,b)=>`mois ${a+1} à ${b}`;
 /** Contexte d'affichage (identité, revenus, charges) de l'écran Budget max. */
 function ctxRapide(d){
   const cur=window.ptDossierCourant&&window.ptDossierCourant(),saisi=($('client')?.value||'').trim();
-  return {nom:cur?.client||(saisi&&saisi!=='Simulation test'?saisi:''),situation:m('dg-sitfam').value||(d.adultes>1?'En couple':'Seul(e)'),enfants:d.enfants,rev1:num(m('dg-rev1').value),rev2:num(m('dg-rev2').value),autres:num(m('dg-autres').value),rf:d.rf,rfPct:d.rfPct,pensRecue:d.pensRecue,pensVersee:d.pensVersee,creditsConso:d.creditsConso,creditsImmo:d.creditsImmo,credits:d.credits,loyer:num(m('dg-loyer').value),terrain:0,travaux:0,usage:'Résidence principale'};
+  const foyer=(()=>{const n1=m('dg-nom1').value.trim(),p1=m('dg-prenom1').value.trim(),n2=m('dg-nom2').value.trim(),p2=m('dg-prenom2').value.trim();const un=[p1,n1].filter(Boolean).join(' ');if(!n2&&!p2)return un;if(!n2||n2.toLowerCase()===n1.toLowerCase())return [p1,'et',p2,n1].filter(Boolean).join(' ');return [un,'et',[p2,n2].filter(Boolean).join(' ')].filter(Boolean).join(' ')})();
+  return {nom:cur?.client||foyer||(saisi&&saisi!=='Simulation test'?saisi:''),situation:m('dg-sitfam').value||(d.adultes>1?'En couple':'Seul(e)'),enfants:d.enfants,rev1:num(m('dg-rev1').value),rev2:num(m('dg-rev2').value),autres:num(m('dg-autres').value),rf:d.rf,rfPct:d.rfPct,pensRecue:d.pensRecue,pensVersee:d.pensVersee,creditsConso:d.creditsConso,creditsImmo:d.creditsImmo,credits:d.credits,loyer:num(m('dg-loyer').value),terrain:0,travaux:0,usage:'Résidence principale'};
 }
 function ficheSolvabilite(d,c,ctx){
   const ech=echeancier(c),pal=paliers(ech).slice(0,4),z=c.ptz||{montant:0},p=c.p;
@@ -775,6 +782,9 @@ function bindDiag(){
   const f=$('st-form');
   lierCredits();
   $('sd-detail')?.addEventListener('click',versDiagDetaille);
+  // Couple (marié, pacsé, union libre ou salaire du co-emprunteur) : noms du co-emprunteur affichés.
+  const majCo=()=>{const co=$('sd-co');if(co)co.style.display=/Mari|Pacs|Union/.test(m('dg-sitfam').value)||num(m('dg-rev2').value)>0||m('dg-nom2').value||m('dg-prenom2').value?'':'none';const n2=$('sd-nom2');if(n2)n2.placeholder=m('dg-nom1').value};
+  f.querySelectorAll('#sd-sitfam,#sd-rev2,#sd-nom1').forEach(i=>i.addEventListener('input',()=>setTimeout(majCo,0)));
   f.querySelectorAll('[data-memo]').forEach(i=>i.addEventListener('input',()=>{m(i.dataset.memo).value=['sd-taux','sd-ass','sd-notpct','sd-altx','sd-pctx','sd-peltx','sd-celtx','sd-rltx','sd-rlquot'].includes(i.id)?i.value.replace(',','.').trim():i.value;resDiag()}));
   lierDuree('sd-duree',a=>{m('dg-duree').value=a;$('sd-taux').placeholder=String(tauxDuree(a)).replace('.',',');resDiag()});
   // Curseur du taux d'endettement : ajuste le budget en direct.
