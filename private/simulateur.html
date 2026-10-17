@@ -1132,7 +1132,7 @@ window.ptParametresPrets=charger().then(()=>{if(!courant?.simId)appliquer(0)}).c
 <!-- Champs mémorisés avec le dossier (diagnostic et optimiseur fiscal) -->
 <div hidden id="st-memo">
 <input id="dg-rev1"><input id="dg-rev2"><input id="dg-autres"><input id="dg-charges"><input id="dg-apport"><input id="dg-duree"><input id="dg-enfants"><input id="dg-type"><input id="dg-endet"><input id="dg-loyer"><input id="dg-taux"><input id="dg-ass"><input id="dg-zone"><input id="dg-rfr"><input id="dg-primo"><input id="dg-occ"><input id="dg-notoff"><input id="dg-notpct"><input id="dg-gar"><input id="dg-sitfam"><input id="dg-credits"><input id="pl-notoff"><input id="dg-rf"><input id="dg-pensr"><input id="dg-pensv"><input id="dg-credimmo"><input id="dg-al"><input id="dg-almt"><input id="dg-altx"><input id="dg-alans"><input id="dg-ptztype"><input id="dg-etat">
-<input id="of-prix"><input id="of-type"><input id="of-regime"><input id="of-zone"><input id="of-surface"><input id="of-agence"><input id="of-notpct"><input id="of-notoff"><input id="of-crd"><input id="of-horizon"><input id="of-exotf"><input id="of-gli"><input id="of-index"><input id="of-valo"><input id="of-delai"><input id="of-rfexist"><input id="of-ir"><input id="of-parkval"><input id="of-parkloyer"><input id="of-nvloyer"><input id="of-nvapres"><input id="of-constr"><input id="of-travaux"><input id="of-apport"><input id="of-loyer"><input id="of-tf"><input id="of-copro"><input id="of-pno"><input id="of-gestion"><input id="of-vacance"><input id="of-tmi"><input id="of-ps"><input id="of-mobilier"><input id="of-duree"><input id="of-taux"><input id="of-ass">
+<input id="of-prix"><input id="of-type"><input id="of-regime"><input id="of-zone"><input id="of-surface"><input id="of-agence"><input id="of-notpct"><input id="of-notoff"><input id="of-crd"><input id="of-horizon"><input id="of-exotf"><input id="of-gli"><input id="of-index"><input id="of-valo"><input id="of-delai"><input id="of-rfexist"><input id="of-ir"><input id="of-psm"><input id="of-parkval"><input id="of-parkloyer"><input id="of-nvloyer"><input id="of-nvapres"><input id="of-constr"><input id="of-travaux"><input id="of-apport"><input id="of-loyer"><input id="of-tf"><input id="of-copro"><input id="of-pno"><input id="of-gestion"><input id="of-vacance"><input id="of-tmi"><input id="of-ps"><input id="of-mobilier"><input id="of-duree"><input id="of-taux"><input id="of-ass">
 </div>
 <script>
 (function(){
@@ -1846,7 +1846,7 @@ function bindDiag(){
 // À l'ouverture, tous les montants sont à zéro ; seuls les paramètres d'évolution, de fiscalité et du prêt ont une valeur de départ.
 const DEF_OF={'of-type':'ancien','of-regime':'auto','of-zone':'A','of-surface':0,'of-prix':0,'of-travaux':0,'of-mobilier':0,'of-agence':0,'of-notpct':'','of-notoff':'non','of-crd':0,'of-apport':0,'of-horizon':15,
   'of-loyer':0,'of-copro':0,'of-tf':0,'of-exotf':'non','of-pno':0,'of-gestion':0,'of-gli':0,'of-vacance':0,'of-index':1,'of-valo':1,'of-delai':0,
-  'of-tmi':30,'of-ps':17.2,'of-rfexist':0,'of-ir':0,'of-duree':20,'of-taux':3.6,'of-ass':0.3,
+  'of-tmi':30,'of-ps':17.2,'of-psm':18.6,'of-rfexist':0,'of-ir':0,'of-duree':20,'of-taux':3.6,'of-ass':0.3,
   'of-parkval':0,'of-parkloyer':0,'of-nvloyer':0,'of-nvapres':0,'of-constr':0};
 function initFiscal(){Object.entries(DEF_OF).forEach(([k,v])=>{const el=m(k);if(el&&el.value==='')el.value=v})}
 function champOF(id,label,u,aide){return `<div class="f"><label for="s${id}">${label}${aide?` <span style="font-weight:400;color:#8a7a70">${aide}</span>`:''}</label><div class="euro" data-u="${u}"><input id="s${id}" data-memo="${id}" inputmode="decimal" value="${esc(m(id).value)}"></div></div>`}
@@ -1856,7 +1856,7 @@ const REGIMES_OF=[
   ['jb_int','Jeanbrun intermédiaire',''],['jb_soc','Jeanbrun social',''],['jb_tsoc','Jeanbrun très social',''],
   ['den6','Denormandie 6 ans',''],['den9','Denormandie 9 ans',''],['den12','Denormandie 12 ans',''],
   ['mal22','Malraux 22 % (site patrimonial avec PVAP)',''],['mal30','Malraux 30 % (secteur sauvegardé PSMV)',''],
-  ['lli','LLI (TVA 10 %, exonération de taxe foncière)',''],['lli_jb_int','LLI + Jeanbrun intermédiaire',''],['lli_jb_soc','LLI + Jeanbrun social',''],['lli_jb_tsoc','LLI + Jeanbrun très social',''],
+  ['lli','LLI (TVA à 10 %)',''],['lli_jb_int','LLI + Jeanbrun intermédiaire',''],['lli_jb_soc','LLI + Jeanbrun social',''],['lli_jb_tsoc','LLI + Jeanbrun très social',''],
   ['dom6','Denormandie outre-mer 6 ans',''],['dom9','Denormandie outre-mer 9 ans',''],['dom12','Denormandie outre-mer 12 ans',''],['girardin','Girardin social (outre-mer)','']];
 function selOF(id,opts){return `<select id="s${id}" data-memo="${id}">${opts.map(([v,t])=>`<option value="${v}" ${m(id).value===v?'selected':''}>${t}</option>`).join('')}</select>`}
 function formFiscal(){
@@ -1890,7 +1890,8 @@ function formFiscal(){
   ${champOF('of-horizon','Bilan / revente à','ans')}
   <h3>Fiscalité du foyer</h3>
   <div class="f"><label>Tranche marginale d'imposition</label><div class="seg" data-tmi>${[0,11,30,41,45].map(t=>`<button type="button" data-v="${t}" class="${num(m('of-tmi').value)===t?'on':''}">${t} %</button>`).join('')}</div></div>
-  <div class="duo">${champOF('of-ps','Prélèvements sociaux','%')}${champOF('of-ir','Impôt sur le revenu actuel','€','par an')}</div>
+  <div class="duo">${champOF('of-ps','Prélèvements sociaux','%','location nue')}${champOF('of-psm','Prélèvements sociaux','%','meublé')}</div>
+  ${champOF('of-ir','Impôt sur le revenu actuel','€','par an')}
   ${champOF('of-rfexist','Revenus fonciers existants','€','nets, par an')}
   <h3>Financement</h3>
   ${champDuree('sof-duree','Durée du prêt',esc(m('of-duree').value),'')}
@@ -1912,14 +1913,16 @@ function projeterOF(x,regime){
   if(den&&!(x.type==='ancien_tx'&&x.travaux>=0.25*(x.prix+x.travaux))){res.ok=false;res.motif='Ancien avec travaux d’au moins 25 % du coût total.'}
   if(mal&&!x.travaux){res.ok=false;res.motif='Réservé aux travaux de restauration.'}
   if(lli&&x.type!=='vefa'){res.ok=false;res.motif='Logement neuf uniquement.'}
+  if(lli&&res.ok)res.info='Achat par une société (SCI familiale possible), loyer et ressources plafonnés.';
+  if(jb&&res.ok)res.info=(lli?'Achat par une société (SCI familiale possible), ':'')+'immeuble collectif uniquement, loyer et ressources plafonnés.';
   if(dom&&!(x.type==='ancien_tx'&&x.travaux>=0.25*(x.prix+x.travaux))){res.ok=false;res.motif='Ancien avec travaux d\u2019au moins 25 % du coût total, en outre-mer.'}
-  if(girardin&&x.type!=='vefa'){res.ok=false;res.motif='Logement social neuf en outre-mer.'}
+  if(girardin){res.ok=false;res.motif='Montage par une société de portage (réduction de 50 % du prix de revient, au moins 70 % rétrocédés au bailleur social) : à chiffrer avec le monteur de l\u2019opération.'}
   // LLI : TVA à 10 % au lieu de 20 % sur le prix du neuf ; le prêt baisse d'autant.
   const ecoTVA=lli?x.prix*(1-1.1/1.2):0,prixR=x.prix-ecoTVA,pretR=Math.max(0,x.pret-ecoTVA);
   // Intérêts intercalaires (VEFA) : la moitié du prêt en moyenne pendant la construction.
   const intercal=pretR*x.taux/1200*x.constr*0.5;
   if(intercal)res.intercal=intercal;
-  const tmi=x.tmi,ps=x.ps;
+  const tmi=x.tmi,ps=meuble?x.psm:x.ps;
   let crd=pretR,reportRF=0,reportBIC=0,reportAmort=0,amortCumul=0,reportMal=0,effort=0;
   const r=x.taux/1200,n=x.duree*12,ann=pretR?(r?pretR*r/(1-Math.pow(1+r,-n)):pretR/n):0,insM=pretR*x.ass/1200;
   // Amortissements LMNP / Jeanbrun
@@ -1931,7 +1934,7 @@ function projeterOF(x,regime){
     let mois=12;if(y===1&&x.type==='vefa')mois=Math.max(0,12-x.delai);
     const loyerBase=(x.nvloyer&&x.nvapres&&y>x.nvapres)?x.nvloyer:x.loyer;
     const loyers=(loyerBase+x.parkloyer)*mois*idx*(1-x.vacance/100);
-    const tf=((x.type==='vefa'&&x.exotf&&y<=2)||(lli&&y<=20))?0:x.tf*idx;
+    const tf=(x.type==='vefa'&&x.exotf&&y<=2)?0:x.tf*idx;
     const charges=x.copro*12*idx+tf+x.pno*idx+loyers*(x.gestion+x.gli)/100;
     let int=0,cap=0;for(let k=0;k<12;k++){const t=(y-1)*12+k;if(t>=n||crd<=0)break;const i=crd*r;int+=i;cap+=ann-i;crd=Math.max(0,crd-(ann-i))}
     const ass=(y-1)*12<n?insM*Math.min(12,n-(y-1)*12):0,credit=int+cap+ass;
@@ -1948,7 +1951,7 @@ function projeterOF(x,regime){
       impot=resu*(tmi+ps);
     }else{ // location nue au réel (droit commun, Jeanbrun, Denormandie, Malraux)
       let resu=loyers-charges-int-ass-interDed-travauxDed;
-      if(jb&&resu>0){const dispo=amortJB+reportAmort,a=Math.min(dispo,resu);reportAmort=dispo-a;resu-=a}else if(jb)reportAmort+=amortJB;
+      if(jb)resu-=amortJB;
       let tot=resu+x.rfexist;
       if(tot>=0){const u=Math.min(reportRF,tot);tot-=u;reportRF-=u;impot=tot*(tmi+ps)-x.rfexist*(tmi+ps)}
       else{const def=-tot,horsInt=Math.max(0,def-(int+ass)),imput=Math.min(horsInt,10700);reportRF+=def-imput;impot=-imput*tmi-x.rfexist*(tmi+ps)}
@@ -1969,11 +1972,11 @@ function projeterOF(x,regime){
   const prixRevient=prixR+x.parkval+Math.max(x.fraisAcq,x.prix*0.075)+(ansDet>5?Math.max(x.travaux,x.prix*0.15):x.travaux)-(meuble&&regime==='lmnp_reel'?amortCumul:0);
   const pv=Math.max(0,V-prixRevient);
   let abIR=0,abPS=0;for(let a=6;a<=ansDet;a++){abIR+=a<=21?6:a===22?4:0;abPS+=a<=21?1.65:a===22?1.6:9}
-  const impotPV=pv*(1-Math.min(100,abIR)/100)*0.19+pv*(1-Math.min(100,abPS)/100)*ps;
+  const impotPV=pv*(1-Math.min(100,abIR)/100)*0.19+pv*(1-Math.min(100,abPS)/100)*x.ps;
   const crdFin=res.lignes[H-1]?.crd||0,net=V-impotPV-crdFin;
   const cfs=[-x.apport-intercal,...res.lignes.map(l=>l.cf)];cfs[cfs.length-1]+=net;
   const van=t=>cfs.reduce((s,c,i)=>s+c/Math.pow(1+t,i),0);let lo=-0.99,hi=1;for(let k=0;k<80;k++){const mid=(lo+hi)/2;van(mid)>0?lo=mid:hi=mid}
-  Object.assign(res,{V,pv,impotPV,crdFin,net,enrichissement:net-x.apport-intercal+res.lignes.reduce((s,l)=>s+l.cf,0),ecoTVA,tri:x.apport>0?lo*100:null,cf1:res.lignes[0]?.cf/12||0,cfMoy:res.lignes.reduce((s,l)=>s+l.cf,0)/H/12,engagement:jb?9:den?den[0]:dom?dom:mal?9:girardin?5:lli?15:0});
+  Object.assign(res,{V,pv,impotPV,crdFin,net,enrichissement:net-x.apport-intercal+res.lignes.reduce((s,l)=>s+l.cf,0),ecoTVA,tri:x.apport>0?lo*100:null,cf1:res.lignes[0]?.cf/12||0,cfMoy:res.lignes.reduce((s,l)=>s+l.cf,0)/H/12,engagement:lli?20:jb?9:den?den[0]:dom?dom:mal?9:0});
   return res;
 }
 function lireOF(){
@@ -1987,7 +1990,7 @@ function lireOF(){
   return {parkval,parkloyer:g('of-parkloyer'),nvloyer:g('of-nvloyer'),nvapres:g('of-nvapres'),constr:type==='vefa'?g('of-constr'):0,type,zone:m('of-zone').value||'A',surface:g('of-surface'),prix,travaux,mobilier,agence,notaire,notPct,dossier,garantie,coutTotal:horsGar+garantie,apport,pret,fraisAcq:notaire+agence+dossier+garantie,
     loyer:g('of-loyer'),loyerAn1:g('of-loyer')*12,copro:g('of-copro'),tf:g('of-tf'),exotf:m('of-exotf').value==='oui',pno:g('of-pno'),gestion:g('of-gestion'),gli:g('of-gli'),vacance:g('of-vacance'),
     index:g('of-index'),valo:g('of-valo'),delai:g('of-delai'),horizon:Math.max(1,Math.min(30,Math.round(g('of-horizon')||15))),
-    tmi:g('of-tmi')/100,ps:g('of-ps')/100,rfexist:g('of-rfexist'),ir:g('of-ir'),duree:g('of-duree')||20,taux:g('of-taux'),ass:g('of-ass')};
+    tmi:g('of-tmi')/100,ps:g('of-ps')/100,psm:(m('of-psm').value===''?18.6:g('of-psm'))/100,rfexist:g('of-rfexist'),ir:g('of-ir'),duree:g('of-duree')||20,taux:g('of-taux'),ass:g('of-ass')};
 }
 function resFiscal(){
   const x=lireOF();
@@ -2011,14 +2014,14 @@ function resFiscal(){
   </div>
   <div class="card"><h2>Comparaison des régimes sur ${H} ans</h2><p class="sub">Enrichissement = valeur nette à la revente (après impôt sur la plus-value et capital restant dû) + cash-flows cumulés − apport.</p>
    <div style="overflow-x:auto"><table class="prets" style="min-width:720px"><tr><th>Régime</th><th>Cash-flow / mois (an 1)</th><th>Impôt cumulé</th><th>Réductions</th><th>Plus-value taxée</th><th>Enrichissement</th><th>TRI</th></tr>
-   ${liste.map(r=>`<tr style="${r===ret?'background:#fbf3ee;font-weight:600':''}"><td>${esc(nom(r.regime))}${r.ok?(r.engagement?` <span style="color:#7b6b62;font-weight:400">· engagement ${r.engagement} ans</span>`:''):` <span style="color:#b04d3e;font-weight:400">· ${esc(r.motif)}</span>`}</td><td>${r.ok?eur(r.cf1):'—'}</td><td>${r.ok?eur(r.impotTot):'—'}</td><td>${r.ok&&r.reductionsTot?eur(r.reductionsTot):'—'}</td><td>${r.ok?eur(r.impotPV):'—'}</td><td>${r.ok?eur(r.enrichissement):'—'}</td><td>${r.ok&&r.tri!=null?pc(r.tri,1):'—'}</td></tr>`).join('')}</table></div></div>
+   ${liste.map(r=>`<tr style="${r===ret?'background:#fbf3ee;font-weight:600':''}"><td>${esc(nom(r.regime))}${r.ok?(r.engagement?` <span style="color:#7b6b62;font-weight:400">· engagement ${r.engagement} ans${r.info?' · '+esc(r.info):''}</span>`:''):` <span style="color:#b04d3e;font-weight:400">· ${esc(r.motif)}</span>`}</td><td>${r.ok?eur(r.cf1):'—'}</td><td>${r.ok?eur(r.impotTot):'—'}</td><td>${r.ok&&r.reductionsTot?eur(r.reductionsTot):'—'}</td><td>${r.ok?eur(r.impotPV):'—'}</td><td>${r.ok?eur(r.enrichissement):'—'}</td><td>${r.ok&&r.tri!=null?pc(r.tri,1):'—'}</td></tr>`).join('')}</table></div></div>
   <div class="card"><h2>Patrimoine : valeur du bien et capital restant dû</h2>${courbes([{l:'Valeur du bien',c:C.apport,v:[x.prix+x.travaux,...ret.lignes.map(l=>l.valeur)]},{l:'Capital restant dû',c:C.main,v:[x.pret,...ret.lignes.map(l=>l.crd)]}],H)}</div>
   <details class="card longue" open><summary style="cursor:pointer"><h2 style="display:inline">Année par année · ${esc(nom(ret.regime))}</h2></summary>
    <div class="amort-box" style="max-height:420px;overflow:auto;margin-top:10px"><table class="prets"><tr><th>Année</th><th>Loyers</th><th>Charges</th><th>Crédit</th><th>Impôt</th><th>Réduction</th><th>Cash-flow</th><th>Capital dû</th><th>Valeur</th></tr>
    ${ret.lignes.map(l=>`<tr><td>${l.y}</td><td>${eur(l.loyers)}</td><td>${eur(l.charges)}</td><td>${eur(l.credit)}</td><td>${eur(l.impot)}</td><td>${l.reduction?eur(l.reduction):'—'}</td><td>${eur(l.cf)}</td><td>${eur(l.crd)}</td><td>${eur(l.valeur)}</td></tr>`).join('')}</table></div>
    <div class="lignes" style="margin-top:10px">${ret.ecoTVA?`<div><span>Économie de TVA (LLI, 10 % au lieu de 20 %)</span><b>${eur(ret.ecoTVA)}</b></div>`:''}${ret.intercal?`<div><span>Intérêts intercalaires pendant la construction</span><b>− ${eur(ret.intercal)}</b></div>`:''}<div><span>Revente à ${H} ans</span><b>${eur(ret.V)}</b></div><div><span>Impôt sur la plus-value (${eur(ret.pv)} brute)</span><b>− ${eur(ret.impotPV)}</b></div><div><span>Capital restant dû remboursé</span><b>− ${eur(ret.crdFin)}</b></div><div><span>Net perçu à la revente</span><b>${eur(ret.net)}</b></div></div></details>
   <button type="button" class="cta" id="sof-vers-plan">Envoyer ce projet dans le plan de financement →</button>
-  <p class="note">Estimation indicative, à valider avec un expert-comptable. Location nue au réel : déficit hors intérêts imputable sur le revenu global jusqu'à 10 700 €/an, le reste reportable. LMNP réel : amortissement du bâti (85 % sur 30 ans), du mobilier (7 ans) et des travaux (10 ans), réintégré dans la plus-value à la revente. Jeanbrun : amortissement de 80 % du prix au taux du niveau de loyer (neuf 3,5/4,5/5,5 %, ancien 3/3,5/4 %), plafonné à 8 000/10 000/12 000 €/an, loyer plafonné, engagement 9 ans. Denormandie : réduction de 12/18/21 % (plafond 300 000 € et 5 500 €/m²). Malraux : réduction de 22 ou 30 % des travaux (plafond 400 000 €). LLI : TVA à 10 % sur le neuf et exonération de taxe foncière (20 ans retenus), loyer intermédiaire plafonné. Denormandie outre-mer : réduction de 23/29/32 % sur 6/9/12 ans. Girardin social : réduction de 50 % du prix (hypothèse simplifiée, montage par société agréée en pratique). Réductions outre-mer plafonnées à 18 000 €/an. Réductions limitées à l'impôt saisi et, hors Malraux, au plafond des niches de 10 000 €. Plus-value : abattements pour durée de détention, 19 % + prélèvements sociaux.</p>`;
+  <p class="note">Estimation indicative, à valider avec un expert-comptable. Location nue au réel : déficit hors intérêts imputable sur le revenu global jusqu'à 10 700 €/an, le reste reportable. LMNP réel : amortissement du bâti (85 % sur 30 ans), du mobilier (7 ans) et des travaux (10 ans), réintégré dans la plus-value à la revente. Jeanbrun (loi de finances 2026, art. 47) : amortissement de 80 % du prix (ancien : prix + travaux, travaux ≥ 30 %) au taux de 3,5/4,5/5,5 % dans le neuf et 3/3,5/4 % dans l'ancien, plafonné à 8 000/10 000/12 000 €/an, immeuble collectif, acquisitions jusqu'au 31/12/2028, engagement 9 ans. Denormandie : réduction de 12/18/21 % (plafond 300 000 € et 5 500 €/m², travaux ≥ 25 % du coût total ; fin du dispositif au 31/12/2026 selon le BOFiP, 2027 selon economie.gouv). Malraux : réduction de 22 ou 30 % des travaux (plafond 400 000 €). LLI : TVA à 10 % (art. 279-0 bis A), achat par une personne morale (SCI possible), engagement 20 ans ; l'exonération de taxe foncière ne vaut plus pour les logements achevés après 2023. Denormandie outre-mer : 23/29 % sur 6/9 ans, 32 % sur 12 ans (taux des investissements réalisés jusqu'en 2025). Girardin social : non chiffré (montage par société de portage). Réductions outre-mer plafonnées à 18 000 €/an. Réductions limitées à l'impôt saisi et, hors Malraux, au plafond des niches de 10 000 €. Prélèvements sociaux : 17,2 % en location nue, 18,6 % en meublé (revenus 2025 et suivants). Plus-value : abattements pour durée de détention, 19 % + 17,2 %.</p>`;
   const b=$('sof-vers-plan');if(b)b.onclick=()=>{poser('purpose','invest');poser('v9operation',x.type==='vefa'?'new':'old');poser('price',x.prix);poser('works',x.travaux);poser('deposit',x.apport);poser('futureRent',x.loyer);fixerPrincipal(x.taux,x.duree,x.ass);fraisAuto();ouvrir('plan')};
 }
 function bindFiscal(){
