@@ -191,8 +191,6 @@ async function choisir(id,proposerEnregistrement){
   $('dos-droite').innerHTML=`
   <div class="ligne" style="justify-content:space-between"><h3 style="margin:0;font:22px Georgia,serif;color:#9c482d">${esc(nomClient(c))}</h3>${admin&&c.owner?`<span style="font-size:12px;color:#7b6b62">Conseiller : ${esc(c.owner.name)}</span>`:''}</div>
   <div class="ligne" style="margin-top:10px"><span style="font-size:12px;color:#65554d">Statut du dossier</span><div class="statuts">${Object.entries(STATUTS).map(([k,l])=>`<button type="button" data-statut="${k}" class="${(c.statut||'en_cours')===k?'on':''}">${l}</button>`).join('')}</div></div>
-  <div class="ligne" style="margin-top:10px;justify-content:space-between"><span style="font-size:12.5px;color:#65554d">${c.telephone?'☎ '+esc(c.telephone):'Pas de téléphone : ajoutez-le dans « Coordonnées du client ».'}${c.sms?.length?` · dernier SMS le ${esc(date(c.sms[0].createdAt))}${c.sms[0].statut==='echec'?' (échec)':''}`:''}</span><button class="b2" id="dos-sms" type="button" ${c.telephone?'':'disabled'}>✉ Contacter par SMS</button></div>
-  <div id="dos-sms-zone"></div>
   <div class="enreg"><b style="font-size:14px">Enregistrer la simulation affichée dans ce dossier</b>
     <div class="ligne" style="margin-top:8px"><input autocomplete="off" id="dos-simnom" value="${esc(nomDefaut)}" maxlength="120" aria-label="Nom de la simulation"><button class="b1" id="dos-save" type="button">Enregistrer</button></div>
     <div style="font-size:12px;color:#7b6b62;margin-top:6px">Enregistre tout le simulateur : plan de financement, prêts, diagnostic et emprunteurs.</div></div>
@@ -208,7 +206,6 @@ async function choisir(id,proposerEnregistrement){
   <details style="margin-top:18px"><summary style="cursor:pointer;color:#9c482d;font-weight:600;font-size:13px">Coordonnées du client</summary><div style="margin-top:10px">${formulaireClient(c)}
   <div class="ligne"><button class="b2" id="dos-maj-client" type="button">Enregistrer les coordonnées</button><button class="b3" id="dos-suppr-client" type="button">Supprimer le dossier</button></div></div></details>`;
   if(proposerEnregistrement)$('dos-simnom').focus();
-  $('dos-sms').onclick=()=>panneauSms(c);
   $('dos-droite').querySelectorAll('[data-statut]').forEach(b=>b.onclick=async()=>{
     try{await api('/api/dossiers/'+c.id,{method:'PATCH',body:JSON.stringify({statut:b.dataset.statut})});c.statut=b.dataset.statut;$('dos-droite').querySelectorAll('[data-statut]').forEach(x=>x.classList.toggle('on',x===b));await chargerListe();message('Statut : '+STATUTS[b.dataset.statut]+'.')}
     catch(e){message(e.message,false)}
@@ -281,47 +278,6 @@ $('dos-droite').addEventListener('click',async e=>{
     }
   }catch(err){b.disabled=false;message(err.message,false)}
 });
-
-// --- SMS de relance (SMS Factor, expéditeur « PremiereTer ») ---
-const GSM7=/^[@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,\-.\/0-9:;<=>?¡A-ZÄÖÑÜ§¿a-zäöñüà\^{}\\\[~\]|€]*$/;
-function nbSms(t){if(GSM7.test(t)){const n=t.length+(t.match(/[\^{}\\\[~\]|€]/g)||[]).length;return {n,sms:n<=160?1:Math.ceil(n/153),gsm:true}}return {n:t.length,sms:t.length<=70?1:Math.ceil(t.length/67),gsm:false}}
-const telFr=t=>{const d=String(t||'').replace(/\D/g,'').replace(/^33/,'0');return d.length===10?d.replace(/(\d{2})(?=\d)/g,'$1 ').trim():String(t||'')};
-let profil=null;
-/** Message à partir du modèle de l'équipe (Paramètres → SMS client). */
-function messageSms(c){
-  const S=window.ptParametres?.sms||{},modele=S.modele||'Bonjour {civilite} {nom}, vous avez fait une demande de projet immobilier sur le secteur {secteur}. Nous avons essayé de vous joindre sans succès. Votre conseiller {conseiller} reste à votre disposition au {telephone}. {societe} - {site}';
-  const memeNom=!c.nom2||c.nom2.toLowerCase()===(c.nom||'').toLowerCase();
-  const nom=c.civilite?(memeNom?c.nom:c.nom+' et '+c.nom2):nomClient(c);
-  let t=modele;if(!c.secteur)t=t.replace(/\s*sur le secteur (de )?\{secteur\}/g,'');
-  const v={civilite:c.civilite||'',nom,secteur:c.secteur||'',conseiller:profil?.name||'',telephone:telFr(profil?.telephone),societe:S.societe||'Agence Première Terre Immobilier',site:S.site??'www.premiereterre.fr'};
-  return t.replace(/\{(\w+)\}/g,(x,k)=>k in v?v[k]:x).replace(/ {2,}/g,' ').replace(/ ,/g,',').replace(/\s*-\s*$/,'').trim();
-}
-async function panneauSms(c){
-  const z=$('dos-sms-zone');if(z.innerHTML){z.innerHTML='';return}
-  z.innerHTML='<div class="enreg">Préparation du message…</div>';
-  try{profil=(await api('/api/profil')).profil;profil._enregistre=profil.telephone||''}catch(e){z.innerHTML=`<div class="enreg">${esc(e.message)}</div>`;return}
-  const hist=(c.sms||[]).map(s=>`<div class="ver"><div><b>${esc(date(s.createdAt))}</b> · ${s.statut==='envoye'?'envoyé':'<span style="color:#b04d3e">échec</span>'}${s.auteurNom?' par '+esc(s.auteurNom):''}<br><span>${esc(s.texte.slice(0,140))}${s.texte.length>140?'…':''}</span>${s.erreur?`<br><span style="color:#b04d3e">${esc(s.erreur)}</span>`:''}</div></div>`).join('');
-  z.innerHTML=`<div class="enreg"><b style="font-size:14px">SMS à ${esc(nomClient(c))} · ${esc(c.telephone||'')}</b>
-   <div class="ligne" style="margin-top:8px"><label style="margin:0;flex:1;min-width:200px">Votre téléphone (affiché dans le SMS)<input autocomplete="off" id="sms-tel" value="${esc(profil?.telephone)}" placeholder="06 12 34 56 78"></label></div>
-   <label style="margin-top:8px">Message<textarea id="sms-texte" rows="5" maxlength="640" style="min-height:110px"></textarea></label>
-   <div class="ligne" style="justify-content:space-between"><span id="sms-compte" style="font-size:12px;color:#7b6b62"></span><span><button class="b2" type="button" id="sms-modele">Recharger le modèle</button> <button class="b1" type="button" id="sms-go">Envoyer le SMS</button></span></div>
-   <div style="font-size:12px;color:#7b6b62;margin-top:6px">Expéditeur « PremiereTer » (SMS Factor). Envoi du lundi au samedi, de 8 h à 20 h, hors jours fériés ; un SMS par client et par jour.${c.civilite?'':' Astuce : renseignez la civilité dans les coordonnées pour « Bonjour Monsieur … ».'}${c.secteur?'':' Le secteur du projet n\'est pas renseigné : la phrase est raccourcie.'}</div>
-   ${hist?`<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:#9c482d">SMS déjà envoyés (${c.sms.length})</summary>${hist}</details>`:''}</div>`;
-  const ta=$('sms-texte'),compte=()=>{const x=nbSms(ta.value);$('sms-compte').textContent=`${x.n} caractères · ${x.sms} SMS${x.gsm?'':' (caractères spéciaux : 70 par SMS)'}`};
-  const remplir=()=>{profil={...profil,telephone:$('sms-tel').value};ta.value=messageSms(c);compte()};
-  remplir();ta.oninput=compte;$('sms-tel').oninput=remplir;$('sms-modele').onclick=remplir;
-  $('sms-go').onclick=async()=>{
-    const b=$('sms-go'),tel=$('sms-tel').value.trim();
-    if(!tel)return message('Indiquez votre téléphone : il figure dans le SMS.',false);
-    if(!confirm(`Envoyer ce SMS au ${c.telephone} ?`))return;
-    b.disabled=true;b.textContent='Envoi…';
-    try{
-      if(tel!==(profil?._enregistre??'')){profil=(await api('/api/profil',{method:'PATCH',body:JSON.stringify({telephone:tel})})).profil;profil._enregistre=tel}
-      await api('/api/dossiers/'+c.id+'/sms',{method:'POST',body:JSON.stringify({texte:ta.value})});
-      await choisir(c.id);message('SMS envoyé à '+c.telephone+'.');
-    }catch(e){b.disabled=false;b.textContent='Envoyer le SMS';message(e.message,false)}
-  };
-}
 
 // --- Sauvegarde : export page par page, restauration dossier par dossier ---
 $('dos-export').onclick=async()=>{
