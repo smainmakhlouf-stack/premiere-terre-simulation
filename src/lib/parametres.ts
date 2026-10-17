@@ -54,6 +54,10 @@ export const PARAMETRES_DEFAUT = {
   },
   /** Mentions imprimées en pied des documents client. */
   mentions: { raisonSociale: "", orias: "", adresse: "", complement: "" },
+  sms: {
+    societe: "Première Terre",
+    modele: "Bonjour {civilite} {nom}, vous avez fait une demande de projet immobilier sur le secteur {secteur}. Nous avons essayé de vous joindre sans succès. Votre conseiller {conseiller} reste à votre disposition au {telephone}. {societe}",
+  },
 }
 
 export const ZONES = ["Abis", "A", "B1", "B2", "C"] as const
@@ -88,7 +92,7 @@ export function normaliser(brut: unknown): Parametres {
     if (["hyp", "rank2", "rank3"].includes(cle)) return f.garantieHypotheque
     return ["legal", "pledge", "casden", "simple"].includes(cle) ? undefined : f.garantieCaution
   }
-  const df = objet(b.defauts), pl = objet(b.plafondsLoyer), me = objet(b.mentions)
+  const df = objet(b.defauts), pl = objet(b.plafondsLoyer), me = objet(b.mentions), sm = objet(b.sms)
   const plafonds = Object.fromEntries(Object.entries(D.plafondsLoyer).map(([niveau, zones]) => {
     const n = objet(pl[niveau])
     return [niveau, Object.fromEntries(Object.entries(zones).map(([z, v]) => [z, nombre(n[z], v, 100)]))]
@@ -100,6 +104,10 @@ export function normaliser(brut: unknown): Parametres {
       zone: ZONES.includes(df.zone as (typeof ZONES)[number]) ? (df.zone as string) : D.defauts.zone,
     },
     plafondsLoyer: plafonds,
+    sms: {
+      societe: texte(sm.societe, 60) || D.sms.societe,
+      modele: texte(sm.modele, 640) || D.sms.modele,
+    },
     mentions: {
       raisonSociale: texte(me.raisonSociale, 120),
       orias: texte(me.orias, 40),

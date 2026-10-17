@@ -16,6 +16,7 @@ export function GET(request: Request, { params }: Ctx) {
       where: { id },
       include: {
         owner: { select: { name: true } },
+        sms: { orderBy: { createdAt: "desc" }, take: 20 },
         simulations: { orderBy: { updatedAt: "desc" }, select: { id: true, nom: true, resume: true, createdAt: true, updatedAt: true, author: { select: { name: true } }, _count: { select: { versions: true } } } },
       },
     })
@@ -39,7 +40,7 @@ export function PATCH(request: Request, { params }: Ctx) {
     if (!nom) throw new ErreurApi(400, "Le nom du client est obligatoire.")
     const client = await db.client.update({
       where: { id },
-      data: { nom, prenom: texte(b.prenom, 100), nom2: texte(b.nom2, 100), prenom2: texte(b.prenom2, 100), email: texte(b.email, 200), telephone: texte(b.telephone, 40), notes: texte(b.notes, 5000) },
+      data: { nom, prenom: texte(b.prenom, 100), nom2: texte(b.nom2, 100), prenom2: texte(b.prenom2, 100), civilite: texte(b.civilite, 40), secteur: texte(b.secteur, 120), email: texte(b.email, 200), telephone: texte(b.telephone, 40), notes: texte(b.notes, 5000) },
     })
     return NextResponse.json({ client })
   })

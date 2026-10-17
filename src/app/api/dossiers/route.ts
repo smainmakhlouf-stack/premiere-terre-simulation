@@ -57,7 +57,7 @@ export function POST(request: Request) {
     const nom = texte(b.nom, 100)
     if (!nom) throw new ErreurApi(400, "Le nom du client est obligatoire.")
     const client = await db.client.create({
-      data: { nom, prenom: texte(b.prenom, 100), nom2: texte(b.nom2, 100), prenom2: texte(b.prenom2, 100), email: texte(b.email, 200), telephone: texte(b.telephone, 40), notes: texte(b.notes, 5000), ownerId: u.id },
+      data: { nom, prenom: texte(b.prenom, 100), nom2: texte(b.nom2, 100), prenom2: texte(b.prenom2, 100), civilite: texte(b.civilite, 40), secteur: texte(b.secteur, 120), email: texte(b.email, 200), telephone: texte(b.telephone, 40), notes: texte(b.notes, 5000), ownerId: u.id },
     })
     return NextResponse.json({ client }, { status: 201 })
   })

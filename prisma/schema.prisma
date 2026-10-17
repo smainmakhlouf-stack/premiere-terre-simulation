@@ -21,6 +21,8 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   twoFactorEnabled Boolean? @default(false)
+  /// Téléphone du conseiller, repris dans les SMS envoyés aux clients.
+  telephone     String?
 
   sessions    Session[]
   twoFactors  TwoFactor[]
@@ -99,6 +101,10 @@ model Client {
   id        String   @id @default(cuid())
   nom       String
   prenom    String?
+  /// Monsieur | Madame | Monsieur et Madame…
+  civilite  String?
+  /// Secteur (ville, quartier) du projet, repris dans les SMS.
+  secteur   String?
   /// Co-emprunteur (couple)
   nom2      String?
   prenom2   String?
@@ -113,6 +119,7 @@ model Client {
 
   owner       User?        @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   simulations Simulation[]
+  sms         SmsEnvoi[]
 
   @@index([ownerId])
   @@map("clients")
@@ -183,4 +190,22 @@ model TwoFactor {
   @@index([secret])
   @@index([userId])
   @@map("two_factors")
+}
+
+// SMS envoyés à un client depuis son dossier (relance « nous avons essayé de vous joindre »).
+model SmsEnvoi {
+  id        String   @id @default(cuid())
+  clientId  String
+  auteurNom String?
+  telephone String
+  texte     String
+  /// envoye | echec
+  statut    String
+  erreur    String?
+  createdAt DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, createdAt])
+  @@map("sms_envois")
 }
