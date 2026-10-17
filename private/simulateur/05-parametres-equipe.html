@@ -1,0 +1,213 @@
+<script>
+/** Taux de garantie de l'équipe pour une clé du diagnostic ou du plan de financement (null si inconnue). */
+/** Valeurs proposées par défaut sur tous les écrans (toujours modifiables). */
+window.ptDefauts={taux:3.6,assurance:0.30,zone:'A'};
+window.ptTauxGarantie=function(cle){
+  const alias={credit:'cl_classic',initio:'cl_initio',sacem:'saccef',mutuelle:'mutual',ppd:'legal'};
+  const g=window.ptParametres&&window.ptParametres.garanties;if(!g||!cle||cle==='none')return cle==='none'?0:null;
+  const v=g[alias[cle]||cle];return typeof v==='number'?v:null;
+};
+</script>
+<!-- Paramètres de l'équipe : taux, assurance, frais et garanties, seuils (réglés par l'administrateur) -->
+<style>
+#pt-par{display:none;position:fixed;inset:0;z-index:9300;background:#261b17a6;padding:3vh 15px;overflow:auto;font-family:Inter,Arial,sans-serif;color:#2f2622}
+#pt-par.open{display:block}#pt-par *{box-sizing:border-box}
+#pt-par .win{max-width:1080px;margin:0 auto;background:#fffaf7;border-radius:17px;box-shadow:0 25px 100px #1d100f55;overflow:hidden}
+#pt-par .head{background:#fff;border-bottom:1px solid #e9d8cd;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 24px}
+#pt-par .head small{font-size:11px;letter-spacing:2px;color:#927c6f}#pt-par h2{font:24px Georgia,serif;color:#9c482d;margin:2px 0 0}
+#pt-par .x{font-size:25px;background:transparent;border:0;color:#624e45;cursor:pointer}
+#pt-par .tabs{display:flex;gap:4px;overflow:auto;background:#fff;border-bottom:1px solid #e8d9d1;padding:0 20px}
+#pt-par .tab{background:transparent;border:0;padding:14px 14px;color:#65554f;white-space:nowrap;border-bottom:3px solid transparent;cursor:pointer;font:inherit;font-size:14px}
+#pt-par .tab.active{border-bottom-color:#b44d2c;color:#a24327;font-weight:700}
+#pt-par .body{padding:20px 24px}
+#pt-par .pane{display:none}#pt-par .pane.active{display:block}
+#pt-par .info{font-size:12.5px;color:#7b6b62;line-height:1.55;margin:0 0 14px}
+#pt-par .bloc{background:#fff;border:1px solid #e9d9ce;border-radius:12px;padding:14px 16px;margin-bottom:14px}
+#pt-par .bloc h3{margin:0 0 10px;font-size:14px;color:#9c482d}
+#pt-par table{border-collapse:collapse;width:100%;font-size:13px}
+#pt-par th{font-weight:600;color:#7e5544;padding:7px 8px;text-align:left;border-bottom:1px solid #eadbd1;white-space:nowrap}
+#pt-par td{padding:6px 8px;border-bottom:1px solid #f3e9e3}
+#pt-par tr:last-child td{border-bottom:0}
+#pt-par input,#pt-par select{width:100%;padding:8px 9px;border:1px solid #dbcac0;border-radius:8px;background:#fff;font-size:14px;color:#322824;font-family:inherit}
+#pt-par input[type=number]{text-align:right;max-width:120px}
+#pt-par input:disabled{background:#f7f1ec;color:#4a3d37;border-color:#eadbd1}
+#pt-par .grille{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 22px}
+#pt-par .champ{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;color:#4d403b}
+#pt-par .champ span small{display:block;color:#8a7a70;font-size:11.5px;margin-top:2px}
+#pt-par .unite{display:flex;align-items:center;gap:6px;flex-shrink:0}#pt-par .unite em{font-style:normal;color:#7b6b62;font-size:12px;min-width:22px}
+#pt-par .b1{background:#a34d31;color:#fff;border:0;border-radius:9px;padding:11px 16px;font-weight:700;cursor:pointer;font-size:14px}
+#pt-par .b2{background:#f1e5dd;color:#7e412f;border:0;border-radius:9px;padding:9px 13px;cursor:pointer;font-size:13px}
+#pt-par .b3{background:#f9e1de;color:#9d3535;border:0;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px}
+#pt-par button:disabled{opacity:.55;cursor:not-allowed}
+#pt-par .pied{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid #ebddd5;padding:15px 24px;background:#fff}
+#pt-par .pied .etat{font-size:12.5px;color:#7b6b62}
+#pt-par .pied .btns{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+#pt-par .alerte{background:#fff1d9;color:#755323;border-radius:9px;padding:10px 13px;font-size:12.5px;margin-bottom:14px;line-height:1.5}
+#pt-par .msg{font-size:13px;border-radius:8px;padding:8px 11px;margin-top:10px}
+#pt-par .msg.ok{background:#eef6f0;color:#387651}#pt-par .msg.ko{background:#fdf0ee;color:#b04d3e}
+#pt-par .resume{font-size:13px;line-height:1.7}
+@media(max-width:760px){#pt-par .grille{grid-template-columns:1fr}#pt-par .body{padding:16px}}
+@media print{#pt-par{display:none!important}}
+</style>
+<div id="pt-par" role="dialog" aria-modal="true" aria-labelledby="pt-par-title"><div class="win">
+<div class="head"><div><small>PREMIÈRE TERRE FINANCE</small><h2 id="pt-par-title">Paramètres de l'équipe</h2></div><button class="x" id="par-close" aria-label="Fermer">×</button></div>
+<div class="tabs"><button class="tab active" data-ptab="taux" type="button">Taux par durée</button><button class="tab" data-ptab="assurance" type="button">Assurance emprunteur</button><button class="tab" data-ptab="frais" type="button">Frais et garanties</button><button class="tab" data-ptab="seuils" type="button">Seuils d'analyse</button><button class="tab" data-ptab="defauts" type="button">Valeurs par défaut et loyers</button><button class="tab" data-ptab="appliquer" type="button">Appliquer à la simulation</button></div>
+<div class="body">
+<div id="par-alerte"></div>
+<div class="pane active" data-ppane="taux"><p class="info">Taux nominaux annuels hors assurance, par durée. La première ligne sert par défaut ; les autres permettent de comparer plusieurs banques.</p><div class="bloc" style="overflow-x:auto"><table id="par-taux"></table><div id="par-taux-add"></div></div></div>
+<div class="pane" data-ppane="assurance"><p class="info">Taux annuel par emprunteur, en % du capital initial, selon l'âge à la date de la simulation (date de naissance saisie dans le diagnostic). Sans date de naissance, la tranche 30-39 ans est utilisée.</p><div class="bloc"><table id="par-ass"></table></div><div class="bloc"><div class="champ"><span>Quotité par emprunteur en cas de co-emprunt<small>100 % chacun = chaque emprunteur couvert pour tout le prêt</small></span><span class="unite"><input type="number" step="any" min="0" max="100" data-p="assurance.quotiteCouple"><em>%</em></span></div></div></div>
+<div class="pane" data-ppane="frais"><div class="bloc"><h3>Frais d'acquisition et de dossier</h3><div class="grille">
+<div class="champ"><span>Notaire · neuf<small>% du prix</small></span><span class="unite"><input type="number" step="any" min="0" data-p="frais.notaireNeuf"><em>%</em></span></div>
+<div class="champ"><span>Notaire · ancien<small>% du prix</small></span><span class="unite"><input type="number" step="any" min="0" data-p="frais.notaireAncien"><em>%</em></span></div>
+<div class="champ"><span>Frais de dossier bancaire</span><span class="unite"><input type="number" step="any" min="0" data-p="frais.dossier"><em>€</em></span></div>
+<div class="champ"><span>Courtage<small>% du montant emprunté</small></span><span class="unite"><input type="number" step="any" min="0" data-p="frais.courtagePct"><em>%</em></span></div></div></div>
+<div class="bloc"><h3>Garanties · coût en % du capital garanti</h3><p class="info" style="margin:0 0 10px">Utilisé automatiquement pour chaque prêt selon la garantie choisie, quand aucun devis ni taux n'est saisi. Coût total estimé (commission, frais et participation au fonds de garantie).</p><div style="overflow-x:auto"><table id="par-gar"></table></div></div></div></div>
+<div class="pane" data-ppane="seuils"><div class="bloc"><div class="grille">
+<div class="champ"><span>Taux d'endettement maximum</span><span class="unite"><input type="number" step="any" min="0" max="100" data-p="seuils.endettement"><em>%</em></span></div>
+<div class="champ"><span>Apport minimum<small>% du coût du projet</small></span><span class="unite"><input type="number" step="any" min="0" max="100" data-p="seuils.apportMin"><em>%</em></span></div>
+<div class="champ"><span>Reste à vivre minimum · par adulte</span><span class="unite"><input type="number" step="any" min="0" data-p="seuils.resteAdulte"><em>€</em></span></div>
+<div class="champ"><span>Reste à vivre minimum · par enfant</span><span class="unite"><input type="number" step="any" min="0" data-p="seuils.resteEnfant"><em>€</em></span></div></div></div></div>
+<div class="pane" data-ppane="defauts"><p class="info">Valeurs proposées au départ sur tous les écrans (Budget max, plan de financement, optimiseur, diagnostic détaillé). Le vendeur peut toujours les modifier.</p><div class="bloc"><div class="grille"><div class="champ"><span>Taux du prêt par défaut</span><span class="unite"><input type="number" step="0.01" min="0" data-p="defauts.taux"><em>%</em></span></div><div class="champ"><span>Assurance par défaut<small>par emprunteur</small></span><span class="unite"><input type="number" step="0.01" min="0" data-p="defauts.assurance"><em>%</em></span></div><div class="champ"><span>Zone par défaut</span><select data-ps="defauts.zone" style="max-width:160px"><option value="Abis">A bis</option><option value="A">A</option><option value="B1">B1</option><option value="B2">B2</option><option value="C">C</option></select></div></div></div><p class="info">Plafonds de loyer mensuels hors charges, en €/m², avant coefficient de surface min(1,2 ; 0,7 + 19/S). À mettre à jour chaque année.</p><div class="bloc" style="overflow-x:auto"><table><tr><th>Niveau de loyer</th><th>A bis</th><th>A</th><th>B1</th><th>B2</th><th>C</th></tr><tr><td>Intermédiaire (Jeanbrun, LLI, Denormandie)</td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.intermediaire.Abis"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.intermediaire.A"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.intermediaire.B1"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.intermediaire.B2"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.intermediaire.C"><em>€</em></span></td></tr><tr><td>Social (Jeanbrun)</td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.social.Abis"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.social.A"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.social.B1"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.social.B2"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.social.C"><em>€</em></span></td></tr><tr><td>Très social (Jeanbrun)</td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.tres_social.Abis"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.tres_social.A"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.tres_social.B1"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.tres_social.B2"><em>€</em></span></td><td><span class="unite"><input type="number" step="0.01" min="0" data-p="plafondsLoyer.tres_social.C"><em>€</em></span></td></tr></table></div></div><div class="pane" data-ppane="appliquer"><p class="info">Les paramètres sont appliqués automatiquement à chaque nouvelle simulation. Ce bouton les réapplique à la simulation affichée (taux, assurance, frais, garantie et seuils), par exemple après une mise à jour de la grille.</p>
+<div class="bloc"><div class="champ"><span>Grille de taux à utiliser</span><select id="par-banque" style="max-width:280px"></select></div></div>
+<button class="b1" id="par-appliquer" type="button">Appliquer à la simulation affichée</button><div id="par-resultat"></div></div>
+</div>
+<div class="pied"><span class="etat" id="par-etat"></span><span class="btns" id="par-btns"></span></div>
+</div></div>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const eur=n=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n||0);
+const pct=n=>String(Math.round(n*100)/100).replace('.',',')+' %';
+const dialog=$('pt-par');
+const TRANCHES=['Moins de 30 ans','30 à 39 ans','40 à 49 ans','50 à 59 ans','60 ans et plus'];
+let P=null,admin=false,majLe=null,majPar=null,modifie=false,CATALOGUE=[],RAPPELS=[];
+
+async function charger(){
+  const r=await fetch('/api/parametres',{credentials:'same-origin'});
+  if(!r.ok)throw new Error('Paramètres indisponibles');
+  const j=await r.json();P=j.parametres;admin=j.admin;majLe=j.majLe;majPar=j.majPar;RAPPELS=j.rappels||[];CATALOGUE=j.garanties||[];window.ptCatalogueGaranties=CATALOGUE;if(j.parametres?.defauts)window.ptDefauts=j.parametres.defauts;window.ptParametres=P;if(window.ptGuaranteeCompute)try{window.ptGuaranteeCompute()}catch(e){}return P;
+}
+const lire=(chemin)=>chemin.split('.').reduce((o,k)=>o?.[k],P);
+function ecrire(chemin,v){const k=chemin.split('.');let o=P;for(let i=0;i<k.length-1;i++)o=o[k[i]];o[k[k.length-1]]=v}
+
+function afficher(){
+  const dis=admin?'':' disabled';
+  $('par-taux').innerHTML='<tr><th>Banque / grille</th><th>10 ans</th><th>15 ans</th><th>20 ans</th><th>25 ans</th>'+(admin?'<th></th>':'')+'</tr>'+P.taux.map((l,i)=>`<tr><td><input data-t="${i}.nom" value="${esc(l.nom)}" maxlength="60"${dis}></td>${['t10','t15','t20','t25'].map(k=>`<td><span class="unite"><input type="number" step="0.01" min="0" data-t="${i}.${k}" value="${l[k]}"${dis}><em>%</em></span></td>`).join('')}${admin?`<td>${P.taux.length>1?`<button class="b3" type="button" data-tdel="${i}">Retirer</button>`:''}</td>`:''}</tr>`).join('');
+  $('par-taux-add').innerHTML=admin?'<button class="b2" type="button" id="par-taux-plus" style="margin-top:10px">+ Ajouter une banque</button>':'';
+  if(admin)$('par-taux-plus').onclick=()=>{P.taux.push({nom:'Nouvelle banque',...Object.fromEntries(['t10','t15','t20','t25'].map(k=>[k,P.taux[0][k]]))});modifie=true;afficher()};
+  $('par-gar').innerHTML='<tr><th>Garantie</th><th>Coût</th></tr>'+CATALOGUE.map(g=>`<tr><td>${esc(g.nom)}</td><td><span class="unite"><input type="number" step="0.01" min="0" data-g="${esc(g.cle)}" value="${P.garanties?.[g.cle]??''}"${dis}><em>%</em></span></td></tr>`).join('');
+  $('par-ass').innerHTML='<tr><th>Âge de l\'emprunteur</th><th>Taux annuel</th></tr>'+P.assurance.tranches.map((t,i)=>`<tr><td>${TRANCHES[i]}</td><td><span class="unite"><input type="number" step="0.01" min="0" data-a="${i}" value="${t.taux}"${dis}><em>%</em></span></td></tr>`).join('');
+  dialog.querySelectorAll('[data-p]').forEach(el=>{el.value=lire(el.dataset.p)??'';el.disabled=!admin});
+  dialog.querySelectorAll('[data-ps]').forEach(el=>{el.value=lire(el.dataset.ps)??'';el.disabled=!admin});
+  $('par-banque').innerHTML=P.taux.map((l,i)=>`<option value="${i}">${esc(l.nom)}</option>`).join('');
+  $('par-alerte').innerHTML=(majLe?'':'<div class="alerte"><b>Valeurs d\'exemple.</b> '+(admin?'Vérifiez-les et enregistrez-les : elles seront alors utilisées par toute l\'équipe.':'L\'administrateur ne les a pas encore validées.')+'</div>')
+   +(majLe&&RAPPELS.length?`<div class="alerte" style="background:#fff8ec;border-color:#e8c58a;color:#7a5212"><b>À vérifier</b><ul style="margin:6px 0;padding-left:18px">${RAPPELS.map(x=>`<li>${esc(x.message)} <button type="button" class="b2" data-confirmer="${esc(x.rubrique)}" style="padding:2px 8px;font-size:12px;margin-left:4px">C'est à jour</button></li>`).join('')}</ul></div>`:'');
+  $('par-alerte').querySelectorAll('[data-confirmer]').forEach(b=>b.onclick=async()=>{
+    if(modifie&&!confirm('Des modifications ne sont pas enregistrées : elles le seront en même temps. Continuer ?'))return;
+    b.disabled=true;
+    try{const r=await fetch('/api/parametres',{method:'PUT',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({parametres:P,confirmer:[b.dataset.confirmer]})});const j=await r.json();if(!r.ok)throw new Error(j.message||'Erreur');P=j.parametres;majLe=j.majLe;majPar=j.majPar;RAPPELS=j.rappels||[];modifie=false;window.ptParametres=P;afficher()}
+    catch(e){alert('Impossible : '+e.message);b.disabled=false}
+  });
+  etat();
+}
+function etat(){
+  $('par-etat').textContent=modifie?'Modifications non enregistrées':majLe?`Mis à jour le ${new Date(majLe).toLocaleDateString('fr-FR')}${majPar?' par '+majPar:''}`:'Jamais enregistrés';
+  $('par-btns').innerHTML=admin?'<button class="b2" type="button" id="par-annuler">Annuler</button><button class="b1" type="button" id="par-enreg">Enregistrer pour l\'équipe</button>':'<span class="etat">Seul un administrateur peut modifier ces valeurs.</span>';
+  if(admin){$('par-enreg').disabled=!modifie&&!!majLe;$('par-annuler').disabled=!modifie;$('par-enreg').onclick=enregistrer;$('par-annuler').onclick=async()=>{modifie=false;await charger();afficher()}}
+}
+dialog.addEventListener('input',e=>{
+  const t=e.target;if(!admin)return;
+  if(t.dataset.ps){ecrire(t.dataset.ps,t.value)}
+  else if(t.dataset.p){ecrire(t.dataset.p,Number(t.value)||0)}
+  else if(t.dataset.t){const [i,k]=t.dataset.t.split('.');P.taux[+i][k]=k==='nom'?t.value:Number(t.value)||0}
+  else if(t.dataset.a){P.assurance.tranches[+t.dataset.a].taux=Number(t.value)||0}
+  else if(t.dataset.g){P.garanties[t.dataset.g]=Number(t.value)||0}
+  else return;
+  modifie=true;etat();
+});
+dialog.addEventListener('click',e=>{const b=e.target.closest('[data-tdel]');if(b&&admin){P.taux.splice(+b.dataset.tdel,1);modifie=true;afficher()}});
+async function enregistrer(){
+  $('par-enreg').disabled=true;
+  try{
+    const r=await fetch('/api/parametres',{method:'PUT',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({parametres:P})});
+    const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.message||'Erreur '+r.status);
+    P=j.parametres;majLe=j.majLe;majPar=j.majPar;RAPPELS=j.rappels||[];modifie=false;window.ptParametres=P;if(P.defauts)window.ptDefauts=P.defauts;afficher();
+    $('par-etat').textContent='Enregistré ✓ · utilisé par toute l\'équipe';
+  }catch(err){alert('Enregistrement impossible : '+err.message);etat()}
+}
+dialog.querySelectorAll('[data-ptab]').forEach(b=>b.onclick=()=>{dialog.querySelectorAll('[data-ptab]').forEach(x=>x.classList.toggle('active',x===b));dialog.querySelectorAll('[data-ppane]').forEach(p=>p.classList.toggle('active',p.dataset.ppane===b.dataset.ptab))});
+
+// --- Application à la simulation ---
+const val=id=>Number(document.getElementById(id)?.value)||0;
+function diag(k){return document.querySelector('#pt-diagnostic [data-d="'+k+'"]')}
+function fixer(el,v){if(!el)return;el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}
+function age(dateTxt){if(!dateTxt)return null;const d=new Date(dateTxt);if(isNaN(d))return null;const n=new Date();let a=n.getFullYear()-d.getFullYear();if(n<new Date(n.getFullYear(),d.getMonth(),d.getDate()))a--;return a>=16&&a<=100?a:null}
+function tauxAssurance(a){const t=P.assurance.tranches;const i=a==null?1:t.findIndex(x=>a<=x.jusqua);return t[i<0?t.length-1:i].taux}
+function tauxPourDuree(grille,annees){return annees<=10?grille.t10:annees<=15?grille.t15:annees<=20?grille.t20:grille.t25}
+function appliquer(indexGrille=0){
+  if(!P)return null;
+  const grille=P.taux[indexGrille]||P.taux[0];
+  const annees=val('mainYears')||25;
+  const taux=window.ptDefauts?.taux??tauxPourDuree(grille,annees);
+  // Assurance : par emprunteur selon l'âge, quotité appliquée au co-emprunteur.
+  const co=!!diag('co')?.checked;
+  const a1=age(diag('birth')?.value),a2=co?age(diag('cobirth')?.value):null;
+  const q=P.assurance.quotiteCouple/100;
+  const assP=a=>window.ptDefauts?.assurance??tauxAssurance(a);
+  const assurance=Math.round((co?(assP(a1)*q+assP(a2)*q):assP(a1))*1000)/1000;
+  window.mainSettings={rate:taux,years:annees,insurance:assurance};
+  fixer($('mainRate'),taux);fixer($('mainYears'),annees);fixer($('mainIns'),assurance);
+  // Frais de notaire : neuf ou ancien selon la nature de l'opération (précontrôle PTZ).
+  const ancien=document.getElementById('v9operation')?.value==='old';
+  const notaire=Math.round(val('price')*(ancien?P.frais.notaireAncien:P.frais.notaireNeuf)/100);
+  fixer($('notary'),notaire);fixer($('fileFee'),P.frais.dossier);fixer($('threshold'),P.seuils.endettement);
+  if(typeof calc==='function')calc();
+  // Garantie et courtage : calculés sur le montant du prêt principal une fois le plan recalculé.
+  const pret=window.loanOutputs?.[0]?.amount||0;
+  const type=$('guarantee')?.value;
+  const pctGarantie=window.ptTauxGarantie(type)??0;
+  const garantie=Math.round(pret*pctGarantie/100),courtage=Math.round(pret*P.frais.courtagePct/100);
+  fixer($('guaranteeFee'),garantie);fixer($('brokerFee'),courtage);
+  if(typeof calc==='function')calc();
+  // Diagnostic financier : mêmes valeurs.
+  const enfants=(window.ptBorrowerGet?.().children||[]).length;
+  const resteMin=(co?2:1)*P.seuils.resteAdulte+enfants*P.seuils.resteEnfant;
+  [['rate',taux],['notary',notaire],['filefee',P.frais.dossier],['broker',courtage],['threshold',P.seuils.endettement],['residual',resteMin]].forEach(([k,v])=>{const el=diag(k);if(el)el.value=v});
+  // Contrôle de l'apport.
+  const cout=val('price')+notaire+val('works'),apport=val('deposit'),apportPct=cout?apport/cout*100:0;
+  return {grille:grille.nom,annees,taux,assurance,a1,a2,co,notaire,ancien,dossier:P.frais.dossier,garantie,pctGarantie,courtage,seuil:P.seuils.endettement,resteMin,apportPct,apportOk:apportPct>=P.seuils.apportMin};
+}
+$('par-appliquer').onclick=()=>{
+  if(modifie&&!confirm('Des modifications ne sont pas enregistrées. Les appliquer quand même à la simulation affichée ?'))return;
+  const r=appliquer(+$('par-banque').value||0);if(!r)return;
+  $('par-resultat').innerHTML=`<div class="bloc resume" style="margin-top:14px"><b>Appliqué à la simulation affichée</b><br>
+  Taux ${esc(r.grille)} sur ${r.annees} ans : <b>${pct(r.taux)}</b><br>
+  Assurance : <b>${pct(r.assurance)}</b> (${r.a1!=null?r.a1+' ans':'âge non renseigné'}${r.co?' + co-emprunteur '+(r.a2!=null?r.a2+' ans':'âge non renseigné'):''})<br>
+  Notaire (${r.ancien?'ancien':'neuf'}) : <b>${eur(r.notaire)}</b> · Dossier : <b>${eur(r.dossier)}</b> · Courtage : <b>${eur(r.courtage)}</b><br>
+  Garantie (${pct(r.pctGarantie)} du prêt principal) : <b>${eur(r.garantie)}</b><br>
+  Seuil d'endettement : <b>${pct(r.seuil)}</b> · Reste à vivre minimum : <b>${eur(r.resteMin)}</b><br>
+  ${r.apportOk?`Apport : ${pct(r.apportPct)} du coût du projet ✓`:`<span style="color:#a3392a">⚠ Apport de ${pct(r.apportPct)} du coût du projet, sous le minimum de l'équipe (${pct(P.seuils.apportMin)}).</span>`}</div>`;
+};
+
+async function ouvrir(){
+  dialog.classList.add('open');
+  try{if(!modifie)await charger();afficher()}catch(e){$('par-alerte').innerHTML=`<div class="alerte">${esc(e.message)}</div>`}
+}
+function fermer(){
+  if(modifie&&!confirm('Des modifications ne sont pas enregistrées. Fermer quand même ?'))return;
+  if(modifie){modifie=false;charger().catch(()=>{})}
+  dialog.classList.remove('open');
+}
+window.ptOpenParametres=ouvrir;
+window.ptAppliquerParametres=appliquer;
+$('par-close').onclick=fermer;
+dialog.addEventListener('click',e=>{if(e.target===dialog)fermer()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dialog.classList.contains('open'))fermer()});
+// Nouvelle simulation (aucune simulation de dossier en cours) : les paramètres de l'équipe remplacent
+// les valeurs par défaut du formulaire.
+let courant=null;try{courant=JSON.parse(sessionStorage.getItem('pt-dossier-courant')||'null')}catch{}
+window.ptParametresPrets=charger().then(()=>{if(!courant?.simId)appliquer(0)}).catch(()=>{});
+})();
+</script>
+<!-- Écrans simplifiés : Plan de financement, Diagnostic (capacité d'emprunt), Optimiseur fiscal -->

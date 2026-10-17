@@ -1,4 +1,5 @@
 {
   "framework": "nextjs",
-  "buildCommand": "npm run vercel-build"
+  "buildCommand": "npm run vercel-build",
+  "crons": [{ "path": "/api/sauvegarde/auto", "schedule": "0 5 * * 1" }]
 }

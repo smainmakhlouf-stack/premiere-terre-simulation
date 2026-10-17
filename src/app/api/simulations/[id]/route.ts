@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client"
 import { db } from "@/lib/db"
 import { lireJson, texte, traiter, utilisateur } from "@/lib/api"
 import { simulationAutorisee } from "@/lib/dossiers"
+import { enregistrerVersion, resume } from "@/lib/historique"
 
 export const dynamic = "force-dynamic"
 
@@ -25,12 +26,15 @@ export function PUT(request: Request, { params }: Ctx) {
       where: { id: sim.id },
       data: {
         ...(texte(b.nom, 120) ? { nom: texte(b.nom, 120)! } : {}),
-        ...(b.data && typeof b.data === "object" ? { data: b.data as Prisma.InputJsonValue } : {}),
+        ...(b.data && typeof b.data === "object" ? { data: b.data as Prisma.InputJsonValue, resume: resume(b.resume) } : {}),
       },
-      select: { id: true, nom: true, updatedAt: true },
+      select: { id: true, nom: true, updatedAt: true, data: true, resume: true },
     })
+    if (b.data && typeof b.data === "object") {
+      await enregistrerVersion(simulation.id, { nom: simulation.nom, data: simulation.data as Prisma.InputJsonValue, resume: simulation.resume as Prisma.InputJsonValue }, "modification", u.name)
+    }
     await db.client.update({ where: { id: sim.clientId }, data: { updatedAt: new Date() } })
-    return NextResponse.json({ simulation })
+    return NextResponse.json({ simulation: { id: simulation.id, nom: simulation.nom, updatedAt: simulation.updatedAt } })
   })
 }
 

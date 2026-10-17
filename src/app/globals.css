@@ -63,3 +63,12 @@ input:focus, select:focus { outline: 2px solid rgba(140, 76, 61, 0.25); border-c
 @media (max-width: 720px) {
   .grille-ajout { grid-template-columns: 1fr; }
 }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.kpi { background: #fff; border: 1px solid var(--bord); border-radius: 14px; padding: 14px 16px; }
+.kpi small { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gris); }
+.kpi b { display: block; font-size: 24px; color: var(--brun); margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
+.kpi span { font-size: 12px; color: var(--gris); }
+.pastille.statut-finance { background: #e3f1e7; color: #2f6b45; }
+.pastille.statut-perdu { background: #f3e1df; color: #9d3535; }
+a.btn { text-decoration: none; display: inline-block; }

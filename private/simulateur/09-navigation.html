@@ -1,0 +1,25 @@
+<script>
+/* Retour à l'accueil depuis n'importe quel écran (bouton de la barre du haut). */
+window.ptAllerAccueil=function(){
+  const ouvert=id=>document.getElementById(id)?.classList.contains('open'),h0=document.getElementById('pt-home');
+  const surSimulation=ouvert('pt-studio')||ouvert('pt-diagnostic')||document.body.classList.contains('v9clientmode')||(h0&&getComputedStyle(h0).display==='none'&&!['pt-ptz','pt-dos','pt-par'].some(ouvert));
+  if(surSimulation&&window.ptFermerSimulation)return window.ptFermerSimulation();
+  ['pt-studio','pt-diagnostic','pt-ptz','pt-dos','pt-par'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('open')});
+  if(document.body.classList.contains('v9clientmode')){document.body.classList.remove('v9clientmode');const b=document.getElementById('v9present');if(b)b.textContent='Présentation client'}
+  const h=document.getElementById('pt-home');if(h)h.style.display='block';
+  document.body.style.overflow='';window.scrollTo(0,0);
+};
+// Le bouton n'apparaît que hors de l'accueil.
+(function(){
+  const ids=['pt-studio','pt-diagnostic','pt-ptz','pt-dos','pt-par'];
+  function maj(){
+    const b=document.getElementById('pt-btn-accueil'),h=document.getElementById('pt-home');if(!b)return;
+    const surAccueil=h&&getComputedStyle(h).display!=='none'&&!ids.some(id=>document.getElementById(id)?.classList.contains('open'))&&!document.body.classList.contains('v9clientmode');
+    b.style.visibility=surAccueil?'hidden':'visible';
+  }
+  const obs=new MutationObserver(maj),cibles=[document.body,document.getElementById('pt-home'),...ids.map(id=>document.getElementById(id))].filter(Boolean);
+  cibles.forEach(el=>obs.observe(el,{attributes:true,attributeFilter:['class','style']}));
+  maj();
+})();
+</script>
+</html>

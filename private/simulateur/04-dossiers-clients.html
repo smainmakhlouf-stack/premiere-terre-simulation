@@ -1,0 +1,406 @@
+<style>
+#pt-dos{display:none;position:fixed;inset:0;z-index:9300;background:#261b17a6;padding:3vh 15px;overflow:auto;font-family:Inter,Arial,sans-serif;color:#2f2622}
+#pt-dos.open{display:block}#pt-dos *{box-sizing:border-box}
+#pt-dos .win{max-width:1180px;margin:0 auto;background:#fffaf7;border-radius:17px;box-shadow:0 25px 100px #1d100f55;overflow:hidden}
+#pt-dos .head{background:#fff;border-bottom:1px solid #e9d8cd;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 24px}
+#pt-dos .head small{font-size:11px;letter-spacing:2px;color:#927c6f}#pt-dos h2{font:24px Georgia,serif;color:#9c482d;margin:2px 0 0}
+#pt-dos .x{font-size:25px;background:transparent;border:0;color:#624e45;cursor:pointer}
+#pt-dos .body{display:grid;grid-template-columns:340px minmax(0,1fr);min-height:60vh}
+#pt-dos .gauche{border-right:1px solid #eadbd1;padding:16px;background:#fffdfb}
+#pt-dos .droite{padding:18px 22px}
+#pt-dos input,#pt-dos textarea{width:100%;padding:9px 10px;border:1px solid #dbcac0;border-radius:8px;background:#fff;font-size:14px;color:#322824;font-family:inherit}
+#pt-dos textarea{min-height:70px;resize:vertical}
+#pt-dos label{display:block;font-size:12px;color:#65554d;margin-bottom:9px}
+#pt-dos label input,#pt-dos label textarea{margin-top:4px}
+#pt-dos .b1{background:#a34d31;color:#fff;border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:13px}
+#pt-dos .b2{background:#f1e5dd;color:#7e412f;border:0;border-radius:9px;padding:8px 12px;cursor:pointer;font-size:13px}
+#pt-dos .b3{background:#f9e1de;color:#9d3535;border:0;border-radius:9px;padding:8px 12px;cursor:pointer;font-size:13px}
+#pt-dos button:disabled{opacity:.55;cursor:not-allowed}
+#pt-dos .liste{margin-top:12px;display:flex;flex-direction:column;gap:6px;max-height:58vh;overflow:auto}
+#pt-dos .cli{text-align:left;border:1px solid #ecdfd8;background:#fff;border-radius:10px;padding:10px 12px;cursor:pointer;font:inherit;color:inherit}
+#pt-dos .cli:hover{border-color:#bd755a}#pt-dos .cli.actif{border-color:#a34d31;background:#fbf1eb}
+#pt-dos .cli b{display:block;font-size:14px}#pt-dos .cli span{display:block;font-size:12px;color:#7b6b62;margin-top:2px}
+#pt-dos .vide{color:#7b6b62;font-size:13px;padding:14px 4px;line-height:1.5}
+#pt-dos .grille{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+#pt-dos .sims{border:1px solid #e9d9ce;border-radius:12px;background:#fff;margin-top:6px}
+#pt-dos .sim{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;border-bottom:1px solid #f3e9e3;flex-wrap:wrap}
+#pt-dos .sim:last-child{border-bottom:0}#pt-dos .sim b{font-size:14px}#pt-dos .sim span{display:block;font-size:12px;color:#7b6b62;margin-top:2px}
+#pt-dos .sim .act{display:flex;gap:6px;flex-wrap:wrap}
+#pt-dos .sim.courante{background:#fbf1eb}
+#pt-dos h3{font-size:15px;color:#9c482d;margin:18px 0 8px}
+#pt-dos .msg{margin-top:10px;font-size:13px;border-radius:8px;padding:8px 11px}
+#pt-dos .msg.ok{background:#eef6f0;color:#387651}#pt-dos .msg.ko{background:#fdf0ee;color:#b04d3e}
+#pt-dos .ligne{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#pt-dos .enreg{background:#f5ede7;border:1px solid #e5d4c9;border-radius:12px;padding:14px;margin-top:14px}
+#pt-dos .enreg .ligne input{flex:1;min-width:200px}
+#pt-dos-bar{display:inline-flex;align-items:center;gap:8px;margin-right:auto;min-width:0}
+#pt-dos-bar span{overflow:hidden;text-overflow:ellipsis;max-width:38vw}
+#pt-dos-bar button{background:#fff;color:#754338;border:0;border-radius:6px;padding:3px 10px;cursor:pointer;font:inherit;font-weight:600}
+#pt-dos-bar button.sec{background:none;color:#fff;border:1px solid rgba(255,255,255,.5);font-weight:400}
+#pt-dos .filtres{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}#pt-dos .filtres select{flex:1;min-width:120px;padding:7px 8px;border:1px solid #dbcac0;border-radius:8px;background:#fff;font:inherit;font-size:12.5px;color:#322824}
+#pt-dos .sauv{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid #eadbd1}#pt-dos .sauv button{font-size:12px}
+#pt-dos .stt{display:inline-block;font-size:11px;border-radius:20px;padding:1px 8px;margin-left:6px;vertical-align:1px;background:#efe3da;color:#7e412f;font-weight:600}
+#pt-dos .stt.finance{background:#e3f1e7;color:#2f6b45}#pt-dos .stt.perdu{background:#f3e1df;color:#9d3535}
+#pt-dos .statuts{display:inline-flex;border:1px solid #e0cfc4;border-radius:9px;overflow:hidden}#pt-dos .statuts button{border:0;background:#fff;padding:6px 11px;font:inherit;font-size:12.5px;cursor:pointer;color:#65554d}#pt-dos .statuts button+button{border-left:1px solid #e0cfc4}
+#pt-dos .statuts button.on{background:#a34d31;color:#fff}#pt-dos .statuts button.on[data-statut=finance]{background:#2f8a5a}#pt-dos .statuts button.on[data-statut=perdu]{background:#9d3535}
+#pt-dos .sim .chiffres{font-size:12px;color:#5e4f48;margin-top:3px}
+#pt-dos .simx{flex-basis:100%;background:#fbf6f2;border:1px solid #efe2d9;border-radius:10px;padding:10px 12px;margin-top:4px}
+#pt-dos .ver{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #efe2d9;font-size:12.5px;flex-wrap:wrap}#pt-dos .ver:last-child{border-bottom:0}#pt-dos .ver span{color:#7b6b62}
+@media(max-width:860px){#pt-dos .body{grid-template-columns:1fr}#pt-dos .gauche{border-right:0;border-bottom:1px solid #eadbd1}#pt-dos .grille{grid-template-columns:1fr}#pt-dos-bar span{max-width:30vw}}
+@media print{#pt-dos{display:none!important}}
+</style>
+<div id="pt-dos" role="dialog" aria-modal="true" aria-labelledby="pt-dos-title"><div class="win">
+<div class="head"><div><small>PREMIÈRE TERRE FINANCE</small><h2 id="pt-dos-title">Dossiers clients</h2></div><button class="x" id="dos-close" aria-label="Fermer">×</button></div>
+<div class="body">
+<div class="gauche">
+<div class="ligne"><input id="dos-q" type="search" placeholder="Rechercher un client (nom, e-mail, tél.)" style="flex:1"><button class="b1" id="dos-nouveau" type="button">+ Client</button></div>
+<div class="filtres"><select id="dos-statut" aria-label="Statut"><option value="">Tous les statuts</option><option value="en_cours">En cours</option><option value="finance">Financés</option><option value="perdu">Perdus</option></select><select id="dos-jours" aria-label="Période"><option value="">Toutes les dates</option><option value="7">Modifiés depuis 7 jours</option><option value="30">Depuis 30 jours</option><option value="90">Depuis 3 mois</option><option value="365">Depuis 12 mois</option></select><select id="dos-conseiller" aria-label="Vendeur" hidden><option value="">Tous les vendeurs</option></select></div>
+<div class="liste" id="dos-liste"></div>
+<div class="sauv"><button class="b2" id="dos-export" type="button">⤓ Exporter les dossiers</button><button class="b2" id="dos-import" type="button" hidden>Restaurer une sauvegarde…</button><input type="file" id="dos-import-f" accept="application/json,.json" hidden></div>
+</div>
+<div class="droite" id="dos-droite"></div>
+</div></div></div>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const date=d=>new Date(d).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+const nomClient=c=>[c.prenom,c.nom].filter(Boolean).join(' ');
+const dialog=$('pt-dos');
+let clients=[],admin=false,selection=null,detail=null;
+// Dossier et simulation ouverts : conservés pendant la session de l'onglet.
+let courant=null;try{courant=JSON.parse(sessionStorage.getItem('pt-dossier-courant')||'null')}catch{}
+
+async function api(url,opt={}){
+  const r=await fetch(url,{...opt,headers:{'Content-Type':'application/json',...(opt.headers||{})},credentials:'same-origin'});
+  if(r.status===401){alert('Votre session a expiré : reconnectez-vous.');location.href='/connexion';throw new Error('session')}
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.message||'Erreur '+r.status);
+  return j;
+}
+
+// --- État complet du simulateur ---
+function capturer(){
+  return {format:'ptf-dossier',version:1,ecrans:Object.fromEntries([...document.querySelectorAll('#st-memo input')].map(i=>[i.id,i.value])),main:window.ptMainGet?window.ptMainGet():null,diag:window.ptDiagGet?window.ptDiagGet():null,borrower:window.ptBorrowerGet?window.ptBorrowerGet():null};
+}
+/** Chiffres clés de la simulation affichée, pour la liste des dossiers et le tableau de bord. */
+function resumer(){
+  const r={};
+  try{const b=window.ptResumeBudget&&window.ptResumeBudget();if(b)Object.assign(r,b)}catch{}
+  const prix=+document.getElementById('price')?.value||0;
+  if(prix>0){r.prix=prix;r.emprunte=(window.loanOutputs||[]).reduce((t,o)=>t+(+o.amount||0),0);r.mensualite=+(window.lastRows?.[0]?.[1])||0}
+  return r;
+}
+const corps=(data,extra)=>JSON.stringify({...(extra||{}),data,resume:resumer()});
+const chiffres=r=>{if(!r)return'';const e=n=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n);const l=[];if(r.budget)l.push('Budget max '+e(r.budget));if(r.emprunte)l.push('Emprunt '+e(r.emprunte));if(r.mensualite)l.push(e(r.mensualite)+'/mois');return l.join(' · ')};
+const STATUTS={en_cours:'En cours',finance:'Financé',perdu:'Perdu'};
+function restaurer(d){
+  if(!d||d.format!=='ptf-dossier')throw new Error('Format de simulation inconnu.');
+  if(d.ecrans)Object.entries(d.ecrans).forEach(([k,v])=>{const el=document.getElementById(k);if(el&&el.closest('#st-memo'))el.value=v});
+  if(d.main&&window.ptMainSet)window.ptMainSet(d.main);
+  if(d.diag&&window.ptDiagSet)window.ptDiagSet(d.diag);
+  if(d.borrower&&window.ptBorrowerSet)window.ptBorrowerSet(d.borrower);
+  if(window.ptRafraichirStudio)setTimeout(window.ptRafraichirStudio,0);
+}
+
+// --- Barre du haut : dossier en cours ---
+function barre(){
+  const hote=$('pt-barre-compte');if(!hote)return;
+  let el=$('pt-dos-bar');if(!el){el=document.createElement('div');el.id='pt-dos-bar';hote.insertBefore(el,hote.firstChild)}
+  if(courant){
+    el.innerHTML=`<span>Dossier : <b>${esc(courant.client)}</b>${courant.simNom?' · '+esc(courant.simNom):''}</span><button type="button" id="dos-bar-save">${courant.simId?'Enregistrer':'Enregistrer la simulation'}</button><button type="button" class="sec" id="dos-bar-open">Dossiers</button><button type="button" class="sec" id="dos-bar-new" title="Repartir d'une simulation vierge">Nouvelle</button>`;
+    $('dos-bar-save').onclick=enregistrerRapide;
+    $('dos-bar-new').onclick=()=>nouvelle();
+  }else{
+    el.innerHTML=`<button type="button" class="sec" id="dos-bar-open">Dossiers clients</button>`;
+  }
+  $('dos-bar-open').onclick=()=>ouvrir(courant?.clientId);
+}
+function setCourant(c){courant=c;try{c?sessionStorage.setItem('pt-dossier-courant',JSON.stringify(c)):sessionStorage.removeItem('pt-dossier-courant')}catch{}barre();if(window.ptStudioDossier)window.ptStudioDossier()}
+
+async function enregistrerRapide(){
+  if(!courant){await ouvrir();const d=$('dos-droite');if(d&&!selection)d.innerHTML='<div class="vide"><b>Pour enregistrer cette simulation</b>, choisissez le client à gauche, ou créez-le avec « + Client ».</div>';return}
+  if(!courant.simId)return ouvrir(courant.clientId,true);
+  const boutons=[$('dos-bar-save'),$('st-save')].filter(Boolean);boutons.forEach(b=>{b.disabled=true;b.dataset.txt=b.textContent;b.textContent='Enregistrement…'});
+  try{await api('/api/simulations/'+courant.simId,{method:'PUT',body:corps(capturer())});if(window.ptMarquerEnregistre)window.ptMarquerEnregistre();boutons.forEach(b=>b.textContent='Enregistré ✓');setTimeout(()=>{barre();boutons.forEach(b=>{b.disabled=false;b.textContent=b.dataset.txt})},1500)}
+  catch(e){alert('Enregistrement impossible : '+e.message);barre();boutons.forEach(b=>{b.disabled=false;b.textContent=b.dataset.txt})}
+}
+
+// --- Liste des clients ---
+async function chargerListe(){
+  const prm=new URLSearchParams();const q=$('dos-q').value.trim();if(q)prm.set('q',q);
+  [['statut','dos-statut'],['jours','dos-jours'],['conseiller','dos-conseiller']].forEach(([k,id])=>{if($(id).value)prm.set(k,$(id).value)});
+  try{const j=await api('/api/dossiers'+(prm.toString()?'?'+prm:''));clients=j.clients;admin=j.admin;
+    const cs=$('dos-conseiller');if(admin&&cs.hidden){cs.hidden=false;$('dos-import').hidden=false;$('dos-export').textContent='⤓ Exporter tous les dossiers';cs.innerHTML='<option value="">Tous les vendeurs</option>'+(j.conseillers||[]).map(v=>`<option value="${esc(v.id)}">${esc(v.name)}</option>`).join('')+'<option value="aucun">Sans vendeur</option>'}
+    afficherListe()}
+  catch(e){$('dos-liste').innerHTML=`<div class="vide">${esc(e.message)}</div>`}
+}
+function afficherListe(){
+  $('dos-liste').innerHTML=clients.length?clients.map(c=>`<button type="button" class="cli${c.id===selection?' actif':''}" data-id="${esc(c.id)}"><b>${esc(nomClient(c))}<span class="stt ${esc(c.statut)}">${STATUTS[c.statut]||''}</span></b><span>${c.nbSimulations} simulation${c.nbSimulations>1?'s':''} · ${esc(date(c.majLe))}${admin&&c.conseiller?' · '+esc(c.conseiller):''}</span>${c.resume&&chiffres(c.resume)?`<span>${esc(chiffres(c.resume))}</span>`:''}</button>`).join('')
+    :`<div class="vide">${$('dos-q').value||$('dos-statut').value||$('dos-jours').value||$('dos-conseiller').value?'Aucun client ne correspond à la recherche.':'Aucun dossier pour l\'instant. Créez votre premier client avec « + Client ».'}</div>`;
+}
+$('dos-liste').addEventListener('click',e=>{const b=e.target.closest('[data-id]');if(b)choisir(b.dataset.id)});
+let minuterie;$('dos-q').addEventListener('input',()=>{clearTimeout(minuterie);minuterie=setTimeout(chargerListe,250)});
+['dos-statut','dos-jours','dos-conseiller'].forEach(id=>$(id).addEventListener('change',chargerListe));
+
+// --- Fiche client ---
+function formulaireClient(c){
+  return `<div class="grille">
+  <label>Nom *<input id="dos-nom" value="${esc(c?.nom)}" maxlength="100"></label>
+  <label>Prénom<input id="dos-prenom" value="${esc(c?.prenom)}" maxlength="100"></label>
+  <label>E-mail<input id="dos-email" type="email" value="${esc(c?.email)}" maxlength="200"></label>
+  <label>Téléphone<input id="dos-tel" value="${esc(c?.telephone)}" maxlength="40"></label></div>
+  <label>Notes<textarea id="dos-notes" maxlength="5000">${esc(c?.notes)}</textarea></label>`;
+}
+const valeursClient=()=>({nom:$('dos-nom').value,prenom:$('dos-prenom').value,email:$('dos-email').value,telephone:$('dos-tel').value,notes:$('dos-notes').value});
+function message(txt,ok=true){const m=$('dos-msg');if(m){m.className='msg '+(ok?'ok':'ko');m.textContent=txt}}
+
+function nouveauClient(){
+  selection=null;afficherListe();
+  $('dos-droite').innerHTML=`<h3 style="margin-top:0">Nouveau client</h3>${formulaireClient(null)}
+  <div class="ligne"><button class="b1" id="dos-creer" type="button">Créer le dossier</button></div><div id="dos-msg"></div>`;
+  $('dos-nom').focus();
+  $('dos-creer').onclick=async()=>{
+    const v=valeursClient();if(!v.nom.trim())return message('Le nom est obligatoire.',false);
+    $('dos-creer').disabled=true;
+    try{const j=await api('/api/dossiers',{method:'POST',body:JSON.stringify(v)});$('dos-q').value='';setCourant({clientId:j.client.id,client:nomClient(j.client),simId:null,simNom:null});await chargerListe();await choisir(j.client.id,true)}
+    catch(e){message(e.message,false);$('dos-creer').disabled=false}
+  };
+}
+$('dos-nouveau').onclick=nouveauClient;
+
+async function choisir(id,proposerEnregistrement){
+  selection=id;afficherListe();
+  $('dos-droite').innerHTML='<div class="vide">Chargement…</div>';
+  try{detail=(await api('/api/dossiers/'+id)).client}catch(e){$('dos-droite').innerHTML=`<div class="vide">${esc(e.message)}</div>`;return}
+  const c=detail,sims=c.simulations;
+  const nomDefaut='Simulation du '+new Date().toLocaleDateString('fr-FR');
+  $('dos-droite').innerHTML=`
+  <div class="ligne" style="justify-content:space-between"><h3 style="margin:0;font:22px Georgia,serif;color:#9c482d">${esc(nomClient(c))}</h3>${admin&&c.owner?`<span style="font-size:12px;color:#7b6b62">Conseiller : ${esc(c.owner.name)}</span>`:''}</div>
+  <div class="ligne" style="margin-top:10px"><span style="font-size:12px;color:#65554d">Statut du dossier</span><div class="statuts">${Object.entries(STATUTS).map(([k,l])=>`<button type="button" data-statut="${k}" class="${(c.statut||'en_cours')===k?'on':''}">${l}</button>`).join('')}</div></div>
+  <div class="enreg"><b style="font-size:14px">Enregistrer la simulation affichée dans ce dossier</b>
+    <div class="ligne" style="margin-top:8px"><input id="dos-simnom" value="${esc(nomDefaut)}" maxlength="120" aria-label="Nom de la simulation"><button class="b1" id="dos-save" type="button">Enregistrer</button></div>
+    <div style="font-size:12px;color:#7b6b62;margin-top:6px">Enregistre tout le simulateur : plan de financement, prêts, diagnostic et emprunteurs.</div></div>
+  <h3>Simulations (${sims.length})</h3>
+  <div class="sims">${sims.length?sims.map(s=>`<div class="sim${courant?.simId===s.id?' courante':''}" data-sim="${esc(s.id)}"><div><b>${esc(s.nom)}</b><span>Modifiée le ${esc(date(s.updatedAt))}${s.author?' par '+esc(s.author.name):''}</span>${chiffres(s.resume)?`<div class="chiffres">${esc(chiffres(s.resume))}</div>`:''}</div><div class="act">
+    <button class="b1" type="button" data-ouvrir="${esc(s.id)}">Ouvrir</button>
+    ${courant?.simId===s.id?`<button class="b2" type="button" data-maj="${esc(s.id)}">Mettre à jour</button>`:''}
+    <button class="b2" type="button" data-dupliquer="${esc(s.id)}">Dupliquer</button>
+    <button class="b2" type="button" data-historique="${esc(s.id)}">Historique${s._count?.versions?' ('+s._count.versions+')':''}</button>
+    <button class="b2" type="button" data-renommer="${esc(s.id)}">Renommer</button>
+    <button class="b3" type="button" data-suppr="${esc(s.id)}">Supprimer</button></div></div>`).join(''):'<div class="vide" style="padding:14px">Aucune simulation enregistrée pour ce client.</div>'}</div>
+  <div id="dos-msg"></div>
+  <details style="margin-top:18px"><summary style="cursor:pointer;color:#9c482d;font-weight:600;font-size:13px">Coordonnées du client</summary><div style="margin-top:10px">${formulaireClient(c)}
+  <div class="ligne"><button class="b2" id="dos-maj-client" type="button">Enregistrer les coordonnées</button><button class="b3" id="dos-suppr-client" type="button">Supprimer le dossier</button></div></div></details>`;
+  if(proposerEnregistrement)$('dos-simnom').focus();
+  $('dos-droite').querySelectorAll('[data-statut]').forEach(b=>b.onclick=async()=>{
+    try{await api('/api/dossiers/'+c.id,{method:'PATCH',body:JSON.stringify({statut:b.dataset.statut})});c.statut=b.dataset.statut;$('dos-droite').querySelectorAll('[data-statut]').forEach(x=>x.classList.toggle('on',x===b));await chargerListe();message('Statut : '+STATUTS[b.dataset.statut]+'.')}
+    catch(e){message(e.message,false)}
+  });
+  $('dos-save').onclick=async()=>{
+    $('dos-save').disabled=true;
+    try{const j=await api('/api/dossiers/'+c.id+'/simulations',{method:'POST',body:corps(capturer(),{nom:$('dos-simnom').value})});
+      setCourant({clientId:c.id,client:nomClient(c),simId:j.simulation.id,simNom:j.simulation.nom});try{localStorage.removeItem('pt-brouillon-simulation')}catch{}if(window.ptMarquerEnregistre)window.ptMarquerEnregistre();await chargerListe();await choisir(c.id);message('Simulation enregistrée.')}
+    catch(e){message(e.message,false);$('dos-save').disabled=false}
+  };
+  $('dos-maj-client').onclick=async()=>{
+    const v=valeursClient();if(!v.nom.trim())return message('Le nom est obligatoire.',false);
+    try{await api('/api/dossiers/'+c.id,{method:'PATCH',body:JSON.stringify(v)});if(courant?.clientId===c.id)setCourant({...courant,client:[v.prenom.trim(),v.nom.trim()].filter(Boolean).join(' ')});await chargerListe();await choisir(c.id);message('Coordonnées enregistrées.')}
+    catch(e){message(e.message,false)}
+  };
+  $('dos-suppr-client').onclick=async()=>{
+    if(!confirm(`Supprimer le dossier de ${nomClient(c)} et ses ${sims.length} simulation(s) ? Cette action est définitive.`))return;
+    try{await api('/api/dossiers/'+c.id,{method:'DELETE'});if(courant?.clientId===c.id)setCourant(null);selection=null;await chargerListe();$('dos-droite').innerHTML='<div class="vide">Dossier supprimé.</div>'}
+    catch(e){message(e.message,false)}
+  };
+}
+$('dos-droite').addEventListener('click',async e=>{
+  const b=e.target.closest('[data-ouvrir],[data-maj],[data-renommer],[data-suppr],[data-dupliquer],[data-historique],[data-dup-ok],[data-restaurer]');if(!b||!detail)return;
+  const c=detail;
+  const panneau=(id,html)=>{const ligne=$('dos-droite').querySelector(`.sim[data-sim="${CSS.escape(id)}"]`);const ouvert=ligne.querySelector('.simx');const meme=ouvert&&ouvert.dataset.k===html.k;$('dos-droite').querySelectorAll('.simx').forEach(x=>x.remove());if(meme)return null;const el=document.createElement('div');el.className='simx';el.dataset.k=html.k;el.innerHTML=html.h;ligne.appendChild(el);return el};
+  try{
+    if(b.dataset.dupliquer){
+      const s=c.simulations.find(x=>x.id===b.dataset.dupliquer);
+      const el=panneau(s.id,{k:'dup',h:`<b style="font-size:13px">Dupliquer « ${esc(s.nom)} »</b><div class="ligne" style="margin-top:8px"><input id="dup-nom" value="${esc(s.nom+' (copie)')}" maxlength="120" style="flex:1;min-width:180px" aria-label="Nom de la copie"><select id="dup-client" style="padding:8px;border:1px solid #dbcac0;border-radius:8px;font:inherit;font-size:13px;max-width:220px" aria-label="Dossier de destination"><option value="${esc(c.id)}">Dans ce dossier</option>${clients.filter(x=>x.id!==c.id).map(x=>`<option value="${esc(x.id)}">Vers ${esc(nomClient(x))}</option>`).join('')}</select><button class="b1" type="button" data-dup-ok="${esc(s.id)}">Créer la copie</button></div><div style="font-size:12px;color:#7b6b62;margin-top:6px">Variante à partir de cette simulation : l'originale n'est pas modifiée.</div>`});
+      if(el)el.querySelector('#dup-nom').select();return;
+    }
+    if(b.dataset.dupOk){
+      b.disabled=true;const cible=$('dup-client').value;
+      const j=await api('/api/simulations/'+b.dataset.dupOk+'/dupliquer',{method:'POST',body:JSON.stringify({nom:$('dup-nom').value,clientId:cible})});
+      await chargerListe();await choisir(cible);message(`Copie « ${j.simulation.nom} » créée${cible!==c.id?' dans ce dossier':''} : cliquez sur Ouvrir pour la modifier.`);return;
+    }
+    if(b.dataset.historique){
+      const id=b.dataset.historique;
+      const el=panneau(id,{k:'hist',h:'<div class="vide" style="padding:4px">Chargement de l\'historique…</div>'});if(!el)return;
+      const v=(await api('/api/simulations/'+id+'/versions')).versions;
+      const ACT={creation:'Création',modification:'Modification',restauration:'Restauration',duplication:'Copie'};
+      el.innerHTML=`<b style="font-size:13px">Historique des enregistrements</b><div style="font-size:12px;color:#7b6b62;margin:2px 0 6px">Les enregistrements automatiques d'une même session sont regroupés. 30 dernières versions conservées.</div>`+(v.length?v.map((x,i)=>`<div class="ver"><div><b>${esc(date(x.createdAt))}</b> · ${ACT[x.action]||esc(x.action)}${x.auteurNom?' par '+esc(x.auteurNom):''}<br><span>${esc(chiffres(x.resume)||'—')}</span></div>${i===0?'<span>Version actuelle</span>':`<button class="b2" type="button" data-restaurer="${esc(x.id)}" data-sim-id="${esc(id)}">Restaurer</button>`}</div>`).join(''):'<div class="vide" style="padding:4px">Aucune version enregistrée (simulation antérieure à l\'historique).</div>');
+      return;
+    }
+    if(b.dataset.restaurer){
+      const id=b.dataset.simId;
+      if(!confirm('Revenir à cette version ? L\'état actuel reste disponible dans l\'historique.'))return;
+      b.disabled=true;
+      const s=(await api('/api/simulations/'+id+'/versions',{method:'POST',body:JSON.stringify({versionId:b.dataset.restaurer})})).simulation;
+      if(courant?.simId===id){restaurer(s.data);setTimeout(()=>window.ptMarquerEnregistre&&window.ptMarquerEnregistre(),0)}
+      await choisir(c.id);message('Version restaurée'+(courant?.simId===id?' et rechargée dans le simulateur.':'.'));return;
+    }
+    if(b.dataset.ouvrir){
+      b.disabled=true;
+      const s=(await api('/api/simulations/'+b.dataset.ouvrir)).simulation;
+      restaurer(s.data);
+      setCourant({clientId:c.id,client:nomClient(c),simId:s.id,simNom:s.nom});setTimeout(()=>window.ptMarquerEnregistre&&window.ptMarquerEnregistre(),0);
+      fermer();
+      if(window.ptOpenStudio)window.ptOpenStudio('plan');else{const plan=document.querySelector('#pt-home [data-go="plan"]');if(plan)plan.click()}
+    }else if(b.dataset.maj){
+      if(!confirm('Remplacer cette simulation par ce qui est affiché dans le simulateur ?'))return;
+      await api('/api/simulations/'+b.dataset.maj,{method:'PUT',body:corps(capturer())});await choisir(c.id);message('Simulation mise à jour.');
+    }else if(b.dataset.renommer){
+      const s=c.simulations.find(x=>x.id===b.dataset.renommer);const nom=prompt('Nouveau nom de la simulation :',s?.nom||'');if(!nom||!nom.trim())return;
+      await api('/api/simulations/'+b.dataset.renommer,{method:'PUT',body:JSON.stringify({nom})});
+      if(courant?.simId===b.dataset.renommer)setCourant({...courant,simNom:nom.trim()});await choisir(c.id);message('Simulation renommée.');
+    }else if(b.dataset.suppr){
+      if(!confirm('Supprimer définitivement cette simulation ?'))return;
+      await api('/api/simulations/'+b.dataset.suppr,{method:'DELETE'});if(courant?.simId===b.dataset.suppr)setCourant({clientId:c.id,client:nomClient(c),simId:null,simNom:null});await chargerListe();await choisir(c.id);message('Simulation supprimée.');
+    }
+  }catch(err){b.disabled=false;message(err.message,false)}
+});
+
+// --- Sauvegarde : export page par page, restauration dossier par dossier ---
+$('dos-export').onclick=async()=>{
+  const b=$('dos-export'),txt=b.textContent;b.disabled=true;
+  try{
+    let page=0,tete=null;const tous=[];
+    do{b.textContent='Export… '+(tete?Math.min(100,Math.round(page/tete.nbPages*100))+' %':'');const j=await api('/api/sauvegarde?page='+page);tete=tete||j;tous.push(...j.clients);page++}while(page<tete.nbPages);
+    const fichier={format:'ptf-sauvegarde',version:1,exporteLe:new Date().toISOString(),par:tete.par,nbClients:tous.length,nbSimulations:tous.reduce((t,c)=>t+c.simulations.length,0),clients:tous};
+    const url=URL.createObjectURL(new Blob([JSON.stringify(fichier)],{type:'application/json'}));
+    const a=document.createElement('a');a.href=url;a.download=tete.nomFichier;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
+    $('dos-droite').innerHTML=`<div class="vide"><b>Sauvegarde téléchargée</b> : ${fichier.nbClients} dossier(s), ${fichier.nbSimulations} simulation(s).<br><br>Conservez ce fichier en lieu sûr (ordinateur, clé USB, Drive). ${admin?'Il se restaure avec « Restaurer une sauvegarde ».':''}</div>`;
+  }catch(e){alert('Export impossible : '+e.message)}
+  finally{b.disabled=false;b.textContent=txt}
+};
+$('dos-import').onclick=()=>$('dos-import-f').click();
+$('dos-import-f').onchange=async e=>{
+  const f=e.target.files?.[0];e.target.value='';if(!f)return;
+  let s;try{s=JSON.parse(await f.text())}catch{return alert('Fichier illisible : choisissez le fichier .json de la sauvegarde (décompressez d\'abord un fichier .gz).')}
+  if(s?.format!=='ptf-sauvegarde'||!Array.isArray(s.clients))return alert('Ce fichier n\'est pas une sauvegarde du simulateur.');
+  if(!confirm(`Restaurer la sauvegarde du ${new Date(s.exporteLe).toLocaleString('fr-FR')} (${s.clients.length} dossiers) ?\n\nSeuls les dossiers et simulations absents sont recréés : rien de ce qui existe n'est modifié.`))return;
+  const d=$('dos-droite');let cc=0,ss=0,err=0;
+  for(let i=0;i<s.clients.length;i++){d.innerHTML=`<div class="vide">Restauration… ${i+1} / ${s.clients.length}</div>`;
+    try{const j=await api('/api/sauvegarde',{method:'POST',body:JSON.stringify({client:s.clients[i]})});if(j.clientCree)cc++;ss+=j.simulations}catch{err++}}
+  await chargerListe();
+  d.innerHTML=`<div class="vide"><b>Restauration terminée.</b><br>${cc} dossier(s) et ${ss} simulation(s) recréé(s).${err?`<br><span style="color:#b04d3e">${err} dossier(s) n'ont pas pu être restaurés.</span>`:''}${!cc&&!ss&&!err?'<br>Tout était déjà présent.':''}</div>`;
+};
+
+function fermer(){dialog.classList.remove('open')}
+async function ouvrir(clientId,proposerEnregistrement){
+  dialog.classList.add('open');
+  if(!clientId)$('dos-droite').innerHTML='<div class="vide">Choisissez un client à gauche, ou créez-en un avec « + Client ».<br><br>Dans un dossier, vous pouvez enregistrer la simulation affichée et rouvrir les simulations précédentes.</div>';
+  await chargerListe();
+  if(clientId)await choisir(clientId,proposerEnregistrement);
+}
+window.ptOpenDossiers=()=>ouvrir(courant?.clientId);
+/** Ferme la simulation en cours et repart d'un formulaire vide (après confirmation). */
+function nouvelle(){
+  if(!confirm(courant?.simId?'Fermer « '+(courant.simNom||'cette simulation')+' » et commencer une nouvelle simulation vierge ?\n\nLes modifications non enregistrées seront perdues.':'Commencer une nouvelle simulation vierge ?\n\nLes saisies non enregistrées seront perdues.'))return;
+  setCourant(null);
+  try{localStorage.removeItem('pt-finance-v17-borrower');localStorage.removeItem('pt-brouillon-simulation');sessionStorage.setItem('pt-vierge','1')}catch{}
+  location.reload();
+}
+window.ptNouvelleSimulation=nouvelle;
+// ---------- Fermer la simulation ----------
+// En quittant une simulation : proposer de l'enregistrer ; sans enregistrement, le simulateur repart de zéro.
+function remiseAZero(){
+  setCourant(null);
+  try{localStorage.removeItem('pt-finance-v17-borrower');localStorage.removeItem('pt-brouillon-simulation');sessionStorage.setItem('pt-vierge','1')}catch{}
+  location.reload();
+}
+// Saisies réelles de l'utilisateur (les écrans pré-remplissent des valeurs à l'ouverture).
+let saisie=false;
+document.addEventListener('input',e=>{if(e.isTrusted&&!e.target.closest('#pt-fermer,#pt-dos,#pt-par,#pt-sorties,#pt-ptz'))saisie=true},true);
+document.addEventListener('click',e=>{if(e.isTrusted&&e.target.closest('[data-dseg] button,[data-seg] button,.st-env tr[data-ans],#brouillon-oui,#pt-transfer'))saisie=true},true);
+document.addEventListener('pointerdown',e=>{if(e.isTrusted&&e.target.closest('.remb-barre'))saisie=true},true);
+function modifiee(){if(courant?.simId)return saisie&&etatActuel()!==dernierServeur;return saisie}
+function fermerSimulation(){
+  if(!modifiee())return remiseAZero();
+  let el=document.getElementById('pt-fermer');if(!el){el=document.createElement('div');el.id='pt-fermer';document.body.appendChild(el)}
+  el.innerHTML=`<div class="fer-win"><h2>Fermer la simulation</h2><p>${courant?.simId?'Les dernières modifications de « '+esc(courant.simNom||'cette simulation')+' » ('+esc(courant.client)+') ne sont pas enregistrées.':'Cette simulation n’est enregistrée dans aucun dossier client.'}</p><p class="fer-sub">Sans enregistrement, le simulateur repart de zéro.</p>
+   <div class="fer-act"><button type="button" class="fer-b prim" data-a="oui">${courant?.simId?'Enregistrer et fermer':'Enregistrer dans un dossier…'}</button><button type="button" class="fer-b" data-a="non">Fermer sans enregistrer</button><button type="button" class="fer-b sec" data-a="annuler">Annuler</button></div></div>`;
+  el.classList.add('open');
+  el.onclick=e=>{if(e.target===el)el.classList.remove('open')};
+  el.querySelector('[data-a="annuler"]').onclick=()=>el.classList.remove('open');
+  el.querySelector('[data-a="non"]').onclick=()=>{el.classList.remove('open');remiseAZero()};
+  el.querySelector('[data-a="oui"]').onclick=async e=>{
+    const b=e.currentTarget;
+    if(courant?.simId){b.disabled=true;b.textContent='Enregistrement…';
+      try{await api('/api/simulations/'+courant.simId,{method:'PUT',body:corps(capturer())});remiseAZero()}
+      catch(err){alert('Enregistrement impossible : '+err.message);b.disabled=false;b.textContent='Enregistrer et fermer'}}
+    else{el.classList.remove('open');fermerApres=true;enregistrerRapide()}
+  };
+}
+window.ptFermerSimulation=fermerSimulation;
+// Fenêtre des dossiers refermée sans enregistrer : on ne ferme plus la simulation ensuite.
+new MutationObserver(()=>{if(!dialog.classList.contains('open'))fermerApres=false}).observe(dialog,{attributes:true,attributeFilter:['class']});
+
+// ---------- Enregistrement automatique ----------
+// Simulation rattachée à un dossier : mise à jour sur le serveur toutes les 30 s si elle a changé,
+// et au moment de quitter la page. Sinon : brouillon de secours dans le navigateur, proposé au retour.
+const CLE_BROUILLON='pt-brouillon-simulation';
+let dernierEtat=null,dernierAuto=null,autoEnCours=false,dernierServeur=null,etatInitial=null,fermerApres=false;
+const etatActuel=()=>{try{return JSON.stringify(capturer())}catch{return null}};
+function marquerEnregistre(){dernierEtat=etatActuel();dernierServeur=dernierEtat;if(typeof saisie!=='undefined')saisie=false;if(fermerApres){fermerApres=false;setTimeout(remiseAZero,900)}}
+window.ptMarquerEnregistre=marquerEnregistre;
+async function autoEnregistrer(sortie){
+  const etat=etatActuel();if(!etat||etat===dernierEtat||autoEnCours)return;
+  if(courant?.simId){
+    autoEnCours=true;
+    try{
+      const r=await fetch('/api/simulations/'+courant.simId,{method:'PUT',credentials:'same-origin',keepalive:!!sortie,headers:{'Content-Type':'application/json'},body:corps(JSON.parse(etat))});
+      if(r.ok){dernierEtat=etat;dernierServeur=etat;dernierAuto=new Date();if(window.ptStudioDossier)window.ptStudioDossier();barreAuto()}
+    }catch{}finally{autoEnCours=false}
+  }else{
+    try{localStorage.setItem(CLE_BROUILLON,JSON.stringify({at:new Date().toISOString(),data:JSON.parse(etat)}));dernierEtat=etat}catch{}
+  }
+}
+window.ptDernierAuto=()=>dernierAuto;
+function barreAuto(){const sp=document.querySelector('#pt-dos-bar span');if(sp&&dernierAuto&&!sp.querySelector('.auto'))sp.insertAdjacentHTML('beforeend',' <small class="auto" style="opacity:.75"></small>');const a=document.querySelector('#pt-dos-bar .auto');if(a&&dernierAuto)a.textContent='· enregistré à '+dernierAuto.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}
+setInterval(()=>autoEnregistrer(false),30000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')autoEnregistrer(true)});
+addEventListener('pagehide',()=>autoEnregistrer(true));
+// Brouillon d'une simulation non enregistrée : proposé au retour sur la page.
+function proposerBrouillon(){
+  if(courant?.simId||window.ptVierge)return;
+  let b=null;try{b=JSON.parse(localStorage.getItem(CLE_BROUILLON)||'null')}catch{}
+  if(!b?.data)return;
+  const hote=$('pt-barre-compte');if(!hote)return;
+  const el=document.createElement('div');el.id='pt-brouillon';
+  el.style.cssText='position:fixed;top:44px;left:50%;transform:translateX(-50%);z-index:9800;background:#fff;color:#2b2320;border:1px solid #e2cfc3;border-radius:12px;box-shadow:0 10px 30px #0002;padding:10px 14px;font:13px Inter,Arial,sans-serif;display:flex;gap:10px;align-items:center;flex-wrap:wrap;max-width:94vw';
+  el.innerHTML=`<span>Simulation non enregistrée du <b>${esc(new Date(b.at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))}</b> retrouvée.</span><button type="button" id="brouillon-oui" style="background:#a34d31;color:#fff;border:0;border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:600">Reprendre</button><button type="button" id="brouillon-non" style="background:#f1e5dd;color:#7e412f;border:0;border-radius:8px;padding:6px 12px;cursor:pointer">Ignorer</button>`;
+  document.body.appendChild(el);
+  $('brouillon-oui').onclick=()=>{try{restaurer(b.data);marquerEnregistre()}catch(e){alert('Brouillon illisible.')}el.remove();if(window.ptOpenStudio)window.ptOpenStudio('plan')};
+  $('brouillon-non').onclick=()=>{try{localStorage.removeItem(CLE_BROUILLON)}catch{}el.remove()};
+}
+setTimeout(proposerBrouillon,1500);
+// État de référence une fois la page prête (paramètres appliqués) : rien n'est enregistré tant qu'on n'a rien modifié.
+setTimeout(()=>{etatInitial=etatActuel();if(dernierEtat===null)marquerEnregistre()},2500);
+window.ptEnregistrerSimulation=enregistrerRapide;
+window.ptDossierCourant=()=>courant;
+// Page rechargée pour une nouvelle simulation : tous les montants repartent de zéro.
+try{if(sessionStorage.getItem('pt-vierge')){sessionStorage.removeItem('pt-vierge');
+  ['price','notary','works','deposit','income','rents','futureRent','currentRent','guaranteeFee','brokerFee','refund','v9rfr'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=0});
+  const nom=document.getElementById('client');if(nom)nom.value='';
+  if(typeof loans!=='undefined')loans.splice(0);if(typeof existing!=='undefined')existing.splice(0);
+  window.ptVierge=true;
+  if(typeof render==='function')render();
+}}catch(e){}
+// Après un rechargement, le formulaire revient aux valeurs par défaut : on recharge la simulation
+// en cours, sinon « Enregistrer » écraserait le dossier avec un formulaire vide.
+if(courant?.simId){api('/api/simulations/'+courant.simId).then(j=>{restaurer(j.simulation.data);setCourant({...courant,simNom:j.simulation.nom});setTimeout(()=>window.ptMarquerEnregistre&&window.ptMarquerEnregistre(),0)}).catch(()=>setCourant(null))}
+$('dos-close').onclick=fermer;
+// Lien « Ouvrir » du tableau de bord : /?dossier=<id>
+try{const id=new URLSearchParams(location.search).get('dossier');if(id){history.replaceState(null,'',location.pathname);setTimeout(()=>ouvrir(id),300)}}catch{}
+dialog.addEventListener('click',e=>{if(e.target===dialog)fermer()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dialog.classList.contains('open'))fermer()});
+barre();
+})();
+</script>

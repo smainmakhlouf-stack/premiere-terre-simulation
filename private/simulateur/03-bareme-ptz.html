@@ -1,0 +1,192 @@
+<style>
+#pt-ptz{display:none;position:fixed;inset:0;z-index:9300;background:#261b17a6;padding:3vh 15px;overflow:auto;font-family:Inter,Arial,sans-serif;color:#2f2622}
+#pt-ptz.open{display:block}#pt-ptz *{box-sizing:border-box}
+#pt-ptz .win{max-width:1180px;margin:0 auto;background:#fffaf7;border-radius:17px;box-shadow:0 25px 100px #1d100f55;overflow:hidden}
+#pt-ptz .head{background:#fff;border-bottom:1px solid #e9d8cd;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 24px}
+#pt-ptz .head small{font-size:11px;letter-spacing:2px;color:#927c6f}#pt-ptz h2{font:24px Georgia,serif;color:#9c482d;margin:2px 0 0}
+#pt-ptz .x{font-size:25px;background:transparent;border:0;color:#624e45;cursor:pointer}
+#pt-ptz .body{padding:20px 24px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
+#pt-ptz .bloc{background:#fff;border:1px solid #e9d9ce;border-radius:12px;overflow:hidden;margin-bottom:16px}
+#pt-ptz .bloc h3{margin:0;padding:11px 14px;font-size:14px;color:#9c482d;background:#f8efe9;border-bottom:1px solid #eadbd1;font-weight:700}
+#pt-ptz .tw{overflow-x:auto}
+#pt-ptz table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+#pt-ptz th{font-weight:600;color:#7e5544;padding:8px 10px;text-align:right;border-bottom:1px solid #eadbd1;white-space:nowrap}
+#pt-ptz th:first-child,#pt-ptz td:first-child{text-align:left}
+#pt-ptz td{padding:7px 10px;text-align:right;border-bottom:1px solid #f3e9e3;white-space:nowrap}
+#pt-ptz tr:last-child td{border-bottom:0}
+#pt-ptz .sep{border-left:1px solid #eadbd1}
+#pt-ptz td.on{background:#f3ddd2;color:#8e3a22;font-weight:700;border-radius:4px}
+#pt-ptz tr.dim td{color:#b3a59c}
+#pt-ptz .crit{background:#fff;border:1px solid #e9d9ce;border-radius:12px;padding:14px;margin-bottom:14px}
+#pt-ptz .crit h3{margin:0 0 10px;font-size:14px;color:#9c482d}
+#pt-ptz label{display:block;font-size:12px;color:#65554d;margin-bottom:9px}
+#pt-ptz input,#pt-ptz select{margin-top:4px;width:100%;padding:8px 9px;border:1px solid #dbcac0;border-radius:8px;background:#fff;font-size:14px;color:#322824;font-family:inherit}
+#pt-ptz .res{background:#f5ede7;border:1px solid #e5d4c9;border-radius:12px;padding:14px;font-size:13px;line-height:1.55}
+#pt-ptz .res .big{font:26px Georgia,serif;color:#923c27;margin:2px 0 8px}
+#pt-ptz .res .ligne{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed #e2cfc3;padding:3px 0}
+#pt-ptz .res .ligne:last-of-type{border-bottom:0}
+#pt-ptz .res .ko{color:#a3392a;font-weight:600}
+#pt-ptz .btn1{width:100%;margin-top:12px;background:#a34d31;color:#fff;border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer;font-size:14px}
+#pt-ptz .btn1:disabled{background:#c9b3a8;cursor:not-allowed}
+#pt-ptz .btn2{background:#f1e5dd;color:#7e412f;border:0;border-radius:9px;padding:9px 12px;cursor:pointer;font-size:13px}
+#pt-ptz .note{font-size:11.5px;color:#7b6b62;line-height:1.55;margin:8px 0 0}
+#pt-ptz details{background:#fff;border:1px solid #e9d9ce;border-radius:12px;padding:10px 14px}
+#pt-ptz summary{cursor:pointer;color:#9c482d;font-weight:600;font-size:13px}
+#pt-ptz details table input{width:84px;padding:5px 6px;font-size:13px;text-align:right;margin:0}
+#pt-ptz details .actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+@media(max-width:900px){#pt-ptz .body{grid-template-columns:1fr}}
+@media print{#pt-ptz{display:none!important}}
+</style>
+<div id="pt-ptz" role="dialog" aria-modal="true" aria-labelledby="pt-ptz-title"><div class="win">
+<div class="head"><div><small>PRÊTS ET AIDES</small><h2 id="pt-ptz-title">Barème PTZ applicable au 01/04/2025</h2></div><button class="x" id="ptz-close" aria-label="Fermer">×</button></div>
+<div class="body">
+<div>
+<div class="bloc"><h3 id="ptz-t1-title">Montant maximum du PTZ</h3><div class="tw"><table id="ptz-t1"></table></div></div>
+<div class="bloc"><h3 id="ptz-t2-title">Tranches de revenu</h3><div class="tw"><table id="ptz-t2"></table></div></div>
+<details id="ptz-bareme"><summary>Modifier le barème (en cas d'évolution réglementaire)</summary><div id="ptz-edit"></div>
+<div class="actions"><span class="note" style="margin:0">Valeurs pour 1 personne ; elles sont multipliées par le coefficient familial. Enregistrées sur cet ordinateur.</span><button class="btn2" id="ptz-reset" type="button">Rétablir le barème du 01/04/2025</button></div></details>
+</div>
+<div>
+<div class="crit"><h3>Critères de calcul</h3>
+<label>Zone<select id="ptz-zone"><option value="all">Toutes</option><option value="A">A bis / A</option><option value="B1">B1</option><option value="B2">B2</option><option value="C">C</option></select></label>
+<label>Ménage (personnes destinées à occuper le logement)<select id="ptz-pers"><option value="1">1 personne</option><option value="2">2 personnes</option><option value="3">3 personnes</option><option value="4">4 personnes</option><option value="5">5 personnes</option><option value="6">6 personnes</option><option value="7">7 personnes</option><option value="8">8 personnes et plus</option></select></label>
+<label>Achat<select id="ptz-type"><option value="coll">Neuf · logement collectif</option><option value="indiv">Neuf · maison individuelle</option><option value="ancien">Ancien avec travaux (zones B2 et C)</option></select></label>
+<label>Coût de l'opération hors frais de notaire (€)<input id="ptz-prix" type="number" min="0" step="1000" placeholder="ex. 250000"></label>
+<label>Revenu fiscal de référence N-2 du foyer (€)<input id="ptz-rfr" type="number" min="0" step="500" placeholder="ex. 38000"></label>
+</div>
+<div class="res" id="ptz-res"></div>
+</div>
+</div></div></div>
+<script>
+(function(){
+const DEFAUT={
+  plafond:{A:150000,B1:135000,B2:110000,C:100000},
+  revenus:{A:[25000,31000,37000,49000],B1:[21500,26000,30000,34500],B2:[18000,22500,27000,31500],C:[15000,19500,24000,28500]},
+  quotite:{coll:[50,40,40,20],indiv:[30,20,20,10],ancien:[50,40,40,20]},
+  differe:[10,8,2,0],
+  duree:[25,20,15,10]
+};
+const ZONES=['A','B1','B2','C'],NOMZ={A:'A bis / A',B1:'B1',B2:'B2',C:'C'},TYPES={coll:'Neuf · collectif',indiv:'Neuf · maison individuelle',ancien:'Ancien avec travaux'};
+const CLE='pt-finance-ptz-bareme';
+let B=charger();
+function charger(){try{const s=JSON.parse(localStorage.getItem(CLE)||'null');if(s&&s.plafond&&s.revenus&&s.quotite)return s}catch{}return JSON.parse(JSON.stringify(DEFAUT))}
+function sauver(){try{localStorage.setItem(CLE,JSON.stringify(B))}catch{}}
+const $=id=>document.getElementById(id);
+const eur=n=>new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0}).format(Math.round(n));
+// Coefficient familial : 1 / 1,5 / 1,8 / 2,1 / 2,4 puis +0,3 par personne (8 et plus : 3,3).
+const coefRevenu=p=>[1,1.5,1.8,2.1,2.4,2.7,3,3.3][Math.min(8,Math.max(1,p))-1];
+// Le plafond de l'opération s'arrête au coefficient de 5 personnes.
+const coefOperation=p=>coefRevenu(Math.min(5,p));
+function calcul(){
+  const zone=$('ptz-zone').value,pers=+$('ptz-pers').value,type=$('ptz-type').value,prix=+$('ptz-prix').value||0,rfr=+$('ptz-rfr').value||0;
+  const r={zone,pers,type,prix,rfr,ok:false,motifs:[]};
+  if(zone==='all'){r.motifs.push('Choisissez la zone du logement.');return r}
+  if(type==='ancien'&&(zone==='A'||zone==='B1'))r.motifs.push('Dans l\'ancien, le PTZ ne concerne que les zones B2 et C.');
+  if(!prix)r.motifs.push('Renseignez le coût de l\'opération.');
+  if(!$('ptz-rfr').value)r.motifs.push('Renseignez le revenu fiscal de référence.');
+  if(r.motifs.length)return r;
+  r.plafond=B.plafond[zone]*coefOperation(pers);
+  r.coutRetenu=Math.min(prix,r.plafond);
+  // Revenu retenu : le plus élevé entre le RFR et le coût total de l'opération divisé par 9.
+  r.revenuRetenu=Math.max(rfr,prix/9);
+  const seuils=B.revenus[zone].map(v=>v*coefRevenu(pers));
+  r.tranche=seuils.findIndex(s=>r.revenuRetenu<=s);
+  if(r.tranche<0){r.motifs.push('Revenu retenu ('+eur(r.revenuRetenu)+' €) supérieur au plafond de la tranche 4 ('+eur(seuils[3])+' €).');return r}
+  r.quotite=B.quotite[type][r.tranche];
+  r.montant=Math.round(r.coutRetenu*r.quotite/100);
+  r.differe=B.differe[r.tranche];r.duree=B.duree[r.tranche];
+  r.mensualite=r.montant/Math.max(1,(r.duree-r.differe)*12);
+  r.ok=r.montant>0;
+  return r;
+}
+/** Calcul PTZ sans l'interface (utilisé par le diagnostic pour comparer neuf et ancien). */
+window.ptCalculPTZ=function(zone,pers,type,prix,rfr){
+  if(!B.plafond[zone]||!prix)return {montant:0};
+  if(type==='ancien'&&(zone==='A'||zone==='B1'))return {montant:0,motif:'Ancien : zones B2 et C uniquement.'};
+  const plafond=B.plafond[zone]*coefOperation(pers),revenu=Math.max(rfr||0,prix/9);
+  const t=B.revenus[zone].map(v=>v*coefRevenu(pers)).findIndex(s=>revenu<=s);
+  if(t<0)return {montant:0,motif:'Revenus au-dessus du plafond PTZ.'};
+  return {montant:Math.round(Math.min(prix,plafond)*B.quotite[type][t]/100),tranche:t+1,differe:B.differe[t],duree:B.duree[t]};
+};
+function rendre(){
+  const zone=$('ptz-zone').value,pers=+$('ptz-pers').value,type=$('ptz-type').value,r=calcul();
+  const zs=zone==='all'?ZONES:[zone];
+  // Tableau 1 : montant maximum (tranche 1) par taille de ménage et par zone.
+  $('ptz-t1-title').textContent='Montant maximum du PTZ · '+TYPES[type]+' (tranche 1)';
+  let h='<tr><th>Taille du ménage</th>'+ZONES.map(z=>`<th class="sep">Zone ${NOMZ[z]}</th>`).join('')+'</tr>';
+  for(let p=1;p<=5;p++){
+    h+=`<tr${p===Math.min(5,pers)?'':' class="dim"'}><td>${p<5?p+' pers.':'5 pers. et plus'}</td>`+ZONES.map(z=>{
+      const exclu=type==='ancien'&&(z==='A'||z==='B1');
+      const v=exclu?'—':eur(B.plafond[z]*coefOperation(p)*B.quotite[type][0]/100)+' €';
+      const on=p===Math.min(5,pers)&&zs.includes(z)&&zone!=='all';
+      return `<td class="sep${on?' on':''}">${v}</td>`}).join('')+'</tr>';
+  }
+  $('ptz-t1').innerHTML=h;
+  // Tableau 2 : tranches de revenu pour la taille du ménage, quotité, différé et durée.
+  $('ptz-t2-title').textContent='Tranches de revenu pour '+(pers>=8?'8 personnes et plus':pers+(pers>1?' personnes':' personne'))+' · coefficient '+String(coefRevenu(pers)).replace('.',',');
+  h='<tr><th>Tranche</th>'+ZONES.map(z=>`<th class="sep">Zone ${NOMZ[z]}</th>`).join('')+'<th class="sep">Quotité</th><th>Différé</th><th>Durée totale</th></tr>';
+  for(let t=0;t<4;t++){
+    const on=r.tranche===t&&r.ok!==undefined&&r.tranche>=0;
+    h+=`<tr><td>${t+1} · revenu ≤</td>`+ZONES.map(z=>`<td class="sep${on&&z===zone?' on':''}">${eur(B.revenus[z][t]*coefRevenu(pers))} €</td>`).join('')+
+      `<td class="sep${on?' on':''}">${B.quotite[type][t]} %</td><td${on?' class="on"':''}>${B.differe[t]?B.differe[t]+' ans':'aucun'}</td><td${on?' class="on"':''}>${B.duree[t]} ans</td></tr>`;
+  }
+  $('ptz-t2').innerHTML=h;
+  // Résultat
+  let o='';
+  if(r.ok){
+    o=`<div>PTZ estimé</div><div class="big">${eur(r.montant)} €</div>
+    <div class="ligne"><span>Tranche</span><b>${r.tranche+1}</b></div>
+    <div class="ligne"><span>Revenu retenu</span><b>${eur(r.revenuRetenu)} €</b></div>
+    <div class="ligne"><span>Coût retenu (plafonné)</span><b>${eur(r.coutRetenu)} €</b></div>
+    <div class="ligne"><span>Plafond de l'opération</span><b>${eur(r.plafond)} €</b></div>
+    <div class="ligne"><span>Quotité</span><b>${r.quotite} %</b></div>
+    <div class="ligne"><span>Différé · durée totale</span><b>${r.differe?r.differe+' ans':'aucun'} · ${r.duree} ans</b></div>
+    <div class="ligne"><span>Mensualité après différé</span><b>${eur(r.mensualite)} €/mois</b></div>
+    <button class="btn1" id="ptz-ajout" type="button">Ajouter au plan de financement</button>`;
+  }else{
+    o=`<div><b>${r.motifs.length&&r.tranche===-1?'Non éligible':'Calcul du PTZ'}</b></div><p class="${r.tranche===-1?'ko':''}" style="margin:6px 0 0">${r.motifs.join('<br>')}</p>`;
+  }
+  o+=`<p class="note">Estimation indicative selon le barème saisi. Conditions à vérifier : primo-accession, résidence principale, revenu fiscal N-2 de tous les occupants. Revenu retenu = le plus élevé entre le RFR et le coût de l'opération ÷ 9.</p>`;
+  $('ptz-res').innerHTML=o;
+  const btn=$('ptz-ajout');
+  if(btn)btn.onclick=()=>{
+    if(typeof addLoan!=='function'){alert('Plan de financement indisponible.');return}
+    addLoan({name:'PTZ · tranche '+(r.tranche+1)+' · zone '+NOMZ[r.zone],type:'ptz',amount:r.montant,rate:0,years:r.duree,delay:r.differe*12,insurance:0.20});
+    fermer();
+    const cible=document.getElementById('loans');if(cible)cible.scrollIntoView({behavior:'smooth',block:'center'});
+  };
+}
+function editeur(){
+  const champ=(chemin,v)=>`<input type="number" min="0" step="any" data-b="${chemin}" value="${v}">`;
+  let h='<div class="tw"><table><tr><th>Plafond de l\'opération (1 pers.)</th>'+ZONES.map(z=>`<th>${NOMZ[z]}</th>`).join('')+'</tr><tr><td>Montant (€)</td>'+ZONES.map(z=>`<td>${champ('plafond.'+z,B.plafond[z])}</td>`).join('')+'</tr></table></div>';
+  h+='<div class="tw"><table><tr><th>Revenus (1 pers.)</th>'+ZONES.map(z=>`<th>${NOMZ[z]}</th>`).join('')+'<th>Collectif %</th><th>Maison %</th><th>Ancien %</th><th>Différé (ans)</th><th>Durée (ans)</th></tr>';
+  for(let t=0;t<4;t++)h+=`<tr><td>Tranche ${t+1}</td>`+ZONES.map(z=>`<td>${champ('revenus.'+z+'.'+t,B.revenus[z][t])}</td>`).join('')+['coll','indiv','ancien'].map(k=>`<td>${champ('quotite.'+k+'.'+t,B.quotite[k][t])}</td>`).join('')+`<td>${champ('differe.'+t,B.differe[t])}</td><td>${champ('duree.'+t,B.duree[t])}</td></tr>`;
+  $('ptz-edit').innerHTML=h+'</table></div>';
+}
+$('ptz-edit').addEventListener('input',e=>{
+  const c=e.target.dataset.b;if(!c)return;const p=c.split('.');let o=B;for(let i=0;i<p.length-1;i++)o=o[p[i]];
+  o[p[p.length-1]]=Math.max(0,+e.target.value||0);sauver();rendre();
+});
+$('ptz-reset').onclick=()=>{if(!confirm('Rétablir le barème PTZ du 01/04/2025 ?'))return;B=JSON.parse(JSON.stringify(DEFAUT));try{localStorage.removeItem(CLE)}catch{}editeur();rendre()};
+['ptz-zone','ptz-pers','ptz-type','ptz-prix','ptz-rfr'].forEach(id=>$(id).addEventListener('input',rendre));
+const dialog=$('pt-ptz');
+function fermer(){dialog.classList.remove('open')}
+function ouvrir(){
+  // Pré-remplissage depuis le dossier en cours (précontrôle PTZ et projet).
+  const v=id=>document.getElementById(id)?.value;
+  const zoneDossier={'A bis':'A','A':'A','B1':'B1','B2':'B2','C':'C'}[v('v9zone')];
+  if(zoneDossier)$('ptz-zone').value=zoneDossier;
+  const pers=+v('v9people');if(pers>0)$('ptz-pers').value=String(Math.min(8,Math.round(pers)));
+  if(v('v9operation')==='old')$('ptz-type').value='ancien';
+  const cout=(+v('price')||0)+(v('v9operation')==='old'?(+v('works')||0):0);
+  if(!$('ptz-prix').value&&cout)$('ptz-prix').value=Math.round(cout);
+  if(!$('ptz-rfr').value&&+v('v9rfr'))$('ptz-rfr').value=+v('v9rfr');
+  editeur();rendre();dialog.classList.add('open');
+}
+window.ptOpenPTZ=ouvrir;
+$('ptz-close').onclick=fermer;
+dialog.addEventListener('click',e=>{if(e.target===dialog)fermer()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dialog.classList.contains('open'))fermer()});
+})();
+</script>
+<!-- Dossiers clients : simulations enregistrées sur le serveur, par client -->

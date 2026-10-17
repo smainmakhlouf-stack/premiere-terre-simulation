@@ -1,6 +1,8 @@
 import { db } from "./db"
 import { ErreurApi, type Utilisateur } from "./api"
 
+export const STATUTS = ["en_cours", "finance", "perdu"] as const
+
 /** Un vendeur ne voit que ses clients ; un administrateur les voit tous. */
 export const filtreClients = (u: Utilisateur) => (u.admin ? {} : { ownerId: u.id })
 

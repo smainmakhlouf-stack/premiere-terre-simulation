@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { ErreurApi, lireJson, texte, traiter, utilisateur } from "@/lib/api"
-import { clientAutorise } from "@/lib/dossiers"
+import { STATUTS, clientAutorise } from "@/lib/dossiers"
 
 export const dynamic = "force-dynamic"
 
@@ -16,7 +16,7 @@ export function GET(request: Request, { params }: Ctx) {
       where: { id },
       include: {
         owner: { select: { name: true } },
-        simulations: { orderBy: { updatedAt: "desc" }, select: { id: true, nom: true, createdAt: true, updatedAt: true, author: { select: { name: true } } } },
+        simulations: { orderBy: { updatedAt: "desc" }, select: { id: true, nom: true, resume: true, createdAt: true, updatedAt: true, author: { select: { name: true } }, _count: { select: { versions: true } } } },
       },
     })
     return NextResponse.json({ client })
@@ -29,6 +29,12 @@ export function PATCH(request: Request, { params }: Ctx) {
     const { id } = await params
     await clientAutorise(u, id)
     const b = await lireJson(request)
+    // Changement de statut seul (en cours / financé / perdu).
+    if (b.nom === undefined && typeof b.statut === "string") {
+      if (!STATUTS.includes(b.statut as (typeof STATUTS)[number])) throw new ErreurApi(400, "Statut inconnu.")
+      const client = await db.client.update({ where: { id }, data: { statut: b.statut } })
+      return NextResponse.json({ client })
+    }
     const nom = texte(b.nom, 100)
     if (!nom) throw new ErreurApi(400, "Le nom du client est obligatoire.")
     const client = await db.client.update({

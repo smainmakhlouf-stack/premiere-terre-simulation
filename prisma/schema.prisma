@@ -102,6 +102,8 @@ model Client {
   email     String?
   telephone String?
   notes     String?
+  /// en_cours | finance | perdu
+  statut    String   @default("en_cours")
   ownerId   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -119,15 +121,36 @@ model Simulation {
   nom       String
   /// État complet du simulateur (formulaire, prêts, diagnostic, emprunteurs).
   data      Json
+  /// Chiffres clés (budget, montant emprunté, mensualité…) pour les listes et le tableau de bord.
+  resume    Json?
   authorId  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  author User?  @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  client   Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  author   User?               @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  versions SimulationVersion[]
 
   @@index([clientId])
   @@map("simulations")
+}
+
+// Historique : chaque enregistrement conserve l'état précédent de la simulation (30 dernières versions).
+model SimulationVersion {
+  id           String   @id @default(cuid())
+  simulationId String
+  nom          String
+  data         Json
+  resume       Json?
+  /// creation | modification | restauration | duplication
+  action       String
+  auteurNom    String?
+  createdAt    DateTime @default(now())
+
+  simulation Simulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+
+  @@index([simulationId, createdAt])
+  @@map("simulation_versions")
 }
 
 // Paramètres de l'équipe (une seule ligne, id "equipe"), modifiables par les administrateurs.
@@ -135,6 +158,8 @@ model Parametres {
   id        String   @id
   data      Json
   majPar    String?
+  /// Date de dernière modification de chaque rubrique (taux, plafondsLoyer…), pour les rappels.
+  misesAJour Json?
   updatedAt DateTime @updatedAt
 
   @@map("parametres")

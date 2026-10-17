@@ -3,7 +3,9 @@
 Simulateur de financement (PTZ, montage, diagnostic) réservé aux vendeurs, derrière une connexion
 par e-mail et mot de passe.
 
-- `private/simulateur.html` : le simulateur (fichier autonome, données conservées dans le navigateur).
+- `private/simulateur/` : le simulateur, découpé par module et assemblé dans l'ordre des noms par `src/app/route.ts` :
+  `01` moteur du plan de financement, `02` accueil, `03` barème PTZ, `04` dossiers clients, `05` paramètres de l'équipe,
+  `06`–`07` écrans Budget max / Plan / Investissement et documents client, `08` diagnostic détaillé, `09` navigation.
   Il n'est servi qu'aux personnes connectées (`src/app/route.ts`).
 - `/connexion`, `/mot-de-passe-oublie`, `/nouveau-mot-de-passe` : connexion et changement de mot de passe (lien par e-mail, valable 24 h).
 - `/comptes` : réservé aux administrateurs — créer, désactiver, supprimer des comptes. Pas d'inscription libre.

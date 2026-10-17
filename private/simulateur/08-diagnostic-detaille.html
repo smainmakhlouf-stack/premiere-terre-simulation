@@ -1,0 +1,112 @@
+<script>
+/* Diagnostic détaillé : PTZ automatique (primo-accédant, RFR, zone, neuf), Action Logement et prêt complémentaire. */
+(function(){
+const dlg=document.getElementById('pt-diagnostic');if(!dlg)return;
+const d=k=>dlg.querySelector('[data-d="'+k+'"]'),n=k=>Math.max(0,Number(d(k)?.value)||0);
+const eur=x=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(x||0);
+const neuf=()=>d('propertyType')?.value==='new'||d('acquisition')?.value==='vefa'||d('propertyType')?.value==='construction';
+function occupants(){return n('occupants')||((d('co')?.checked?2:1)+(window.ptBorrowerGet?.().children||[]).length)}
+function aidesAuto(){
+  const info=document.getElementById('ptz-auto-info');
+  if(d('ptzAuto')?.checked){
+    let msg='',ptz={montant:0};
+    if(!d('primo')?.checked)msg='PTZ non retenu : cochez « Primo-accédant » si le client y a droit.';
+    else if(d('usage')&&d('usage').value!=='rp')msg='PTZ non retenu : il finance uniquement la résidence principale.';
+    else if(!neuf())msg='PTZ non calculé : logement ancien (PTZ possible seulement avec travaux en zones B2 et C, à saisir à la main).';
+    else if(!window.ptCalculPTZ)msg='Barème PTZ indisponible.';
+    else{
+      const cout=n('price')+n('land')+n('works'),rfr=n('rfr'),occ=occupants();
+      ptz=window.ptCalculPTZ(d('zone')?.value||'B1',occ,d('ptzType')?.value||'coll',cout,rfr)||{montant:0};
+      msg=ptz.montant?`PTZ : <b>${eur(ptz.montant)}</b> · tranche ${ptz.tranche} · différé ${ptz.differe} an${ptz.differe>1?'s':''} puis ${ptz.duree-ptz.differe} ans de remboursement · ${occ} occupant${occ>1?'s':''}${rfr?'':' · <b>RFR non renseigné</b> (coût ÷ 9 retenu)'}`:(ptz.motif||'PTZ non accordé avec ces critères (revenus au-dessus du plafond ?).');
+    }
+    d('ptz').value=ptz.montant||0;
+    if(ptz.montant){d('ptzDelay').value=ptz.differe;d('ptzYears').value=ptz.duree-ptz.differe;d('usePTZ').checked=true}
+    if(info)info.innerHTML=msg;
+  }else if(info)info.textContent='Saisie manuelle du PTZ.';
+  if(d('alElig')?.checked){if(!n('action'))d('action').value=30000;if(!n('actionRate'))d('actionRate').value=1;d('useAction').checked=true}
+}
+/** Mensualités des prêts aidés et complémentaires (PTZ : après différé). */
+function mensualitesAidees(mois){
+  const ann=(c,t,m)=>{const r=t/1200;return c<=0||m<=0?0:r?c*r/(1-Math.pow(1+r,-m)):c/m};
+  const ptz=d('usePTZ')?.checked?n('ptz'):0,ptzMois=Math.max(1,(n('ptzYears')||15)*12);
+  const al=d('useAction')?.checked?n('action'):0,autre=d('useOther')?.checked?n('other'):0;
+  return ptz/ptzMois+ann(al,n('actionRate')||1,(n('actionYears')||20)*12)+ann(autre,n('otherRate')||n('rate'),(n('otherYears')*12)||mois);
+}
+/** Droits à prêt d'épargne logement : intérêts du prêt ≤ 2,5 × intérêts acquis, dans la limite du plafond. */
+function droitsEL(interets,taux,ans,plafond){if(!interets)return 0;const m=Math.round(ans*12),r=taux/1200,f=r?r/(1-Math.pow(1+r,-m)):1/m,k=m*f-1;return Math.min(plafond,k>0?2.5*interets/k:plafond)}
+function pretsEpargne(){
+  const pelD=droitsEL(n('pelInterets'),n('pelTaux'),n('pelAns')||15,92000),celD=droitsEL(n('celInterets'),n('celTaux'),n('celAns')||15,23000);
+  let pel=n('pelMontant')||pelD,cel=n('celMontant')||celD;if(pel+cel>92000)cel=Math.max(0,92000-pel);
+  const info=document.getElementById('pel-droits');
+  if(info&&(pelD||celD))info.innerHTML=`Droits calculés : PEL <b>${eur(pelD)}</b>${celD?` · CEL <b>${eur(celD)}</b>`:''} (intérêts du prêt ≤ 2,5 × intérêts acquis ; plafonds 92 000 € / 23 000 €). Laissez « Montant » vide pour utiliser les droits.`;
+  const l=[];if(pel)l.push({nom:'Prêt PEL',montant:Math.round(pel),taux:n('pelTaux'),ans:n('pelAns')||15});if(cel)l.push({nom:'Prêt CEL',montant:Math.round(cel),taux:n('celTaux'),ans:n('celAns')||15});return l;
+}
+/** Assurance : somme des contrats (taux forcé sinon taux du contrat) × quotité. */
+function assuranceContrats(){
+  let tot=0,det=[];
+  for(let i=1;i<=4;i++){const qui=d('insured'+i)?.value,ct=d('contract'+i)?.value;if(!qui||qui==='none'||ct==='none')continue;
+    const t=n('forced'+i)||n('ar'+i),q=n('q'+i);if(!q)continue;tot+=t*q/100;det.push(`${qui==='p2'?'Personne 2':'Personne 1'} ${String(t).replace('.',',')} % × ${q} %`)}
+  return det.length?{total:tot,detail:det.join(' + ')}:null;
+}
+function pretRelais(){
+  if(!d('bridge')?.checked)return null;const montant=Math.max(0,n('sale')*n('bridgeRatio')/100-n('debt'));if(!montant)return null;
+  const taux=n('bridgeRate')||n('rate'),mois=n('bridgeMonths')||24,totale=d('bridgeType')?.value==='totale';
+  return {nom:'Prêt relais',montant:Math.round(montant),taux,mois,mens:totale?0:montant*taux/1200,final:totale?montant*taux/1200*mois:0,horsLissage:!!d('noBridgeSmooth')?.checked};
+}
+window.ptDiagAidesAuto=aidesAuto;window.ptDiagMensualitesAidees=mensualitesAidees;
+// Résultat visuel (enveloppes, plan, graphique à barre déplaçable), calculé par le moteur de l'écran Budget max.
+window.ptDiagVisuel=function(){
+  const res=document.getElementById('pt-diagnostic-result');if(!res||!window.ptResultatDetaille)return;
+  let box=document.getElementById('pt-diag-visuel');
+  if(!box){box=document.createElement('div');box.id='pt-diag-visuel';res.parentNode.insertBefore(box,res)}
+  const inc=n('income')+n('otherIncome')+(d('co')?.checked?n('coincome'):0)+(n('rents')+(d('usage')?.value==='invest'?n('futureRent'):0))*(Number(d('rentWeight')?.value??70))/100;
+  if(inc<=0){box.innerHTML='';return}
+  const charges=n('debts')+n('rentCharge')+n('otherCharges'),ans=n('years')||25;
+  const occ=occupants(),adultes=d('co')?.checked?2:1;
+  let ptzFixe;if(!d('ptzAuto')?.checked||!d('usePTZ')?.checked)ptzFixe=d('usePTZ')?.checked&&n('ptz')?{montant:n('ptz'),differe:n('ptzDelay'),duree:n('ptzDelay')+(n('ptzYears')||15)}:{montant:0};
+  const prets=[];
+  if(d('useAction')?.checked&&n('action'))prets.push({neufSeul:true,nom:'Action Logement',montant:n('action'),taux:n('actionRate')||1,ans:n('actionYears')||20});
+  if(d('useOther')?.checked&&n('other'))prets.push({nom:'Prêt complémentaire',montant:n('other'),taux:n('otherRate')||n('rate'),ans:n('otherYears')||ans});
+  if(d('usePEL')?.checked)prets.push(...pretsEpargne());
+  const relais=pretRelais();if(relais)prets.push(relais);
+  const cr=window.ptCreditsRapide;if(cr)prets.push(...cr.lisses);
+  const ac=assuranceContrats();
+  const dd={revenus:inc,charges,apport:n('deposit')+n('grants'),ans,enfants:Math.max(0,occ-adultes),adultes,occupants:occ,type:neuf()?'neuf':'ancien',zone:d('zone')?.value||'B1',rfr:n('rfr'),primo:!!d('primo')?.checked,ptzType:d('ptzType')?.value||'coll',taux:d('rate')?.value===''?null:n('rate'),ass:null,endet:n('threshold')||null,solde:window.ptCreditsRapide?.solde||0,garantie:d('gMain')?.value||'cl_classic',notairePct:(n('price')+n('land'))>0&&n('notary')?n('notary')/(n('price')+n('land'))*100:null,notaireOfferts:!!d('excludeNotary')?.checked,ptzFixe,prets,assTotal:ac?ac.total:null,assDetail:ac?ac.detail:'taux de l’équipe'};
+  const recalcul=()=>{try{document.getElementById('pt-calculate').click()}catch(e){}};
+  const nom=[d('firstname')?.value,d('surname')?.value].filter(Boolean).join(' '),conom=[d('cofirstname')?.value,d('cosurname')?.value].filter(Boolean).join(' ');
+  const ctx={nom:[nom,d('co')?.checked?conom:''].filter(Boolean).join(' et '),situation:d('family')?.value||(adultes>1?'En couple':'Seul(e)'),enfants:Math.max(0,occ-adultes),rev1:n('income'),rev2:d('co')?.checked?n('coincome'):0,autres:n('otherIncome')+n('rents'),loyer:n('rentCharge'),terrain:0,travaux:0};
+  const c=window.ptResultatDetaille(dd,box,v=>{d('threshold').value=v;window.ptDiagVisuel()},a=>{d('years').value=a;recalcul()},ctx);
+  // Contrôle du prix saisi, avec le même calcul (lissage compris) que le budget maximum.
+  const prix=n('price')+n('land')+n('works');
+  if(c&&prix){const ecart=c.budget-prix,ok=ecart>=-1;
+    res.innerHTML=`<strong>Contrôle pour le prix saisi dans l’onglet Général : ${eur(prix)}</strong><p style="margin:8px 0 0;color:${ok?'#2f6b45':'#a14a32'}">${ok?`Finançable : il reste <b>${eur(ecart)}</b> de marge sous le budget maximum (${eur(c.budget)}).`:`Au-dessus du budget maximum de <b>${eur(-ecart)}</b> : baissez le prix, augmentez l’apport, allongez la durée ou montez la barre de mensualité.`}</p>`;}
+  else res.innerHTML='';
+};
+
+const declencheurs='[data-d="primo"],[data-d="rfr"],[data-d="zone"],[data-d="occupants"],[data-d="ptzType"],[data-d="ptzAuto"],[data-d="alElig"],[data-d="price"],[data-d="land"],[data-d="works"],[data-d="propertyType"],[data-d="acquisition"],[data-d="usage"],[data-d="co"]';
+dlg.addEventListener('input',e=>{if(e.target.matches(declencheurs))aidesAuto()},true);
+dlg.addEventListener('change',e=>{if(e.target.matches(declencheurs))aidesAuto()},true);
+dlg.addEventListener('input',e=>{if(e.target.matches('[data-d^="pel"],[data-d^="cel"]')){if(d('usePEL')&&(n('pelInterets')||n('pelMontant')||n('celInterets')||n('celMontant')))d('usePEL').checked=true;pretsEpargne()}},true);
+// Saisie manuelle du montant PTZ : on coupe le calcul automatique pour ne pas l'écraser.
+dlg.addEventListener('input',e=>{if(e.target.matches('[data-d="ptz"],[data-d="ptzDelay"],[data-d="ptzYears"]')&&d('ptzAuto')?.checked){d('ptzAuto').checked=false;aidesAuto()}},true);
+// Transfert vers le plan de financement : les prêts aidés et complémentaires suivent.
+const bouton=document.getElementById('pt-transfer');
+if(bouton){const origine=bouton.onclick;bouton.onclick=function(){
+  aidesAuto();const r=origine?origine.apply(this,arguments):undefined;
+  if(typeof loans!=='undefined'&&typeof addLoan==='function'){
+    for(let i=loans.length-1;i>=0;i--)if(loans[i].source==='diagnostic')loans.splice(i,1);
+    const ass=Number(document.getElementById('mainIns')?.value)||0.15,ans=n('years')||25;
+    if(d('usePTZ')?.checked&&n('ptz'))addLoan({name:'PTZ',type:'ptz',amount:n('ptz'),rate:0,years:n('ptzDelay')+(n('ptzYears')||15),delay:n('ptzDelay')*12,insurance:ass,source:'diagnostic'});
+    if(d('useAction')?.checked&&n('action')&&neuf())addLoan({name:'Prêt Action Logement',type:'action',amount:n('action'),rate:n('actionRate')||1,years:n('actionYears')||20,delay:0,insurance:ass,source:'diagnostic'});
+    if(d('usePEL')?.checked)pretsEpargne().forEach(x=>addLoan({name:x.nom,type:'external',amount:x.montant,rate:x.taux,years:x.ans,delay:0,insurance:ass,source:'diagnostic'}));
+    if(d('useOther')?.checked&&n('other'))addLoan({name:'Prêt complémentaire',type:'external',amount:n('other'),rate:n('otherRate')||n('rate'),years:n('otherYears')||ans,delay:0,insurance:ass,source:'diagnostic'});
+    // Prêt relais : intérêts chaque mois, capital remboursé par la vente du bien actuel.
+    const rl=pretRelais();if(rl)addLoan({name:'Prêt relais',type:'external',amount:rl.montant,rate:rl.taux,years:Math.max(1,Math.ceil(rl.mois/12)),mois:rl.mois,delay:Math.max(0,rl.mois-1),insurance:0,lissable:!rl.horsLissage,relais:true,source:'diagnostic'});
+    // Crédits en cours saisis dans Budget max : conservés, lissés ou rachetés.
+    const cr=window.ptCreditsRapide?.credits;if(cr&&cr.length&&typeof existing!=='undefined'){existing.splice(0);cr.forEach((x,i)=>existing.push({id:9000+i,name:({conso:'Crédit conso / auto',immo:'Crédit immobilier',revolving:'Crédit renouvelable'})[x.nature]||'Crédit',payment:+x.mens||0,months:+x.mois||0,balance:+x.crd||0,penalty:+x.ind||0,mode:x.mode==='repay'?'refinance':x.mode==='smooth'?'smooth':'keep'}));if(typeof render==='function')render()}
+  }
+  return r;
+}}
+aidesAuto();
+})();
+</script>

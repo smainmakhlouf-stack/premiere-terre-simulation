@@ -2,7 +2,7 @@ import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
   // Le simulateur est lu sur le disque par src/app/route.ts : il doit être embarqué dans la fonction.
-  outputFileTracingIncludes: { "/": ["./private/**"] },
+  outputFileTracingIncludes: { "/": ["./private/**"], "/version": ["./private/**"] },
   headers: async () => [
     {
       source: "/:path*",

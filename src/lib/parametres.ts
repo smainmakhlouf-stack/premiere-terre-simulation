@@ -121,3 +121,35 @@ export function normaliser(brut: unknown): Parametres {
     },
   }
 }
+
+export type MisesAJour = Partial<Record<keyof Parametres, string>>
+
+/** Date de mise à jour de chaque rubrique : celles qui ont changé prennent la date du jour. */
+export function horodater(avant: Parametres | null, apres: Parametres, anciennes: unknown): MisesAJour {
+  const m: MisesAJour = { ...(anciennes && typeof anciennes === "object" ? (anciennes as MisesAJour) : {}) }
+  const maintenant = new Date().toISOString()
+  for (const k of Object.keys(apres) as (keyof Parametres)[]) {
+    if (!avant || JSON.stringify(avant[k]) !== JSON.stringify(apres[k])) m[k] = maintenant
+  }
+  return m
+}
+
+/**
+ * Rappels de mise à jour : grille de taux de plus de 60 jours, plafonds de loyer non revus depuis
+ * le 1er janvier (publiés chaque année), autres barèmes de plus d'un an.
+ */
+export function rappels(m: MisesAJour, majGlobale: Date | null): { rubrique: string; message: string }[] {
+  const date = (k: keyof Parametres) => { const v = m[k]; return v ? new Date(v) : majGlobale }
+  const jours = (d: Date | null) => (d ? Math.floor((Date.now() - d.getTime()) / 86400000) : null)
+  const fr = (d: Date | null) => (d ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(d) : "jamais")
+  const r: { rubrique: string; message: string }[] = []
+  const t = date("taux")
+  if (!t || jours(t)! > 60) r.push({ rubrique: "taux", message: `Grille de taux : dernière mise à jour ${t ? "le " + fr(t) + ` (${jours(t)} jours)` : "jamais"}. Vérifiez les taux des banques.` })
+  const p = date("plafondsLoyer"), annee = new Date().getFullYear()
+  if (!p || p < new Date(annee, 0, 1)) r.push({ rubrique: "plafondsLoyer", message: `Plafonds de loyer : pas encore revus pour ${annee} (dernière mise à jour : ${fr(p)}). Ils sont publiés chaque année au Bulletin officiel des impôts.` })
+  for (const [k, nom] of [["assurance", "Barème d'assurance"], ["frais", "Frais et notaire"], ["garanties", "Taux des garanties"]] as const) {
+    const d = date(k)
+    if (!d || jours(d)! > 365) r.push({ rubrique: k, message: `${nom} : dernière mise à jour ${d ? "le " + fr(d) : "jamais"} (plus d'un an).` })
+  }
+  return r
+}

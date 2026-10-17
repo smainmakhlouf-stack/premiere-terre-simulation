@@ -1,32 +1,50 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { ErreurApi, lireJson, texte, traiter, utilisateur } from "@/lib/api"
-import { filtreClients } from "@/lib/dossiers"
+import { STATUTS, filtreClients } from "@/lib/dossiers"
 
 export const dynamic = "force-dynamic"
 
 export function GET(request: Request) {
   return traiter(async () => {
     const u = await utilisateur(request)
-    const q = new URL(request.url).searchParams.get("q")?.trim()
+    const sp = new URL(request.url).searchParams
+    const q = sp.get("q")?.trim()
     const recherche = q
-      ? { OR: ["nom", "prenom", "email", "telephone"].map((champ) => ({ [champ]: { contains: q, mode: "insensitive" as const } })) }
+      ? { OR: [
+          ...["nom", "prenom", "email", "telephone"].map((champ) => ({ [champ]: { contains: q, mode: "insensitive" as const } })),
+          { simulations: { some: { nom: { contains: q, mode: "insensitive" as const } } } },
+        ] }
       : {}
+    const statut = sp.get("statut")
+    const conseiller = u.admin ? sp.get("conseiller") : null
+    const jours = Number(sp.get("jours"))
+    const filtres = {
+      ...(STATUTS.includes(statut as (typeof STATUTS)[number]) ? { statut: statut! } : {}),
+      ...(conseiller ? { ownerId: conseiller === "aucun" ? null : conseiller } : {}),
+      ...(jours > 0 && jours <= 3650 ? { updatedAt: { gte: new Date(Date.now() - jours * 86400000) } } : {}),
+    }
     const clients = await db.client.findMany({
-      where: { ...filtreClients(u), ...recherche },
+      where: { ...filtreClients(u), ...recherche, ...filtres },
       orderBy: { updatedAt: "desc" },
       take: 200,
       select: {
-        id: true, nom: true, prenom: true, email: true, telephone: true, updatedAt: true,
+        id: true, nom: true, prenom: true, email: true, telephone: true, statut: true, updatedAt: true,
         owner: { select: { name: true } },
+        simulations: { orderBy: { updatedAt: "desc" }, take: 1, select: { resume: true } },
         _count: { select: { simulations: true } },
       },
     })
+    const conseillers = u.admin
+      ? await db.user.findMany({ where: { clients: { some: {} } }, orderBy: { name: "asc" }, select: { id: true, name: true } })
+      : []
     return NextResponse.json({
       admin: u.admin,
+      conseillers,
       clients: clients.map((c) => ({
-        id: c.id, nom: c.nom, prenom: c.prenom, email: c.email, telephone: c.telephone,
+        id: c.id, nom: c.nom, prenom: c.prenom, email: c.email, telephone: c.telephone, statut: c.statut,
         conseiller: c.owner?.name ?? null, nbSimulations: c._count.simulations, majLe: c.updatedAt,
+        resume: c.simulations[0]?.resume ?? null,
       })),
     })
   })

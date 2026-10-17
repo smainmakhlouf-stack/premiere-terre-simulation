@@ -61,3 +61,23 @@ export async function sendPasswordLinkEmail(to: string, url: string, userName: s
     throw new Error(`Échec de l'envoi de l'e-mail : ${error.message}`)
   }
 }
+
+/** Sauvegarde automatique des dossiers (fichier JSON compressé en pièce jointe). */
+export async function envoyerSauvegarde(to: string[], fichier: string, contenu: Buffer, nbClients: number, nbSimulations: number) {
+  const date = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeZone: "Europe/Paris" }).format(new Date())
+  const { error } = await getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `Sauvegarde des dossiers du ${date}`,
+    attachments: [{ filename: fichier, content: contenu }],
+    html: `
+      <div style="font-family: 'Trebuchet MS', Arial, sans-serif; max-width: 520px; margin: 0 auto; color: #342b27; font-size: 14px; line-height: 1.6;">
+        <p>Bonjour,</p>
+        <p>Voici la sauvegarde hebdomadaire du simulateur Première Terre : <b>${nbClients} dossier(s)</b> et <b>${nbSimulations} simulation(s)</b>.</p>
+        <p>Conservez ce fichier. Pour le restaurer : décompressez-le (fichier .json), puis dans le simulateur ouvrez « Dossier client » → « Sauvegarde » → « Restaurer une sauvegarde ». Les dossiers déjà présents ne sont pas modifiés.</p>
+        <p style="font-size: 12.5px; color: #7c7068;">Message automatique, envoyé chaque lundi aux administrateurs.</p>
+      </div>
+    `,
+  })
+  if (error) throw new Error(`Échec de l'envoi de la sauvegarde : ${error.message}`)
+}
