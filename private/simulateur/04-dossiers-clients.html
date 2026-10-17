@@ -53,10 +53,10 @@
 <div class="head"><div><small>PREMIÈRE TERRE FINANCE</small><h2 id="pt-dos-title">Dossiers clients</h2></div><button class="x" id="dos-close" aria-label="Fermer">×</button></div>
 <div class="body">
 <div class="gauche">
-<div class="ligne"><input id="dos-q" type="search" placeholder="Rechercher un client (nom, e-mail, tél.)" style="flex:1"><button class="b1" id="dos-nouveau" type="button">+ Client</button></div>
-<div class="filtres"><select id="dos-statut" aria-label="Statut"><option value="">Tous les statuts</option><option value="en_cours">En cours</option><option value="finance">Financés</option><option value="perdu">Perdus</option></select><select id="dos-jours" aria-label="Période"><option value="">Toutes les dates</option><option value="7">Modifiés depuis 7 jours</option><option value="30">Depuis 30 jours</option><option value="90">Depuis 3 mois</option><option value="365">Depuis 12 mois</option></select><select id="dos-conseiller" aria-label="Vendeur" hidden><option value="">Tous les vendeurs</option></select></div>
+<div class="ligne"><input autocomplete="off" id="dos-q" type="search" placeholder="Rechercher un client (nom, e-mail, tél.)" style="flex:1"><button class="b1" id="dos-nouveau" type="button">+ Client</button></div>
+<div class="filtres"><select autocomplete="off" id="dos-statut" aria-label="Statut"><option value="">Tous les statuts</option><option value="en_cours">En cours</option><option value="finance">Financés</option><option value="perdu">Perdus</option></select><select autocomplete="off" id="dos-jours" aria-label="Période"><option value="">Toutes les dates</option><option value="7">Modifiés depuis 7 jours</option><option value="30">Depuis 30 jours</option><option value="90">Depuis 3 mois</option><option value="365">Depuis 12 mois</option></select><select autocomplete="off" id="dos-conseiller" aria-label="Vendeur" hidden><option value="">Tous les vendeurs</option></select></div>
 <div class="liste" id="dos-liste"></div>
-<div class="sauv"><button class="b2" id="dos-export" type="button">⤓ Exporter les dossiers</button><button class="b2" id="dos-import" type="button" hidden>Restaurer une sauvegarde…</button><input type="file" id="dos-import-f" accept="application/json,.json" hidden></div>
+<div class="sauv"><button class="b2" id="dos-export" type="button">⤓ Exporter les dossiers</button><button class="b2" id="dos-import" type="button" hidden>Restaurer une sauvegarde…</button><input autocomplete="off" type="file" id="dos-import-f" accept="application/json,.json" hidden></div>
 </div>
 <div class="droite" id="dos-droite"></div>
 </div></div></div>
@@ -146,11 +146,11 @@ let minuterie;$('dos-q').addEventListener('input',()=>{clearTimeout(minuterie);m
 // --- Fiche client ---
 function formulaireClient(c){
   return `<div class="grille">
-  <label>Nom *<input id="dos-nom" value="${esc(c?.nom)}" maxlength="100"></label>
-  <label>Prénom<input id="dos-prenom" value="${esc(c?.prenom)}" maxlength="100"></label>
-  <label>E-mail<input id="dos-email" type="email" value="${esc(c?.email)}" maxlength="200"></label>
-  <label>Téléphone<input id="dos-tel" value="${esc(c?.telephone)}" maxlength="40"></label></div>
-  <label>Notes<textarea id="dos-notes" maxlength="5000">${esc(c?.notes)}</textarea></label>`;
+  <label>Nom *<input autocomplete="off" id="dos-nom" value="${esc(c?.nom)}" maxlength="100"></label>
+  <label>Prénom<input autocomplete="off" id="dos-prenom" value="${esc(c?.prenom)}" maxlength="100"></label>
+  <label>E-mail<input autocomplete="off" id="dos-email" type="email" value="${esc(c?.email)}" maxlength="200"></label>
+  <label>Téléphone<input autocomplete="off" id="dos-tel" value="${esc(c?.telephone)}" maxlength="40"></label></div>
+  <label>Notes<textarea autocomplete="off" id="dos-notes" maxlength="5000">${esc(c?.notes)}</textarea></label>`;
 }
 const valeursClient=()=>({nom:$('dos-nom').value,prenom:$('dos-prenom').value,email:$('dos-email').value,telephone:$('dos-tel').value,notes:$('dos-notes').value});
 function message(txt,ok=true){const m=$('dos-msg');if(m){m.className='msg '+(ok?'ok':'ko');m.textContent=txt}}
@@ -179,7 +179,7 @@ async function choisir(id,proposerEnregistrement){
   <div class="ligne" style="justify-content:space-between"><h3 style="margin:0;font:22px Georgia,serif;color:#9c482d">${esc(nomClient(c))}</h3>${admin&&c.owner?`<span style="font-size:12px;color:#7b6b62">Conseiller : ${esc(c.owner.name)}</span>`:''}</div>
   <div class="ligne" style="margin-top:10px"><span style="font-size:12px;color:#65554d">Statut du dossier</span><div class="statuts">${Object.entries(STATUTS).map(([k,l])=>`<button type="button" data-statut="${k}" class="${(c.statut||'en_cours')===k?'on':''}">${l}</button>`).join('')}</div></div>
   <div class="enreg"><b style="font-size:14px">Enregistrer la simulation affichée dans ce dossier</b>
-    <div class="ligne" style="margin-top:8px"><input id="dos-simnom" value="${esc(nomDefaut)}" maxlength="120" aria-label="Nom de la simulation"><button class="b1" id="dos-save" type="button">Enregistrer</button></div>
+    <div class="ligne" style="margin-top:8px"><input autocomplete="off" id="dos-simnom" value="${esc(nomDefaut)}" maxlength="120" aria-label="Nom de la simulation"><button class="b1" id="dos-save" type="button">Enregistrer</button></div>
     <div style="font-size:12px;color:#7b6b62;margin-top:6px">Enregistre tout le simulateur : plan de financement, prêts, diagnostic et emprunteurs.</div></div>
   <h3>Simulations (${sims.length})</h3>
   <div class="sims">${sims.length?sims.map(s=>`<div class="sim${courant?.simId===s.id?' courante':''}" data-sim="${esc(s.id)}"><div><b>${esc(s.nom)}</b><span>Modifiée le ${esc(date(s.updatedAt))}${s.author?' par '+esc(s.author.name):''}</span>${chiffres(s.resume)?`<div class="chiffres">${esc(chiffres(s.resume))}</div>`:''}</div><div class="act">
@@ -221,7 +221,7 @@ $('dos-droite').addEventListener('click',async e=>{
   try{
     if(b.dataset.dupliquer){
       const s=c.simulations.find(x=>x.id===b.dataset.dupliquer);
-      const el=panneau(s.id,{k:'dup',h:`<b style="font-size:13px">Dupliquer « ${esc(s.nom)} »</b><div class="ligne" style="margin-top:8px"><input id="dup-nom" value="${esc(s.nom+' (copie)')}" maxlength="120" style="flex:1;min-width:180px" aria-label="Nom de la copie"><select id="dup-client" style="padding:8px;border:1px solid #dbcac0;border-radius:8px;font:inherit;font-size:13px;max-width:220px" aria-label="Dossier de destination"><option value="${esc(c.id)}">Dans ce dossier</option>${clients.filter(x=>x.id!==c.id).map(x=>`<option value="${esc(x.id)}">Vers ${esc(nomClient(x))}</option>`).join('')}</select><button class="b1" type="button" data-dup-ok="${esc(s.id)}">Créer la copie</button></div><div style="font-size:12px;color:#7b6b62;margin-top:6px">Variante à partir de cette simulation : l'originale n'est pas modifiée.</div>`});
+      const el=panneau(s.id,{k:'dup',h:`<b style="font-size:13px">Dupliquer « ${esc(s.nom)} »</b><div class="ligne" style="margin-top:8px"><input autocomplete="off" id="dup-nom" value="${esc(s.nom+' (copie)')}" maxlength="120" style="flex:1;min-width:180px" aria-label="Nom de la copie"><select autocomplete="off" id="dup-client" style="padding:8px;border:1px solid #dbcac0;border-radius:8px;font:inherit;font-size:13px;max-width:220px" aria-label="Dossier de destination"><option value="${esc(c.id)}">Dans ce dossier</option>${clients.filter(x=>x.id!==c.id).map(x=>`<option value="${esc(x.id)}">Vers ${esc(nomClient(x))}</option>`).join('')}</select><button class="b1" type="button" data-dup-ok="${esc(s.id)}">Créer la copie</button></div><div style="font-size:12px;color:#7b6b62;margin-top:6px">Variante à partir de cette simulation : l'originale n'est pas modifiée.</div>`});
       if(el)el.querySelector('#dup-nom').select();return;
     }
     if(b.dataset.dupOk){
@@ -385,12 +385,13 @@ setTimeout(proposerBrouillon,1500);
 setTimeout(()=>{etatInitial=etatActuel();if(dernierEtat===null)marquerEnregistre()},2500);
 window.ptEnregistrerSimulation=enregistrerRapide;
 window.ptDossierCourant=()=>courant;
-// Page rechargée pour une nouvelle simulation : tous les montants repartent de zéro.
-try{if(sessionStorage.getItem('pt-vierge')){sessionStorage.removeItem('pt-vierge');
+// Ouverture du simulateur : tous les montants repartent de zéro (les valeurs d'exemple de l'ancien
+// formulaire ne doivent pas apparaître), sauf si une simulation d'un dossier est en cours de rechargement.
+try{const vierge=sessionStorage.getItem('pt-vierge');sessionStorage.removeItem('pt-vierge');if(vierge||!courant?.simId){
   ['price','notary','works','deposit','income','rents','futureRent','currentRent','guaranteeFee','brokerFee','refund','v9rfr'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=0});
   const nom=document.getElementById('client');if(nom)nom.value='';
   if(typeof loans!=='undefined')loans.splice(0);if(typeof existing!=='undefined')existing.splice(0);
-  window.ptVierge=true;
+  window.ptVierge=!!vierge;
   if(typeof render==='function')render();
 }}catch(e){}
 // Après un rechargement, le formulaire revient aux valeurs par défaut : on recharge la simulation

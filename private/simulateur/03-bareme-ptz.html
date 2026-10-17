@@ -48,11 +48,11 @@
 </div>
 <div>
 <div class="crit"><h3>Critères de calcul</h3>
-<label>Zone<select id="ptz-zone"><option value="all">Toutes</option><option value="A">A bis / A</option><option value="B1">B1</option><option value="B2">B2</option><option value="C">C</option></select></label>
-<label>Ménage (personnes destinées à occuper le logement)<select id="ptz-pers"><option value="1">1 personne</option><option value="2">2 personnes</option><option value="3">3 personnes</option><option value="4">4 personnes</option><option value="5">5 personnes</option><option value="6">6 personnes</option><option value="7">7 personnes</option><option value="8">8 personnes et plus</option></select></label>
-<label>Achat<select id="ptz-type"><option value="coll">Neuf · logement collectif</option><option value="indiv">Neuf · maison individuelle</option><option value="ancien">Ancien avec travaux (zones B2 et C)</option></select></label>
-<label>Coût de l'opération hors frais de notaire (€)<input id="ptz-prix" type="number" min="0" step="1000" placeholder="ex. 250000"></label>
-<label>Revenu fiscal de référence N-2 du foyer (€)<input id="ptz-rfr" type="number" min="0" step="500" placeholder="ex. 38000"></label>
+<label>Zone<select autocomplete="off" id="ptz-zone"><option value="all">Toutes</option><option value="A">A bis / A</option><option value="B1">B1</option><option value="B2">B2</option><option value="C">C</option></select></label>
+<label>Ménage (personnes destinées à occuper le logement)<select autocomplete="off" id="ptz-pers"><option value="1">1 personne</option><option value="2">2 personnes</option><option value="3">3 personnes</option><option value="4">4 personnes</option><option value="5">5 personnes</option><option value="6">6 personnes</option><option value="7">7 personnes</option><option value="8">8 personnes et plus</option></select></label>
+<label>Achat<select autocomplete="off" id="ptz-type"><option value="coll">Neuf · logement collectif</option><option value="indiv">Neuf · maison individuelle</option><option value="ancien">Ancien avec travaux (zones B2 et C)</option></select></label>
+<label>Coût de l'opération hors frais de notaire (€)<input autocomplete="off" id="ptz-prix" type="number" min="0" step="1000" placeholder="ex. 250000"></label>
+<label>Revenu fiscal de référence N-2 du foyer (€)<input autocomplete="off" id="ptz-rfr" type="number" min="0" step="500" placeholder="ex. 38000"></label>
 </div>
 <div class="res" id="ptz-res"></div>
 </div>
@@ -157,7 +157,7 @@ function rendre(){
   };
 }
 function editeur(){
-  const champ=(chemin,v)=>`<input type="number" min="0" step="any" data-b="${chemin}" value="${v}">`;
+  const champ=(chemin,v)=>`<input autocomplete="off" type="number" min="0" step="any" data-b="${chemin}" value="${v}">`;
   let h='<div class="tw"><table><tr><th>Plafond de l\'opération (1 pers.)</th>'+ZONES.map(z=>`<th>${NOMZ[z]}</th>`).join('')+'</tr><tr><td>Montant (€)</td>'+ZONES.map(z=>`<td>${champ('plafond.'+z,B.plafond[z])}</td>`).join('')+'</tr></table></div>';
   h+='<div class="tw"><table><tr><th>Revenus (1 pers.)</th>'+ZONES.map(z=>`<th>${NOMZ[z]}</th>`).join('')+'<th>Collectif %</th><th>Maison %</th><th>Ancien %</th><th>Différé (ans)</th><th>Durée (ans)</th></tr>';
   for(let t=0;t<4;t++)h+=`<tr><td>Tranche ${t+1}</td>`+ZONES.map(z=>`<td>${champ('revenus.'+z+'.'+t,B.revenus[z][t])}</td>`).join('')+['coll','indiv','ancien'].map(k=>`<td>${champ('quotite.'+k+'.'+t,B.quotite[k][t])}</td>`).join('')+`<td>${champ('differe.'+t,B.differe[t])}</td><td>${champ('duree.'+t,B.duree[t])}</td></tr>`;
