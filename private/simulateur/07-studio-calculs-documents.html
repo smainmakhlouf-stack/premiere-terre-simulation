@@ -1120,7 +1120,7 @@ $('st-expert').onclick=()=>VUES[vue].expert();
 $('st-save').onclick=()=>window.ptEnregistrerSimulation&&window.ptEnregistrerSimulation();
 $('st-list').onclick=()=>window.ptOpenDossiers&&window.ptOpenDossiers();
 $('st-new').onclick=()=>window.ptNouvelleSimulation&&window.ptNouvelleSimulation();
-window.ptStudioDossier=()=>{const c=window.ptDossierCourant&&window.ptDossierCourant();const auto=window.ptDernierAuto&&window.ptDernierAuto();$('st-dossier').innerHTML=c?`Dossier : <b>${esc(c.client)}</b>${c.simNom?' · '+esc(c.simNom):''}${c.simId?`<br><span style="font-size:11px">${auto?'Enregistré automatiquement à '+auto.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'Enregistrement automatique activé'}</span>`:''}`:'Simulation non enregistrée<br><span style="font-size:11px">brouillon gardé sur cet ordinateur</span>';$('st-save').textContent=c?.simId?'Enregistrer':'Enregistrer…'};
+window.ptStudioDossier=()=>{const c=window.ptDossierCourant&&window.ptDossierCourant();const auto=window.ptDernierAuto&&window.ptDernierAuto();$('st-dossier').innerHTML=c?`Dossier : <b>${esc(c.client)}</b>${c.simNom?' · '+esc(c.simNom):''}${c.simId?`<br><span style="font-size:11px">${auto?'Enregistré automatiquement à '+auto.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'Enregistrement automatique activé'}</span>`:''}`:(window.ptSaisie&&window.ptSaisie()?'Simulation non enregistrée<br><span style="font-size:11px">brouillon gardé sur cet ordinateur</span>':'');$('st-save').textContent=c?.simId?'Enregistrer':'Enregistrer…'};
 window.ptStudioDossier();
 studio.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>ouvrir(b.dataset.st));
 // Le PTZ ajouté depuis le barème doit apparaître tout de suite dans le plan.

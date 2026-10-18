@@ -330,9 +330,12 @@ function remiseAZero(){
 }
 // Saisies réelles de l'utilisateur (les écrans pré-remplissent des valeurs à l'ouverture).
 let saisie=false;
-document.addEventListener('input',e=>{if(e.isTrusted&&!e.target.closest('#pt-fermer,#pt-dos,#pt-par,#pt-sorties,#pt-ptz'))saisie=true},true);
-document.addEventListener('click',e=>{if(e.isTrusted&&e.target.closest('[data-dseg] button,[data-seg] button,.st-env tr[data-ans],#brouillon-oui,#pt-transfer'))saisie=true},true);
-document.addEventListener('pointerdown',e=>{if(e.isTrusted&&e.target.closest('.remb-barre'))saisie=true},true);
+// Première saisie : la mention « Simulation non enregistrée » apparaît alors seulement (rien à signaler sur un écran vierge).
+const marquerSaisie=()=>{const avant=saisie;saisie=true;if(!avant&&window.ptStudioDossier)setTimeout(window.ptStudioDossier,0)};
+window.ptSaisie=()=>saisie;
+document.addEventListener('input',e=>{if(e.isTrusted&&!e.target.closest('#pt-fermer,#pt-dos,#pt-par,#pt-sorties,#pt-ptz'))marquerSaisie()},true);
+document.addEventListener('click',e=>{if(e.isTrusted&&e.target.closest('[data-dseg] button,[data-seg] button,.st-env tr[data-ans],#brouillon-oui,#pt-transfer'))marquerSaisie()},true);
+document.addEventListener('pointerdown',e=>{if(e.isTrusted&&e.target.closest('.remb-barre'))marquerSaisie()},true);
 function modifiee(){if(courant?.simId)return saisie&&etatActuel()!==dernierServeur;return saisie}
 function fermerSimulation(){
   if(!modifiee())return remiseAZero();
