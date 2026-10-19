@@ -151,6 +151,8 @@ function rendre(){
   const btn=$('ptz-ajout');
   if(btn)btn.onclick=()=>{
     if(typeof addLoan!=='function'){alert('Plan de financement indisponible.');return}
+    // Un seul PTZ par plan : un nouveau calcul remplace le précédent.
+    if(typeof loans!=='undefined')for(let i=loans.length-1;i>=0;i--)if(loans[i].type==='ptz')loans.splice(i,1);
     addLoan({name:'PTZ · tranche '+(r.tranche+1)+' · zone '+NOMZ[r.zone],type:'ptz',amount:r.montant,rate:0,years:r.duree,delay:r.differe*12,insurance:0.20});
     fermer();
     const cible=document.getElementById('loans');if(cible)cible.scrollIntoView({behavior:'smooth',block:'center'});
@@ -184,6 +186,7 @@ function ouvrir(){
   editeur();rendre();dialog.classList.add('open');
 }
 window.ptOpenPTZ=ouvrir;
+window.ptBaremePTZ=()=>B;
 $('ptz-close').onclick=fermer;
 dialog.addEventListener('click',e=>{if(e.target===dialog)fermer()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dialog.classList.contains('open'))fermer()});

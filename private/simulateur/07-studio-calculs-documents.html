@@ -93,6 +93,36 @@ function barresH(items,fmt=eur){
 // 1. PLAN DE FINANCEMENT
 // =====================================================================
 let tauxPlanManuel=false,ouvertPret=null;
+// ---------- Onglets PTZ / Action Logement (conditions et plafonds de ressources) ----------
+let ongletAide='';
+const nbP=n=>n+' personne'+(n>1?'s':'');
+function infoPTZ(){
+  const B=window.ptBaremePTZ?window.ptBaremePTZ():null,dejaPtz=(typeof loans!=='undefined'?loans:[]).some(l=>l.type==='ptz');
+  if(!B)return '<p class="hint">Barème PTZ indisponible.</p>';
+  const coef=[1,1.5,1.8,2.1,2.4,2.7,3,3.3],Z=[['A','A bis / A'],['B1','B1'],['B2','B2'],['C','C']];
+  const fr=n=>new Intl.NumberFormat('fr-FR').format(Math.round(n));
+  return `<p><b>Prêt à taux zéro</b> : prêt de l'État sans intérêts qui complète le prêt bancaire, pour l'achat de la <b>résidence principale</b> d'un <b>primo-accédant</b> (pas propriétaire de sa résidence principale depuis 2 ans).</p>
+  <ul><li>Neuf collectif : partout en France. Maison individuelle neuve : quotité réduite. Ancien : seulement avec travaux, en zones B2 et C.</li>
+  <li>Montant = quotité (20 à 50 %) × coût de l'opération plafonné (${fr(B.plafond.A)} € pour 1 personne en zone A, plus selon le foyer).</li>
+  <li>Remboursement sur ${B.duree[3]} à ${B.duree[0]} ans, avec un différé de 0 à ${B.differe[0]} ans selon la tranche de revenus.</li></ul>
+  <div class="t-titre">Revenu fiscal de référence (N-2) à ne pas dépasser</div>
+  <table class="t-aide"><tr><th>Occupants</th>${Z.map(z=>`<th>Zone ${z[1]}</th>`).join('')}</tr>${coef.map((c,i)=>`<tr><td>${i===7?'8 et +':nbP(i+1)}</td>${Z.map(z=>`<td>${fr(B.revenus[z[0]][3]*c)} €</td>`).join('')}</tr>`).join('')}</table>
+  <p class="hint">Barème du simulateur (Paramètres → Barème PTZ). Plus les revenus sont bas, plus la quotité et le différé sont élevés (4 tranches).</p>
+  ${dejaPtz?'<p class="hint"><b>Un PTZ est déjà dans le plan</b> : recalculez-le avec le barème pour le remplacer.</p><button type="button" class="mini" id="sp-ptz">Recalculer le PTZ (barème)</button>':'<button type="button" class="mini" id="sp-ptz">+ Ajouter le PTZ (barème)</button>'}`;
+}
+// Plafonds Action Logement (prêt accession) : grille « logements intermédiaires » au 10/03/2026 (actionlogement.fr).
+const PLAFONDS_AL={zones:['A bis / A','B1','B2 et C'],lignes:[['1 personne seule',[44344,36144,32530]],['2 personnes',[66276,48268,43439]],['3 personnes (ou 1 + 1 à charge)',[79666,58043,52239]],['4 personnes (ou 1 + 2 à charge)',[95427,70073,63066]],['5 personnes (ou 1 + 3 à charge)',[112968,82432,74189]],['6 personnes (ou 1 + 4 à charge)',[127122,92900,83611]],['Par personne en plus',[14164,10364,9325],'+']],abis:[44344,66276,86878,103727,123415,138874,15471]};
+function infoAL(){
+  const fr=n=>new Intl.NumberFormat('fr-FR').format(n),deja=(typeof loans!=='undefined'?loans:[]).some(l=>l.type==='action');
+  return `<p><b>Prêt accession Action Logement</b> : jusqu'à <b>30 000 €</b> à taux réduit (1 % hors assurance), en complément du prêt bancaire, pour l'achat de la <b>résidence principale dans le neuf</b>.</p>
+  <ul><li>Être <b>salarié d'une entreprise du secteur privé non agricole de 10 salariés et plus</b>.</li>
+  <li>Primo-accédant, ou pas propriétaire de sa résidence principale depuis 2 ans.</li>
+  <li>Revenus du foyer sous les plafonds ci-dessous (revenu fiscal de référence N-2, avis 2025 sur les revenus 2024).</li></ul>
+  <div class="t-titre">Revenu fiscal de référence (N-2) à ne pas dépasser</div>
+  <table class="t-aide"><tr><th>Foyer</th>${PLAFONDS_AL.zones.map(z=>`<th>Zone ${z}</th>`).join('')}</tr>${PLAFONDS_AL.lignes.map(([l,v,plus])=>`<tr><td>${l}</td>${v.map(x=>`<td>${plus||''}${fr(x)} €</td>`).join('')}</tr>`).join('')}</table>
+  <p class="hint">Zone A bis : mêmes plafonds que la zone A pour 1 et 2 personnes, un peu plus élevés au-delà (3 personnes : ${fr(PLAFONDS_AL.abis[2])} €). Barème Action Logement au 10 mars 2026 ; conditions définitives fixées par Action Logement.</p>
+  ${deja?'<p class="hint"><b>Le prêt Action Logement est déjà dans le plan</b> (un seul par dossier) : modifiez-le dans la liste ci-dessus.</p>':'<button type="button" class="mini" id="sp-al">+ Ajouter le prêt Action Logement</button>'}`;
+}
 function formPlan(){
   const invest=$('purpose')?.value==='invest',ancien=$('v9operation')?.value==='old',ans=fv('mainYears')||window.mainSettings?.years||25;
   // Un taux différent de la grille (saisi ou repris d'un dossier) est considéré comme choisi par le vendeur.
@@ -126,7 +156,9 @@ function formPlan(){
   <div class="hint">${tauxPlanManuel?'Taux saisi : il ne change plus avec la durée. <button type="button" class="lien" id="sp-grille">Reprendre le taux de la grille</button>':'Taux de la grille de l\'équipe selon la durée ; saisissez le vôtre pour le garder.'}</div>
   <h3>Aides et prêts complémentaires</h3>
   ${aides||'<div class="hint" style="margin-bottom:8px">Aucun pour l\'instant.</div>'}
-  <button type="button" class="mini" id="sp-ptz">+ PTZ (barème)</button><button type="button" class="mini" id="sp-al">+ Prêt Action Logement</button><button type="button" class="mini" id="sp-autre">+ Prêt externe</button>`;
+  <div class="aides-onglets"><button type="button" data-aide="ptz" class="${ongletAide==='ptz'?'on':''}">PTZ · conditions</button><button type="button" data-aide="al" class="${ongletAide==='al'?'on':''}">Prêt Action Logement · conditions</button></div>
+  ${ongletAide?`<div class="aide-info">${ongletAide==='ptz'?infoPTZ():infoAL()}</div>`:''}
+  <button type="button" class="mini" id="sp-autre">+ Prêt externe</button>`;
 }
 function resPlan(){
   recalc();
@@ -274,10 +306,13 @@ function bindPlan(){
   $('sp-ins').addEventListener('input',majPrincipal);
   const majAide=()=>{const h=$('sp-rate').closest('.duo').nextElementSibling;if(h)h.innerHTML='Taux saisi : il ne change plus avec la durée. <button type="button" class="lien" id="sp-grille">Reprendre le taux de la grille</button>';const g=$('sp-grille');if(g)g.onclick=()=>{tauxPlanManuel=false;$('sp-rate').value=tauxDuree(num($('sp-years').value));majPrincipal();rafraichir()}};
   if(tauxPlanManuel)majAide();
-  $('sp-ptz').onclick=()=>window.ptOpenPTZ&&window.ptOpenPTZ();
+  // Onglets d'information PTZ / Action Logement (conditions et plafonds) ; l'ajout au plan se fait depuis l'onglet.
+  $('st-form').querySelectorAll('[data-aide]').forEach(b=>b.onclick=()=>{ongletAide=ongletAide===b.dataset.aide?'':b.dataset.aide;rafraichir()});
+  const bPtz=$('sp-ptz');if(bPtz)bPtz.onclick=()=>window.ptOpenPTZ&&window.ptOpenPTZ();
   const assPrincipal=()=>window.mainSettings?.insurance??fv('mainIns')??0.15;
   const ajouter=x=>{addLoan(x);ouvertPret=loans[loans.length-1]?.id;fraisAuto();rafraichir()};
-  $('sp-al').onclick=()=>ajouter({name:'Prêt Action Logement',type:'action',amount:30000,rate:1,years:20,delay:0,insurance:assPrincipal(),garantie:'none'});
+  // Un seul prêt Action Logement par dossier : le bouton disparaît dès qu'il y en a un.
+  const bAl=$('sp-al');if(bAl)bAl.onclick=()=>ajouter({name:'Prêt Action Logement',type:'action',amount:30000,rate:1,years:20,delay:0,insurance:assPrincipal(),garantie:'none'});
   $('sp-autre').onclick=()=>ajouter({name:'Prêt externe',type:'external',amount:15000,rate:window.mainSettings?.rate||fv('mainRate')||3,years:15,delay:0,insurance:assPrincipal(),garantie:$('guarantee')?.value||'none'});
   // Modification d'un prêt complémentaire : écrit dans le moteur puis recalcule.
   const pretDe=el=>loans.find(l=>l.id===+el.closest('[data-pret]').dataset.pret);
@@ -785,7 +820,7 @@ function resDiag(){
     poser('v9operation',d.type==='neuf'?'new':'old');poser('threshold',c.seuil);poser('price',Math.floor(c.budget/1000)*1000);poser('deposit',d.apport);poser('income',d.revenus);
     fixerPrincipal(c.taux,d.ans,Math.round(c.ins*1200*1000)/1000);
     if(c.ptz.montant&&typeof loans!=='undefined'&&!loans.some(l=>l.type==='ptz'))addLoan({name:'PTZ · tranche '+c.ptz.tranche+' · zone '+d.zone,type:'ptz',amount:c.ptz.montant,rate:0,years:c.ptz.duree,delay:c.ptz.differe*12,insurance:Math.round(c.ins*1200*1000)/1000});
-    if(typeof loans!=='undefined'){for(let i=loans.length-1;i>=0;i--)if(loans[i].source==='budget')loans.splice(i,1);(c.ext||[]).filter(x=>!x.existant).forEach(x=>{const rel=/relais/i.test(x.nom);addLoan({name:x.nom,type:/Action/.test(x.nom)?'action':'external',amount:x.montant,rate:x.taux||0,years:rel?Math.max(1,Math.ceil(x.mois/12)):Math.round(x.mois/12),mois:rel?x.mois:undefined,delay:rel?Math.max(0,x.mois-1):0,insurance:rel?0:Math.round(c.ins*1200*1000)/1000,lissable:rel?!x.horsLissage:true,relais:rel||undefined,source:'budget'})})}
+    if(typeof loans!=='undefined'){const alBudget=(c.ext||[]).some(x=>!x.existant&&/Action/.test(x.nom));for(let i=loans.length-1;i>=0;i--)if(loans[i].source==='budget'||(alBudget&&loans[i].type==='action'))loans.splice(i,1);(c.ext||[]).filter(x=>!x.existant).forEach(x=>{const rel=/relais/i.test(x.nom);addLoan({name:x.nom,type:/Action/.test(x.nom)?'action':'external',amount:x.montant,rate:x.taux||0,years:rel?Math.max(1,Math.ceil(x.mois/12)):Math.round(x.mois/12),mois:rel?x.mois:undefined,delay:rel?Math.max(0,x.mois-1):0,insurance:rel?0:Math.round(c.ins*1200*1000)/1000,lissable:rel?!x.horsLissage:true,relais:rel||undefined,source:'budget'})})}
     if(typeof existing!=='undefined'){existing.splice(0);(d.credits||[]).forEach((x,i)=>existing.push({id:9000+i,name:NATURES[x.nature]||'Crédit',payment:+x.mens||0,months:+x.mois||0,balance:+x.crd||0,penalty:+x.ind||0,mode:x.mode==='repay'?'refinance':x.mode==='smooth'?'smooth':'keep'}));if(d.redevance)existing.push({id:8990,name:'Redevance foncière BRS',payment:d.redevance,months:d.ans*12,balance:0,penalty:0,mode:'keep'});if(d.pensVersee)existing.push({id:8991,name:'Pension alimentaire versée',payment:d.pensVersee,months:d.ans*12,balance:0,penalty:0,mode:'keep'})}
     fraisAuto();ouvrir('plan')};
 }
