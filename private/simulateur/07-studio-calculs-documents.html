@@ -33,11 +33,15 @@ function fraisAuto(){
   const offert=!ancien&&m('pl-notoff')?.value==='oui';
   poser('notary',offert?0:Math.round(fv('price')*(ancien?p.frais.notaireAncien:p.frais.notaireNeuf)/100));
   recalc();
-  const pret=window.loanOutputs?.[0]?.amount||0,type=$('guarantee')?.value;
-  const g=window.ptTauxGarantie(type)??0;
+  // Garantie et courtage dépendent du prêt principal, qui dépend lui-même de ces frais : on recalcule jusqu'à stabilité.
+  const g=window.ptTauxGarantie($('guarantee')?.value)??0;
   // Garantie des prêts complémentaires : même barème, selon la garantie choisie pour chacun.
   const gAutres=(typeof loans!=='undefined'?loans:[]).reduce((s,l)=>s+(+l.amount||0)*((l.garantie&&l.garantie!=='none'?window.ptTauxGarantie(l.garantie):0)||0)/100,0);
-  poser('guaranteeFee',Math.round(pret*g/100+gAutres));poser('brokerFee',Math.round(pret*p.frais.courtagePct/100));recalc();
+  for(let k=0;k<6;k++){
+    const pret=window.loanOutputs?.[0]?.amount||0,gf=Math.round(pret*g/100+gAutres),cf=Math.round(pret*p.frais.courtagePct/100);
+    if(gf===fv('guaranteeFee')&&cf===fv('brokerFee'))break;
+    poser('guaranteeFee',gf);poser('brokerFee',cf);recalc();
+  }
 }
 
 // ---------- Durée : curseur + saisie exacte ----------
@@ -422,7 +426,8 @@ function bases(d){
 }
 const ptzPour=(d,type,prix)=>d.ptzFixe?d.ptzFixe:type==='neuf'&&d.primo&&window.ptCalculPTZ?window.ptCalculPTZ(d.zone,d.occupants||d.adultes+d.enfants,d.ptzType||'coll',prix,d.rfr||d.revenus*12*0.9):{montant:0};
 const annuite=(c,t,m)=>{const r=t/1200;return c<=0||m<=0?0:r?c*r/(1-Math.pow(1+r,-m)):c/m};
-const pretsExt=d=>(d.prets||[]).filter(x=>x.montant>0).map(x=>{const mois=x.mois||Math.round((x.ans||d.ans)*12);return {...x,mois,mens:x.mens!=null?x.mens:annuite(x.montant,x.taux||0,mois)}});
+// Nouveaux prêts (Action Logement, complémentaire) : mensualité avec l'assurance du prêt principal, comme dans le plan.
+const pretsExt=d=>{const ins=bases(d).ins;return (d.prets||[]).filter(x=>x.montant>0).map(x=>{const mois=x.mois||Math.round((x.ans||d.ans)*12);return {...x,mois,mens:x.mens!=null?x.mens:annuite(x.montant,x.taux||0,mois)+x.montant*ins}})};
 /** Budget d'achat maximum : la mensualité disponible fixe le prêt bancaire ; dans le neuf, le PTZ s'y ajoute. */
 function capacite(d,type){
   const b=bases(d),offerts=type==='neuf'&&!!d.notaireOfferts,pctTheo=(d.notairePct!=null&&type===d.type?d.notairePct:(type==='neuf'?b.p.frais.notaireNeuf:b.p.frais.notaireAncien))/100,notaire=offerts?0:pctTheo;
@@ -431,10 +436,12 @@ function capacite(d,type){
   // pendant toute la durée ; la banque baisse sa mensualité pendant le remboursement du PTZ.
   // Prêt = valeur actuelle des mensualités disponibles − valeur actuelle des remboursements du PTZ.
   const A=b.r?(1-Math.pow(1+b.r,-b.n))/b.r:b.n;
+  // Assurance du PTZ : sur son capital initial, pendant toute sa durée (différé compris), comme dans le plan.
+  const vaAssPTZ=z=>{if(!z.montant)return 0;let va=0;for(let t=1;t<=Math.min(z.duree*12,b.n);t++)va+=z.montant*b.ins/Math.pow(1+b.r,t);return va};
   const vaPTZ=z=>{if(!z.montant)return 0;const deb=(z.differe||0)*12,fin=z.duree*12,mens=z.montant/(fin-deb);let va=0;for(let t=deb+1;t<=Math.min(fin,b.n);t++)va+=mens/Math.pow(1+b.r,t);return va};
   const ext=pretsExt(d).filter(x=>!(x.neufSeul&&type!=='neuf')),totExt=ext.reduce((a,x)=>a+(x.existant?0:x.montant),0),solde=d.solde||0;let vaExt=0;ext.forEach(x=>{if(x.horsLissage)return;for(let t=1;t<=Math.min(x.mois,b.n);t++)vaExt+=x.mens/Math.pow(1+b.r,t)});
   for(let k=0;k<8;k++){
-    pret=Math.max(0,(b.mensualite*A-vaPTZ(ptz)-vaExt-(ptz.montant||0)*b.ins*A)/(1+b.ins*A));
+    pret=Math.max(0,(b.mensualite*A-vaPTZ(ptz)-vaExt-vaAssPTZ(ptz))/(1+b.ins*A));
     budget=Math.max(0,(pret+ptz.montant+totExt+d.apport-solde-b.p.frais.dossier-b.courtPct*pret-b.garPct*(pret+ptz.montant+totExt))/(1+notaire));
     const suivant=ptzPour(d,type,budget);if(Math.abs((suivant.montant||0)-ptz.montant)<1){ptz=suivant;break}ptz=suivant;
   }
@@ -450,7 +457,7 @@ function aPrixEgal(d,type,prix){
     // PTZ : capital constant pendant le différé, puis remboursé linéairement.
     let rPtz=0;if(ptz.montant){const fin=ptz.duree,deb=ptz.differe||0;rPtz=a<=deb?ptz.montant:a>=fin?0:ptz.montant*(fin-a)/(fin-deb)}
     crd.push(reste+rPtz)}
-  return {type,banque,ptz,mens:mens+banque*b.ins+(ptz.montant&&!ptz.differe?ptz.montant/(ptz.duree*12):0),interets,assurance,coutCredit:interets+assurance,crd,notaire:prix*notaire};
+  return {type,banque,ptz,mens:mens+banque*b.ins+(ptz.montant||0)*b.ins+(ptz.montant&&!ptz.differe?ptz.montant/(ptz.duree*12):0),interets,assurance,coutCredit:interets+assurance,crd,notaire:prix*notaire};
 }
 function courbes(series,ans){
   const W=760,H=240,L=64,B=26,T=12,PW=W-L-12,PH=H-T-B,max=Math.max(1,...series.flatMap(s=>s.v));
@@ -838,10 +845,10 @@ function resDiag(){
   $('sd-solv').onclick=()=>presenterDoc('Fiche de solvabilité',[['Fiche de solvabilité',ficheSolvabilite(d,c,ctxRapide(d))]],ctxRapide(d).nom);
   $('sd-sorties').onclick=()=>ouvrirSorties(d,c,ctxRapide(d));
   const b=$('sd-vers-plan');if(b)b.onclick=()=>{
-    poser('v9operation',d.type==='neuf'?'new':'old');poser('threshold',c.seuil);m('pl-notoff').value=d.type==='neuf'&&d.notaireOfferts?'oui':'non';poser('price',Math.floor(c.budget/1000)*1000);poser('deposit',d.apport);poser('income',d.revenus);
+    poser('v9operation',d.type==='neuf'?'new':'old');poser('threshold',c.seuil);m('pl-notoff').value=d.type==='neuf'&&d.notaireOfferts?'oui':'non';poser('price',Math.floor(c.budget));poser('deposit',d.apport);poser('income',d.revenus);
     fixerPrincipal(c.taux,d.ans,Math.round(c.ins*1200*1000)/1000);
     const gk=({cl_classic:'credit',cl_initio:'initio',saccef:'sacem',mutual:'mutuelle',legal:'ppd'})[d.garantie]||d.garantie;if($('guarantee')&&[...$('guarantee').options].some(o=>o.value===gk))poser('guarantee',gk);
-    if(c.ptz.montant&&typeof loans!=='undefined'&&!loans.some(l=>l.type==='ptz'))addLoan({name:'PTZ · tranche '+c.ptz.tranche+' · zone '+d.zone,type:'ptz',amount:c.ptz.montant,rate:0,years:c.ptz.duree,delay:c.ptz.differe*12,insurance:Math.round(c.ins*1200*1000)/1000});
+    if(c.ptz.montant&&typeof loans!=='undefined'&&!loans.some(l=>l.type==='ptz'))addLoan({name:'PTZ · tranche '+c.ptz.tranche+' · zone '+d.zone,type:'ptz',amount:c.ptz.montant,rate:0,years:c.ptz.duree,delay:c.ptz.differe*12,insurance:Math.round(c.ins*1200*1000)/1000,garantie:$('guarantee')?.value||'none'});
     if(typeof loans!=='undefined'){const alBudget=(c.ext||[]).some(x=>!x.existant&&/Action/.test(x.nom));for(let i=loans.length-1;i>=0;i--)if(loans[i].source==='budget'||(alBudget&&loans[i].type==='action'))loans.splice(i,1);(c.ext||[]).filter(x=>!x.existant).forEach(x=>{const rel=/relais/i.test(x.nom);addLoan({name:x.nom,type:/Action/.test(x.nom)?'action':'external',amount:x.montant,rate:x.taux||0,years:rel?Math.max(1,Math.ceil(x.mois/12)):Math.round(x.mois/12),mois:rel?x.mois:undefined,delay:rel?Math.max(0,x.mois-1):0,insurance:rel?0:Math.round(c.ins*1200*1000)/1000,lissable:rel?!x.horsLissage:true,relais:rel||undefined,source:'budget',...(/Action/.test(x.nom)?{garantie:$('guarantee')?.value||'none',suit:true}:{})})})}
     if(typeof existing!=='undefined'){existing.splice(0);(d.credits||[]).forEach((x,i)=>existing.push({id:9000+i,name:NATURES[x.nature]||'Crédit',payment:+x.mens||0,months:+x.mois||0,balance:+x.crd||0,penalty:+x.ind||0,mode:x.mode==='repay'?'refinance':x.mode==='smooth'?'smooth':'keep'}));if(d.redevance)existing.push({id:8990,name:'Redevance foncière BRS',payment:d.redevance,months:d.ans*12,balance:0,penalty:0,mode:'keep'});if(d.pensVersee)existing.push({id:8991,name:'Pension alimentaire versée',payment:d.pensVersee,months:d.ans*12,balance:0,penalty:0,mode:'keep'})}
     fraisAuto();ouvrir('plan')};
