@@ -186,7 +186,8 @@ function resPlan(){
   const cout=out.reduce((s,o)=>s+(o.totalInterest||0)+(o.totalIns||0),0);
   const prix=fv('price'),notaire=fv('notary'),travaux=fv('works'),fraisB=fv('guaranteeFee')+fv('fileFee')+fv('brokerFee'),apport=fv('deposit');
   const total=prix+notaire+travaux+fraisB,ans=window.mainSettings?.years||fv('mainYears');
-  const etat=peak<=seuil?'ok':peak<=seuil+3?'warn':'bad';
+  // Comparé au dixième près, comme il est affiché : 35,003 % reste « 35 % ».
+  const pk=Math.round(peak*10)/10,etat=pk<=seuil?'ok':pk<=seuil+3?'warn':'bad';
   const apportPct=total?apport/total*100:0,apportMin=P().seuils.apportMin;
   // Mensualités par année, par type de prêt
   const N=Math.max(1,...out.map(o=>o.arr?.length||0)),annees=Array.from({length:Math.ceil(N/12)},(_,i)=>i+1);
@@ -287,7 +288,7 @@ function solvabilite(){
   const out=window.loanOutputs||[],emprunte=out.reduce((s,o)=>s+(o.amount||0),0);
   const etat=(v,ok,warn,inverse)=>inverse?(v<=ok?'ok':v<=warn?'warn':'bad'):(v>=ok?'ok':v>=warn?'warn':'bad');
   const ind=[
-    {l:"Taux d'endettement après projet",v:pc(apres),r:'≤ '+pc(seuil,0),e:etat(apres,seuil,seuil+3,true)},
+    {l:"Taux d'endettement après projet",v:pc(apres),r:'≤ '+pc(seuil,0),e:etat(Math.round(apres*10)/10,seuil,seuil+3,true)},
     {l:'Reste à vivre',v:eur(reste)+' / mois',r:'≥ '+eur(resteMin),e:etat(reste,resteMin,resteMin*0.8)},
     {l:'Apport personnel',v:eur(apport)+' ('+pc(apportPct,0)+')',r:'≥ '+pc(p.seuils.apportMin,0)+' du coût',e:apportPct>=p.seuils.apportMin?'ok':apport>=fraisAcq?'warn':'bad'},
     {l:'Saut de charge',v:loyer?eur(saut)+' / mois':'loyer actuel non renseigné',r:'≤ 10 % des revenus',e:!loyer?'warn':etat(revenus?saut/revenus*100:0,10,20,true)},
@@ -837,7 +838,7 @@ function resDiag(){
   $('sd-solv').onclick=()=>presenterDoc('Fiche de solvabilité',[['Fiche de solvabilité',ficheSolvabilite(d,c,ctxRapide(d))]],ctxRapide(d).nom);
   $('sd-sorties').onclick=()=>ouvrirSorties(d,c,ctxRapide(d));
   const b=$('sd-vers-plan');if(b)b.onclick=()=>{
-    poser('v9operation',d.type==='neuf'?'new':'old');poser('threshold',c.seuil);poser('price',Math.floor(c.budget/1000)*1000);poser('deposit',d.apport);poser('income',d.revenus);
+    poser('v9operation',d.type==='neuf'?'new':'old');poser('threshold',c.seuil);m('pl-notoff').value=d.type==='neuf'&&d.notaireOfferts?'oui':'non';poser('price',Math.floor(c.budget/1000)*1000);poser('deposit',d.apport);poser('income',d.revenus);
     fixerPrincipal(c.taux,d.ans,Math.round(c.ins*1200*1000)/1000);
     const gk=({cl_classic:'credit',cl_initio:'initio',saccef:'sacem',mutual:'mutuelle',legal:'ppd'})[d.garantie]||d.garantie;if($('guarantee')&&[...$('guarantee').options].some(o=>o.value===gk))poser('guarantee',gk);
     if(c.ptz.montant&&typeof loans!=='undefined'&&!loans.some(l=>l.type==='ptz'))addLoan({name:'PTZ · tranche '+c.ptz.tranche+' · zone '+d.zone,type:'ptz',amount:c.ptz.montant,rate:0,years:c.ptz.duree,delay:c.ptz.differe*12,insurance:Math.round(c.ins*1200*1000)/1000});
