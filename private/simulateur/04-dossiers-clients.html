@@ -40,7 +40,7 @@
 #pt-dos .filtres{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}#pt-dos .filtres select{flex:1;min-width:120px;padding:7px 8px;border:1px solid #dbcac0;border-radius:8px;background:#fff;font:inherit;font-size:12.5px;color:#322824}
 #pt-dos .sauv{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid #eadbd1}#pt-dos .sauv button{font-size:12px}
 #pt-dos .stt{display:inline-block;font-size:11px;border-radius:20px;padding:1px 8px;margin-left:6px;vertical-align:1px;background:#efe3da;color:#7e412f;font-weight:600}
-#pt-dos .stt.finance{background:#e3f1e7;color:#2f6b45}#pt-dos .stt.perdu{background:#f3e1df;color:#9d3535}
+#pt-dos .cli .stt{display:inline-block;margin-top:0}#pt-dos .stt.finance{background:#e3f1e7;color:#2f6b45}#pt-dos .stt.perdu{background:#f3e1df;color:#9d3535}
 #pt-dos .statuts{display:inline-flex;border:1px solid #e0cfc4;border-radius:9px;overflow:hidden}#pt-dos .statuts button{border:0;background:#fff;padding:6px 11px;font:inherit;font-size:12.5px;cursor:pointer;color:#65554d}#pt-dos .statuts button+button{border-left:1px solid #e0cfc4}
 #pt-dos .statuts button.on{background:#a34d31;color:#fff}#pt-dos .statuts button.on[data-statut=finance]{background:#2f8a5a}#pt-dos .statuts button.on[data-statut=perdu]{background:#9d3535}
 #pt-dos .sim .chiffres{font-size:12px;color:#5e4f48;margin-top:3px}
@@ -189,7 +189,7 @@ async function choisir(id,proposerEnregistrement){
   const c=detail,sims=c.simulations;
   const nomDefaut='Simulation du '+new Date().toLocaleDateString('fr-FR');
   $('dos-droite').innerHTML=`
-  <div class="ligne" style="justify-content:space-between"><h3 style="margin:0;font:22px Georgia,serif;color:#9c482d">${esc(nomClient(c))}</h3>${admin&&c.owner?`<span style="font-size:12px;color:#7b6b62">Conseiller : ${esc(c.owner.name)}</span>`:''}</div>
+  <div class="ligne" style="justify-content:space-between"><h3 style="margin:0;font:22px Georgia,serif;color:#9c482d">${esc(nomClient(c))}</h3><div class="ligne" style="gap:12px">${admin&&c.owner?`<span style="font-size:12px;color:#7b6b62">Conseiller : ${esc(c.owner.name)}</span>`:''}<button class="b3" id="dos-suppr-client" type="button">Supprimer le dossier</button></div></div>
   <div class="ligne" style="margin-top:10px"><span style="font-size:12px;color:#65554d">Statut du dossier</span><div class="statuts">${Object.entries(STATUTS).map(([k,l])=>`<button type="button" data-statut="${k}" class="${(c.statut||'en_cours')===k?'on':''}">${l}</button>`).join('')}</div></div>
   <div class="enreg"><b style="font-size:14px">Enregistrer la simulation affichée dans ce dossier</b>
     <div class="ligne" style="margin-top:8px"><input autocomplete="off" id="dos-simnom" value="${esc(nomDefaut)}" maxlength="120" aria-label="Nom de la simulation"><button class="b1" id="dos-save" type="button">Enregistrer</button></div>
@@ -204,7 +204,7 @@ async function choisir(id,proposerEnregistrement){
     <button class="b3" type="button" data-suppr="${esc(s.id)}">Supprimer</button></div></div>`).join(''):'<div class="vide" style="padding:14px">Aucune simulation enregistrée pour ce client.</div>'}</div>
   <div id="dos-msg"></div>
   <details style="margin-top:18px"><summary style="cursor:pointer;color:#9c482d;font-weight:600;font-size:13px">Coordonnées du client</summary><div style="margin-top:10px">${formulaireClient(c)}
-  <div class="ligne"><button class="b2" id="dos-maj-client" type="button">Enregistrer les coordonnées</button><button class="b3" id="dos-suppr-client" type="button">Supprimer le dossier</button></div></div></details>`;
+  <div class="ligne"><button class="b2" id="dos-maj-client" type="button">Enregistrer les coordonnées</button></div></div></details>`;
   if(proposerEnregistrement)$('dos-simnom').focus();
   $('dos-droite').querySelectorAll('[data-statut]').forEach(b=>b.onclick=async()=>{
     try{await api('/api/dossiers/'+c.id,{method:'PATCH',body:JSON.stringify({statut:b.dataset.statut})});c.statut=b.dataset.statut;$('dos-droite').querySelectorAll('[data-statut]').forEach(x=>x.classList.toggle('on',x===b));await chargerListe();message('Statut : '+STATUTS[b.dataset.statut]+'.')}
