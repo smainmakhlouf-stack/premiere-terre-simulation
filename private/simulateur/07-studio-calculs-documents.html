@@ -683,7 +683,7 @@ function echeancier(c){
 }
 /** Paliers : périodes pendant lesquelles chaque mensualité reste la même. */
 function paliers(ech){
-  const out=[];for(let t=0;t<ech.mois;t++){const v=ech.prets.map(p=>Math.round(p.lignes[t]?.lis||0));const der=out[out.length-1];
+  const out=[];for(let t=0;t<ech.mois;t++){const v=ech.prets.map(p=>p.lignes[t]?.lis||0);const der=out[out.length-1];
     if(der&&v.every((x,i)=>Math.abs(x-der.v[i])<=1))der.t1=t+1;else out.push({t0:t,t1:t+1,v})}
   return out.filter(p=>p.t1-p.t0>=1);
 }
@@ -702,9 +702,11 @@ function ficheSolvabilite(d,c,ctx){
   const chAvant=ctx.credits?(ctx.pensVersee||0)+ctx.credits.reduce((a,x)=>a+(+x.mens||0),0):d.charges;
   const avantH=chAvant,avantL=chAvant+(ctx.loyer||0),apres=d.charges+mensMax;
   const tx=v=>d.revenus?pc(v/d.revenus*100):'—',reste=v=>eur(d.revenus-v);
-  const dureeMax=c.n/12,hcsfDuree=dureeMax<=25||(d.type==='neuf'&&dureeMax<=27),hcsfEndet=apres/d.revenus*100<=35.0001;
+  // Endettement comparé au dixième près, comme il est affiché.
+  const dureeMax=c.n/12,hcsfDuree=dureeMax<=25||(d.type==='neuf'&&dureeMax<=27),hcsfEndet=Math.round(apres/d.revenus*1000)/10<=35;
+  const eur2=v=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
   const l=(a,b)=>`<tr><td>${a}</td><td class="n">${b}</td></tr>`;
-  const ligPret=pr=>`<tr><td>${esc(pr.nom)}</td><td class="n">${eur(pr.montant)}</td><td class="n">${pc(pr.taux,2)}</td><td class="n">${pr.mois} mois</td>${pal.map((x,i)=>`<td class="n">${x.v[ech.prets.indexOf(pr)]?eur(x.v[ech.prets.indexOf(pr)]):'—'}</td>`).join('')}</tr>`;
+  const ligPret=pr=>`<tr><td>${esc(pr.nom)}</td><td class="n">${eur(pr.montant)}</td><td class="n">${pc(pr.taux,2)}</td><td class="n">${pr.mois} mois</td>${pal.map((x,i)=>`<td class="n">${x.v[ech.prets.indexOf(pr)]>=0.005?eur2(x.v[ech.prets.indexOf(pr)]):'—'}</td>`).join('')}</tr>`;
   return `<style>.fs{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;margin-bottom:12px}.fs th{background:#f3e9e2;color:#8e3f29;text-align:left;padding:6px 8px;font-size:12.5px}.fs td{padding:4px 8px;border-bottom:1px solid #f1e6df}.fs td.n,.fs th.n{text-align:right}.fs tr.tot td{font-weight:700;border-top:1.5px solid #c9b2a5}.fs-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.fs-hcsf{display:flex;gap:18px;border:1.5px solid #2b2320;border-radius:8px;padding:8px 12px;font-size:13px;margin-top:6px}.fs-ok{color:#2f8a5a;font-weight:700}.fs-ko{color:#b04d3e;font-weight:700}.fs-note{font-size:10.5px;color:#7b6b62;line-height:1.45}</style>
   <div style="text-align:center;font:600 17px Inter,Arial,sans-serif;color:#2b2320;margin:0 0 12px;letter-spacing:.3px">FICHE DE SOLVABILITÉ · ACCÉDANT À LA PROPRIÉTÉ${ctx.nom?'<div style="font-weight:400;font-size:14px;color:#7b6b62;margin-top:3px">'+esc(ctx.nom)+'</div>':''}</div>
   <div class="fs-grid">
@@ -717,7 +719,7 @@ function ficheSolvabilite(d,c,ctx){
   </div>
   <table class="fs"><tr><th>Financement du projet</th><th class="n">Montant</th><th class="n">Taux</th><th class="n">Durée</th>${pal.map((x,i)=>`<th class="n">Palier ${i+1}<div style="font-weight:400;font-size:10.5px">${moisTxt(x.t0,x.t1)}</div></th>`).join('')}</tr>
    ${ech.prets.map(ligPret).join('')}
-   <tr class="tot"><td>Total</td><td class="n">${eur(emprunte)}</td><td></td><td></td>${pal.map(x=>`<td class="n">${eur(x.v.reduce((a,b)=>a+b,0))}</td>`).join('')}</tr></table>
+   <tr class="tot"><td>Total</td><td class="n">${eur(emprunte)}</td><td></td><td></td>${pal.map(x=>`<td class="n">${eur2(x.v.reduce((a,b)=>a+b,0))}</td>`).join('')}</tr></table>
   <p class="fs-note" style="margin:-6px 0 12px">Mensualités assurance comprise (${pc(c.ins*1200,2)} par an du capital${d.assDetail?' · '+esc(d.assDetail):''}).</p>
   <table class="fs"><tr><th>Contrôle de l'endettement</th><th class="n">Avant projet<div style="font-weight:400;font-size:10.5px">hors loyer</div></th><th class="n">Avant projet<div style="font-weight:400;font-size:10.5px">avec loyer</div></th><th class="n">Après projet</th></tr>
    <tr><td>Mensualités</td><td class="n">${eur(avantH)}</td><td class="n">${eur(avantL)}</td><td class="n">${eur(apres)}</td></tr>
