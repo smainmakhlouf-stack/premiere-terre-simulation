@@ -112,8 +112,23 @@ function infoPTZ(){
 }
 // Plafonds Action Logement (prêt accession) : grille « logements intermédiaires » au 10/03/2026 (actionlogement.fr).
 const PLAFONDS_AL={zones:['A bis / A','B1','B2 et C'],lignes:[['1 personne seule',[44344,36144,32530]],['2 personnes',[66276,48268,43439]],['3 personnes (ou 1 + 1 à charge)',[79666,58043,52239]],['4 personnes (ou 1 + 2 à charge)',[95427,70073,63066]],['5 personnes (ou 1 + 3 à charge)',[112968,82432,74189]],['6 personnes (ou 1 + 4 à charge)',[127122,92900,83611]],['Par personne en plus',[14164,10364,9325],'+']],abis:[44344,66276,86878,103727,123415,138874,15471]};
+// Montant proposé : 40 % du coût de l'opération, plafonné à 30 000 €.
+const montantAL=()=>{const cout=fv('price')+fv('works')+fv('notary');return cout>0?Math.min(30000,Math.floor(cout*0.4/100)*100):30000};
+// Plafond de revenus du foyer selon la zone et le nombre d'occupants (saisis dans Budget max).
+function controleAL(){
+  const b=lireDiagBase(),rfr=num(m('dg-rfr').value)||fv('v9rfr'),occ=Math.max(1,num(m('dg-occ').value)||((b.adultes||1)+(b.enfants||0)));
+  const z=m('dg-zone').value||'A',col=z==='A'?0:z==='B1'?1:2,L=PLAFONDS_AL.lignes;
+  const plafond=occ<=6?L[occ-1][1][col]:L[5][1][col]+(occ-6)*L[6][1][col];
+  return {ancien:$('v9operation')?.value==='old',rfr,occ,zone:PLAFONDS_AL.zones[col],plafond};
+}
 function infoAL(){
   const fr=n=>new Intl.NumberFormat('fr-FR').format(n),deja=(typeof loans!=='undefined'?loans:[]).some(l=>l.type==='action');
+  const k=controleAL(),rouge='background:#f9e3e1;border:1px solid #e9b8b3;color:#9d3535',vert='background:#e6f2e8;border:1px solid #b9d8c0;color:#2f6b45',gris='background:#f3ede8;border:1px solid #e3d6cc;color:#5e4f48';
+  const ctrl=k.ancien?[rouge,'<b>✕ Non éligible</b> : le prêt Action Logement est réservé au <b>neuf</b>.']
+    :!k.rfr?[gris,`Plafond pour ce foyer (${nbP(k.occ)}, zone ${k.zone}) : <b>${fr(k.plafond)} €</b>. Renseignez le RFR N-2 dans « Budget max » pour le vérifier.`]
+    :k.rfr>k.plafond?[rouge,`<b>✕ Revenus trop élevés</b> : RFR ${fr(k.rfr)} € pour un plafond de ${fr(k.plafond)} € (${nbP(k.occ)}, zone ${k.zone}).`]
+    :[vert,`<b>✓ Sous le plafond</b> : RFR ${fr(k.rfr)} € pour un plafond de ${fr(k.plafond)} € (${nbP(k.occ)}, zone ${k.zone}).`];
+  const verdict=`<div style="${ctrl[0]};border-radius:10px;padding:8px 10px;margin:4px 0 8px">${ctrl[1]}</div>`;
   return `<p><b>Prêt accession Action Logement</b> : jusqu'à <b>30 000 €</b> à taux réduit (1 % hors assurance), en complément du prêt bancaire, pour l'achat de la <b>résidence principale dans le neuf</b>.</p>
   <ul><li>Être <b>salarié d'une entreprise du secteur privé non agricole de 10 salariés et plus</b>.</li>
   <li>Primo-accédant, ou pas propriétaire de sa résidence principale depuis 2 ans.</li>
@@ -121,7 +136,8 @@ function infoAL(){
   <div class="t-titre">Revenu fiscal de référence (N-2) à ne pas dépasser</div>
   <table class="t-aide"><tr><th>Foyer</th>${PLAFONDS_AL.zones.map(z=>`<th>Zone ${z}</th>`).join('')}</tr>${PLAFONDS_AL.lignes.map(([l,v,plus])=>`<tr><td>${l}</td>${v.map(x=>`<td>${plus||''}${fr(x)} €</td>`).join('')}</tr>`).join('')}</table>
   <p class="hint">Zone A bis : mêmes plafonds que la zone A pour 1 et 2 personnes, un peu plus élevés au-delà (3 personnes : ${fr(PLAFONDS_AL.abis[2])} €). Barème Action Logement au 10 mars 2026 ; conditions définitives fixées par Action Logement.</p>
-  ${deja?'<p class="hint"><b>Le prêt Action Logement est déjà dans le plan</b> (un seul par dossier) : modifiez-le dans la liste ci-dessus.</p>':'<button type="button" class="mini" id="sp-al">+ Ajouter le prêt Action Logement</button>'}`;
+  ${verdict}
+  ${deja?'<p class="hint"><b>Le prêt Action Logement est déjà dans le plan</b> (un seul par dossier) : modifiez-le dans la liste ci-dessus.</p>':`<p class="hint">Ajouté avec <b>${fr(montantAL())} €</b> (40 % du coût de l'opération, 30 000 € maximum), 1 % sur 25 ans, avec l'assurance et la garantie du prêt principal.</p><button type="button" class="mini" id="sp-al">+ Ajouter le prêt Action Logement</button>`}`;
 }
 function formPlan(){
   const invest=$('purpose')?.value==='invest',ancien=$('v9operation')?.value==='old',ans=fv('mainYears')||window.mainSettings?.years||25;
@@ -154,6 +170,7 @@ function formPlan(){
   <div class="duo"><div class="f"><label for="sp-rate">Taux</label><div class="euro" data-u="%"><input autocomplete="off" id="sp-rate" inputmode="decimal" value="${fv('mainRate')||window.mainSettings?.rate||''}"></div></div>
   <div class="f"><label for="sp-ins">Assurance</label><div class="euro" data-u="%"><input autocomplete="off" id="sp-ins" inputmode="decimal" value="${fv('mainIns')||window.mainSettings?.insurance||''}"></div></div></div>
   <div class="hint">${tauxPlanManuel?'Taux saisi : il ne change plus avec la durée. <button type="button" class="lien" id="sp-grille">Reprendre le taux de la grille</button>':'Taux de la grille de l\'équipe selon la durée ; saisissez le vôtre pour le garder.'}</div>
+  <div class="f"><label for="sp-gar">Garantie</label><select autocomplete="off" id="sp-gar">${optsGar.map(([v,t])=>`<option value="${v}" ${($('guarantee')?.value||'none')===v?'selected':''}>${t}</option>`).join('')}</select></div>
   <h3>Aides et prêts complémentaires</h3>
   ${aides||'<div class="hint" style="margin-bottom:8px">Aucun pour l\'instant.</div>'}
   <div class="aides-onglets"><button type="button" data-aide="ptz" class="${ongletAide==='ptz'?'on':''}">PTZ · conditions</button><button type="button" data-aide="al" class="${ongletAide==='al'?'on':''}">Prêt Action Logement · conditions</button></div>
@@ -299,7 +316,10 @@ function bindPlan(){
   $('sp-notoff')?.querySelectorAll('button').forEach(b=>b.onclick=()=>{m('pl-notoff').value=b.dataset.v;fraisAuto();rafraichir()});
   f.querySelectorAll('[data-seg] button').forEach(b=>b.onclick=()=>{const champ=b.closest('[data-seg]').dataset.seg;poser(champ,b.dataset.v);if(champ==='v9operation')fraisAuto();rafraichir()});
   f.querySelectorAll('[data-lien]').forEach(i=>i.addEventListener('input',()=>{poser(i.dataset.lien,num(i.value));if(i.dataset.lien==='price'||i.dataset.lien==='works'||i.dataset.lien==='deposit')fraisAuto();resPlan()}));
-  const majPrincipal=()=>{fixerPrincipal(num($('sp-rate').value),num($('sp-years').value),num($('sp-ins').value));fraisAuto();resPlan()};
+  // Le prêt Action Logement reprend l'assurance et la garantie du prêt principal, tant qu'on ne les modifie pas sur ce prêt.
+  const suivrePrincipal=()=>(typeof loans!=='undefined'?loans:[]).forEach(l=>{if(l.type==='action'&&l.suit){l.insurance=window.mainSettings?.insurance??fv('mainIns');l.garantie=$('guarantee')?.value||'none'}});
+  const majPrincipal=()=>{fixerPrincipal(num($('sp-rate').value),num($('sp-years').value),num($('sp-ins').value));suivrePrincipal();fraisAuto();resPlan()};
+  $('sp-gar').onchange=()=>{poser('guarantee',$('sp-gar').value);suivrePrincipal();fraisAuto();rafraichir()};
   // La durée ne remplace le taux par celui de la grille que si le vendeur n'a pas saisi le sien.
   lierDuree('sp-years',a=>{if(!tauxPlanManuel)$('sp-rate').value=tauxDuree(a);majPrincipal()});
   $('sp-rate').addEventListener('input',()=>{const avant=tauxPlanManuel;tauxPlanManuel=true;majPrincipal();if(!avant)majAide()});
@@ -312,12 +332,12 @@ function bindPlan(){
   const assPrincipal=()=>window.mainSettings?.insurance??fv('mainIns')??0.15;
   const ajouter=x=>{addLoan(x);ouvertPret=loans[loans.length-1]?.id;fraisAuto();rafraichir()};
   // Un seul prêt Action Logement par dossier : le bouton disparaît dès qu'il y en a un.
-  const bAl=$('sp-al');if(bAl)bAl.onclick=()=>ajouter({name:'Prêt Action Logement',type:'action',amount:30000,rate:1,years:20,delay:0,insurance:assPrincipal(),garantie:'none'});
+  const bAl=$('sp-al');if(bAl)bAl.onclick=()=>ajouter({name:'Prêt Action Logement',type:'action',amount:montantAL(),rate:1,years:25,delay:0,insurance:assPrincipal(),garantie:$('guarantee')?.value||'none',suit:true});
   $('sp-autre').onclick=()=>ajouter({name:'Prêt externe',type:'external',amount:15000,rate:window.mainSettings?.rate||fv('mainRate')||3,years:15,delay:0,insurance:assPrincipal(),garantie:$('guarantee')?.value||'none'});
   // Modification d'un prêt complémentaire : écrit dans le moteur puis recalcule.
   const pretDe=el=>loans.find(l=>l.id===+el.closest('[data-pret]').dataset.pret);
   f.querySelectorAll('[data-pret]').forEach(d=>d.addEventListener('toggle',()=>{if(d.open)ouvertPret=+d.dataset.pret}));
-  f.querySelectorAll('[data-pret] [data-k]').forEach(i=>{const maj=()=>{const l=pretDe(i);if(!l)return;const k=i.dataset.k;l[k]=['name','type','garantie'].includes(k)?i.value:num(i.value);if(k==='type'||k==='name'){if(typeof render==='function')render();fraisAuto();rafraichir()}else{fraisAuto();resPlan();majResume(i)}};i.addEventListener(i.tagName==='SELECT'?'change':'input',maj)});
+  f.querySelectorAll('[data-pret] [data-k]').forEach(i=>{const maj=()=>{const l=pretDe(i);if(!l)return;const k=i.dataset.k;l[k]=['name','type','garantie'].includes(k)?i.value:num(i.value);if(k==='insurance'||k==='garantie')l.suit=false;if(k==='type'||k==='name'){if(typeof render==='function')render();fraisAuto();rafraichir()}else{fraisAuto();resPlan();majResume(i)}};i.addEventListener(i.tagName==='SELECT'?'change':'input',maj)});
   f.querySelectorAll('[data-pret] [data-k-seg] button').forEach(b=>b.onclick=()=>{const l=pretDe(b);if(!l)return;l.lissable=b.dataset.v==='1';fraisAuto();rafraichir()});
   function majResume(i){const d=i.closest('[data-pret]'),l=pretDe(i),sp=d.querySelector('summary span');if(sp)sp.innerHTML=`<b>${esc(l.name)}</b><br>${eur(l.amount)} · ${pc(+l.rate||0,2)} · ${l.years} ans${l.delay?' · différé '+Math.round(l.delay/12*10)/10+' ans':''}${l.lissable===false?' · non lissé':''}`}
   f.querySelectorAll('[data-suppr-pret]').forEach(b=>b.onclick=e=>{e.preventDefault();const i=loans.findIndex(l=>l.id===+b.dataset.supprPret);if(i>=0){loans.splice(i,1);if(typeof render==='function')render();fraisAuto();rafraichir()}});
@@ -819,8 +839,9 @@ function resDiag(){
   const b=$('sd-vers-plan');if(b)b.onclick=()=>{
     poser('v9operation',d.type==='neuf'?'new':'old');poser('threshold',c.seuil);poser('price',Math.floor(c.budget/1000)*1000);poser('deposit',d.apport);poser('income',d.revenus);
     fixerPrincipal(c.taux,d.ans,Math.round(c.ins*1200*1000)/1000);
+    const gk=({cl_classic:'credit',cl_initio:'initio',saccef:'sacem',mutual:'mutuelle',legal:'ppd'})[d.garantie]||d.garantie;if($('guarantee')&&[...$('guarantee').options].some(o=>o.value===gk))poser('guarantee',gk);
     if(c.ptz.montant&&typeof loans!=='undefined'&&!loans.some(l=>l.type==='ptz'))addLoan({name:'PTZ · tranche '+c.ptz.tranche+' · zone '+d.zone,type:'ptz',amount:c.ptz.montant,rate:0,years:c.ptz.duree,delay:c.ptz.differe*12,insurance:Math.round(c.ins*1200*1000)/1000});
-    if(typeof loans!=='undefined'){const alBudget=(c.ext||[]).some(x=>!x.existant&&/Action/.test(x.nom));for(let i=loans.length-1;i>=0;i--)if(loans[i].source==='budget'||(alBudget&&loans[i].type==='action'))loans.splice(i,1);(c.ext||[]).filter(x=>!x.existant).forEach(x=>{const rel=/relais/i.test(x.nom);addLoan({name:x.nom,type:/Action/.test(x.nom)?'action':'external',amount:x.montant,rate:x.taux||0,years:rel?Math.max(1,Math.ceil(x.mois/12)):Math.round(x.mois/12),mois:rel?x.mois:undefined,delay:rel?Math.max(0,x.mois-1):0,insurance:rel?0:Math.round(c.ins*1200*1000)/1000,lissable:rel?!x.horsLissage:true,relais:rel||undefined,source:'budget'})})}
+    if(typeof loans!=='undefined'){const alBudget=(c.ext||[]).some(x=>!x.existant&&/Action/.test(x.nom));for(let i=loans.length-1;i>=0;i--)if(loans[i].source==='budget'||(alBudget&&loans[i].type==='action'))loans.splice(i,1);(c.ext||[]).filter(x=>!x.existant).forEach(x=>{const rel=/relais/i.test(x.nom);addLoan({name:x.nom,type:/Action/.test(x.nom)?'action':'external',amount:x.montant,rate:x.taux||0,years:rel?Math.max(1,Math.ceil(x.mois/12)):Math.round(x.mois/12),mois:rel?x.mois:undefined,delay:rel?Math.max(0,x.mois-1):0,insurance:rel?0:Math.round(c.ins*1200*1000)/1000,lissable:rel?!x.horsLissage:true,relais:rel||undefined,source:'budget',...(/Action/.test(x.nom)?{garantie:$('guarantee')?.value||'none',suit:true}:{})})})}
     if(typeof existing!=='undefined'){existing.splice(0);(d.credits||[]).forEach((x,i)=>existing.push({id:9000+i,name:NATURES[x.nature]||'Crédit',payment:+x.mens||0,months:+x.mois||0,balance:+x.crd||0,penalty:+x.ind||0,mode:x.mode==='repay'?'refinance':x.mode==='smooth'?'smooth':'keep'}));if(d.redevance)existing.push({id:8990,name:'Redevance foncière BRS',payment:d.redevance,months:d.ans*12,balance:0,penalty:0,mode:'keep'});if(d.pensVersee)existing.push({id:8991,name:'Pension alimentaire versée',payment:d.pensVersee,months:d.ans*12,balance:0,penalty:0,mode:'keep'})}
     fraisAuto();ouvrir('plan')};
 }

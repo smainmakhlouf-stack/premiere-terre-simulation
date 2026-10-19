@@ -30,7 +30,7 @@ function mensualitesAidees(mois){
   const ann=(c,t,m)=>{const r=t/1200;return c<=0||m<=0?0:r?c*r/(1-Math.pow(1+r,-m)):c/m};
   const ptz=d('usePTZ')?.checked?n('ptz'):0,ptzMois=Math.max(1,(n('ptzYears')||15)*12);
   const al=d('useAction')?.checked?n('action'):0,autre=d('useOther')?.checked?n('other'):0;
-  return ptz/ptzMois+ann(al,n('actionRate')||1,(n('actionYears')||20)*12)+ann(autre,n('otherRate')||n('rate'),(n('otherYears')*12)||mois);
+  return ptz/ptzMois+ann(al,n('actionRate')||1,(n('actionYears')||25)*12)+ann(autre,n('otherRate')||n('rate'),(n('otherYears')*12)||mois);
 }
 /** Droits à prêt d'épargne logement : intérêts du prêt ≤ 2,5 × intérêts acquis, dans la limite du plafond. */
 function droitsEL(interets,taux,ans,plafond){if(!interets)return 0;const m=Math.round(ans*12),r=taux/1200,f=r?r/(1-Math.pow(1+r,-m)):1/m,k=m*f-1;return Math.min(plafond,k>0?2.5*interets/k:plafond)}
@@ -65,7 +65,7 @@ window.ptDiagVisuel=function(){
   const occ=occupants(),adultes=d('co')?.checked?2:1;
   let ptzFixe;if(!d('ptzAuto')?.checked||!d('usePTZ')?.checked)ptzFixe=d('usePTZ')?.checked&&n('ptz')?{montant:n('ptz'),differe:n('ptzDelay'),duree:n('ptzDelay')+(n('ptzYears')||15)}:{montant:0};
   const prets=[];
-  if(d('useAction')?.checked&&n('action'))prets.push({neufSeul:true,nom:'Action Logement',montant:n('action'),taux:n('actionRate')||1,ans:n('actionYears')||20});
+  if(d('useAction')?.checked&&n('action'))prets.push({neufSeul:true,nom:'Action Logement',montant:n('action'),taux:n('actionRate')||1,ans:n('actionYears')||25});
   if(d('useOther')?.checked&&n('other'))prets.push({nom:'Prêt complémentaire',montant:n('other'),taux:n('otherRate')||n('rate'),ans:n('otherYears')||ans});
   if(d('usePEL')?.checked)prets.push(...pretsEpargne());
   const relais=pretRelais();if(relais)prets.push(relais);
@@ -97,7 +97,7 @@ if(bouton){const origine=bouton.onclick;bouton.onclick=function(){
     for(let i=loans.length-1;i>=0;i--)if(loans[i].source==='diagnostic')loans.splice(i,1);
     const ass=Number(document.getElementById('mainIns')?.value)||0.15,ans=n('years')||25;
     if(d('usePTZ')?.checked&&n('ptz'))addLoan({name:'PTZ',type:'ptz',amount:n('ptz'),rate:0,years:n('ptzDelay')+(n('ptzYears')||15),delay:n('ptzDelay')*12,insurance:ass,source:'diagnostic'});
-    if(d('useAction')?.checked&&n('action')&&neuf())addLoan({name:'Prêt Action Logement',type:'action',amount:n('action'),rate:n('actionRate')||1,years:n('actionYears')||20,delay:0,insurance:ass,source:'diagnostic'});
+    if(d('useAction')?.checked&&n('action')&&neuf())addLoan({name:'Prêt Action Logement',type:'action',amount:n('action'),rate:n('actionRate')||1,years:n('actionYears')||25,delay:0,insurance:ass,garantie:document.getElementById('guarantee')?.value||'none',suit:true,source:'diagnostic'});
     if(d('usePEL')?.checked)pretsEpargne().forEach(x=>addLoan({name:x.nom,type:'external',amount:x.montant,rate:x.taux,years:x.ans,delay:0,insurance:ass,source:'diagnostic'}));
     if(d('useOther')?.checked&&n('other'))addLoan({name:'Prêt complémentaire',type:'external',amount:n('other'),rate:n('otherRate')||n('rate'),years:n('otherYears')||ans,delay:0,insurance:ass,source:'diagnostic'});
     // Prêt relais : intérêts chaque mois, capital remboursé par la vente du bien actuel.
