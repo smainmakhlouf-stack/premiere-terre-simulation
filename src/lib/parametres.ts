@@ -3,25 +3,30 @@
  * Taux en % annuels ; assurance en % annuel du capital initial, par emprunteur ; frais de garantie
  * et de courtage en % du montant emprunté.
  */
-/** Organismes de garantie (mêmes clés que le diagnostic détaillé). Coût total en % du capital garanti. */
+/**
+ * Organismes de garantie (mêmes clés que le diagnostic détaillé). Coût total en % du capital garanti,
+ * sans déduire la part restituée en fin de prêt (fourchette haute des barèmes 2026).
+ */
+/** Version du barème de garanties : les paramètres enregistrés avant la version 2 reprennent ces taux. */
+export const VERSION_GARANTIES = 2
 export const GARANTIES: { cle: string; nom: string; defaut: number }[] = [
-  { cle: "cl_classic", nom: "Crédit Logement · Classic", defaut: 1.2 },
-  { cle: "cl_initio", nom: "Crédit Logement · Initio", defaut: 1.0 },
-  { cle: "saccef", nom: "SACCEF", defaut: 1.1 },
-  { cle: "camca", nom: "CAMCA", defaut: 1.0 },
-  { cle: "cmh", nom: "CMH", defaut: 0.9 },
-  { cle: "socami", nom: "SOCAMI", defaut: 1.0 },
-  { cle: "cnp", nom: "CNP Caution", defaut: 1.2 },
-  { cle: "casden", nom: "CASDEN", defaut: 0.3 },
-  { cle: "bred", nom: "BRED Habitat", defaut: 1.0 },
-  { cle: "mutual", nom: "Caution mutuelle / employeur", defaut: 0.8 },
-  { cle: "simple", nom: "Caution simple", defaut: 0.5 },
-  { cle: "hyp", nom: "Hypothèque conventionnelle", defaut: 1.5 },
-  { cle: "legal", nom: "Hypothèque légale spéciale (prêteur de deniers)", defaut: 1.0 },
-  { cle: "rank2", nom: "Hypothèque 2e rang", defaut: 1.5 },
-  { cle: "rank3", nom: "Hypothèque 3e rang", defaut: 1.5 },
-  { cle: "pledge", nom: "Nantissement / gage", defaut: 0.3 },
-  { cle: "other", nom: "Autre garantie", defaut: 1.0 },
+  { cle: "cl_classic", nom: "Crédit Logement · Classic", defaut: 1.3 },
+  { cle: "cl_initio", nom: "Crédit Logement · Initio", defaut: 1.2 },
+  { cle: "saccef", nom: "SACCEF", defaut: 1.3 },
+  { cle: "camca", nom: "CAMCA", defaut: 1.5 },
+  { cle: "cmh", nom: "CMH", defaut: 1.0 },
+  { cle: "socami", nom: "SOCAMI", defaut: 1.3 },
+  { cle: "cnp", nom: "CNP Caution", defaut: 1.4 },
+  { cle: "casden", nom: "CASDEN", defaut: 0.5 },
+  { cle: "bred", nom: "BRED Habitat", defaut: 1.3 },
+  { cle: "mutual", nom: "Caution mutuelle / employeur", defaut: 1.0 },
+  { cle: "simple", nom: "Caution simple", defaut: 0.6 },
+  { cle: "hyp", nom: "Hypothèque conventionnelle", defaut: 1.8 },
+  { cle: "legal", nom: "Hypothèque légale spéciale (prêteur de deniers)", defaut: 1.2 },
+  { cle: "rank2", nom: "Hypothèque 2e rang", defaut: 1.8 },
+  { cle: "rank3", nom: "Hypothèque 3e rang", defaut: 1.8 },
+  { cle: "pledge", nom: "Nantissement / gage", defaut: 0.5 },
+  { cle: "other", nom: "Autre garantie", defaut: 1.3 },
 ]
 
 export const PARAMETRES_DEFAUT = {
@@ -43,6 +48,7 @@ export const PARAMETRES_DEFAUT = {
     courtagePct: 1,
   },
   garanties: Object.fromEntries(GARANTIES.map((g) => [g.cle, g.defaut])) as Record<string, number>,
+  versionGaranties: 2,
   seuils: { endettement: 35, resteAdulte: 800, resteEnfant: 300, apportMin: 10 },
   /** Valeurs proposées sur les écrans (toujours modifiables par le vendeur). */
   defauts: { taux: 3.6, assurance: 0.3, zone: "A" },
@@ -112,7 +118,9 @@ export function normaliser(brut: unknown): Parametres {
       quotiteCouple: nombre(a.quotiteCouple, D.assurance.quotiteCouple, 100),
     },
     frais: Object.fromEntries(Object.entries(D.frais).map(([k, v]) => [k, nombre(f[k], v, k === "dossier" ? 1e6 : 100)])) as Parametres["frais"],
-    garanties: Object.fromEntries(GARANTIES.map((g) => [g.cle, nombre(gar[g.cle] ?? ancien(g.cle), g.defaut, 20)])),
+    // Barème relevé en version 2 : les anciens taux enregistrés sont remplacés une fois par les nouveaux.
+    garanties: Object.fromEntries(GARANTIES.map((g) => [g.cle, nombre(Number(b.versionGaranties) >= VERSION_GARANTIES ? gar[g.cle] ?? ancien(g.cle) : undefined, g.defaut, 20)])),
+    versionGaranties: VERSION_GARANTIES,
     seuils: {
       endettement: nombre(s.endettement, D.seuils.endettement, 100),
       resteAdulte: nombre(s.resteAdulte, D.seuils.resteAdulte, 1e5),

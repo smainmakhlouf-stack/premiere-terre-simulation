@@ -770,21 +770,22 @@ function ouvrirSorties(d,c,ctx){
   el.innerHTML=`<div class="srt-win"><div class="srt-tete"><h2>Sorties client</h2><button type="button" class="srt-x" aria-label="Fermer">✕</button></div>
    <p class="srt-sub">${ctx.nom?esc(ctx.nom)+' · ':''}budget ${eur(c.budget)} · ${d.ans} ans</p>
    <div class="srt-liste">${SORTIES.map(([k,l,def])=>`<label><input autocomplete="off" type="checkbox" value="${k}" ${(memo.length?memo.includes(k):def)?'checked':''}> ${l}</label>`).join('')}</div>
-   <div class="srt-act"><button type="button" class="srt-btn prim" data-a="voir">Afficher (présenter au client)</button><button type="button" class="srt-btn" data-a="imprimer">Imprimer / PDF</button></div></div>`;
+   <div class="srt-act"><button type="button" class="srt-btn prim" data-a="voir">Afficher (présenter au client)</button><button type="button" class="srt-btn" data-a="pdf">Télécharger le PDF</button><button type="button" class="srt-btn" data-a="imprimer">Imprimer</button></div></div>`;
   el.classList.add('open');
   const choix=()=>{const v=[...el.querySelectorAll('input:checked')].map(i=>i.value);try{localStorage.setItem('pt-sorties-choix',JSON.stringify(v))}catch(e){}return v};
   el.querySelector('.srt-x').onclick=()=>el.classList.remove('open');
   el.onclick=e=>{if(e.target===el)el.classList.remove('open')};
   el.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const v=choix();if(!v.length)return alert('Cochez au moins un document.');const sec=sectionsSorties(v,d,c,ctx);
-    if(b.dataset.a==='voir'){el.classList.remove('open');presenterDoc('Étude de financement',sec,ctx.nom)}else imprimerDoc('Étude de financement',sec)});
+    if(b.dataset.a==='voir'){el.classList.remove('open');presenterDoc('Étude de financement',sec,ctx.nom)}else if(b.dataset.a==='pdf')telechargerPDF('Étude de financement',sec,ctx.nom,b);else imprimerDoc('Étude de financement',sec)});
 }
 /** Présentation plein écran du document, avec impression possible. */
 function presenterDoc(titre,sections,nom){
   let el=$('pt-apercu');if(!el){el=document.createElement('div');el.id='pt-apercu';document.body.appendChild(el)}
-  el.innerHTML=`<div class="apc-barre"><button type="button" class="srt-btn" data-a="fermer">← Retour</button><span>${esc(titre)}${nom?' · '+esc(nom):''}</span><button type="button" class="srt-btn prim" data-a="imprimer">Imprimer / PDF</button></div><iframe title="Aperçu du document"></iframe>`;
+  el.innerHTML=`<div class="apc-barre"><button type="button" class="srt-btn" data-a="fermer">← Retour</button><span>${esc(titre)}${nom?' · '+esc(nom):''}</span><span class="apc-act"><button type="button" class="srt-btn prim" data-a="pdf">Télécharger le PDF</button> <button type="button" class="srt-btn" data-a="imprimer">Imprimer</button></span></div><iframe title="Aperçu du document"></iframe>`;
   el.classList.add('open');
   const f=el.querySelector('iframe');f.srcdoc=docHtml(titre,sections).replace('</style>','body{background:#ece6e1!important}#pt-studio{max-width:880px;margin:24px auto!important;background:#fff;padding:36px 42px!important;box-shadow:0 6px 30px #0002;border-radius:6px}.doc-section+.doc-section{border-top:1px dashed #d9c5b9;padding-top:26px}@media print{body{background:#fff!important}#pt-studio{box-shadow:none;margin:0!important;padding:0!important;max-width:none}.doc-section+.doc-section{border-top:0;padding-top:0}}</style>');
   el.querySelector('[data-a="fermer"]').onclick=()=>el.classList.remove('open');
+  el.querySelector('[data-a="pdf"]').onclick=e=>telechargerPDF(titre,sections,nom,e.currentTarget);
   el.querySelector('[data-a="imprimer"]').onclick=()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){alert('Impression impossible : '+e.message)}};
 }
 window.ptSortiesClient=ouvrirSorties;
@@ -1240,6 +1241,33 @@ function docHtml(titreDoc,sections){
   <div class="doc-pied">${(()=>{const me=window.ptParametres?.mentions||{};const l=[me.raisonSociale,me.orias?'ORIAS n° '+me.orias:'',me.adresse].filter(Boolean).map(esc).join(' · ');return (l?'<b>'+l+'</b><br>':'')+(me.complement?esc(me.complement)+'<br>':'')})()}Simulation indicative et non contractuelle, établie à partir des informations communiquées et des conditions de marché à la date du document. Elle ne constitue ni une offre de prêt ni un accord de financement : les conditions définitives (taux, assurance, garanties, frais, éligibilité aux prêts aidés) sont fixées par les établissements prêteurs après étude du dossier. Un crédit vous engage et doit être remboursé : vérifiez vos capacités de remboursement avant de vous engager.</div>
   </div></body></html>`;
   return html;
+}
+/**
+ * Téléchargement en vrai fichier PDF (sans passer par la fenêtre d'impression) : le document est mis en page
+ * dans un cadre invisible à la largeur utile d'une page A4 (190 mm ≈ 718 px), puis converti par html2pdf (servi par le site, dans public/vendor).
+ */
+const PDF_LIB=location.origin+'/vendor/html2pdf-0.10.1.bundle.min.js';
+async function telechargerPDF(titreDoc,sections,nom,bouton){
+  const texte=bouton?.textContent;if(bouton){bouton.disabled=true;bouton.textContent='Préparation du PDF…'}
+  const f=document.createElement('iframe');f.style.cssText='position:fixed;left:-10000px;top:0;width:718px;height:1200px;border:0';document.body.appendChild(f);
+  try{
+    const doc=f.contentDocument;doc.open();doc.write(docHtml(titreDoc,sections).replace('</head>',`<style>.fs td{padding:3px 8px}.fs{margin-bottom:9px}.doc-section{margin-bottom:0}.doc-section>.st-res{padding-bottom:0!important;margin-bottom:0!important}.doc-tete{margin-bottom:12px}</style><script src="${PDF_LIB}"><\/script></head>`));doc.close();
+    await new Promise((ok,ko)=>{let n=0;const t=setInterval(()=>{if(f.contentWindow.html2pdf&&doc.readyState==='complete'){clearInterval(t);ok()}else if(++n>150){clearInterval(t);ko(new Error('bibliothèque PDF indisponible (connexion internet ?)'))}},100)});
+    await Promise.all([...doc.images].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
+    // Les graphiques SVG sont convertis en image : leurs couleurs définies en CSS doivent être recopiées sur chaque forme.
+    doc.querySelectorAll('svg').forEach(v=>{const r=v.getBoundingClientRect();if(r.width&&r.height){v.setAttribute('width',r.width);v.setAttribute('height',r.height)}});
+    doc.querySelectorAll('svg *').forEach(e=>{const c=f.contentWindow.getComputedStyle(e);['fill','stroke','stroke-width','opacity','fill-opacity','stroke-dasharray','font-size','font-weight','font-family'].forEach(k=>{const v=c.getPropertyValue(k);if(v)e.setAttribute(k,v)})});
+    const jour=new Date().toISOString().slice(0,10),fichier=[titreDoc,nom,jour].filter(Boolean).join(' - ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w .,'()-]/g,'')+'.pdf';
+    // Options recréées dans le cadre : html2pdf vérifie les tableaux avec instanceof, propre à chaque fenêtre.
+    const options=f.contentWindow.JSON.parse(JSON.stringify({margin:[10,10,10,10],image:{type:'jpeg',quality:.95},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+      pagebreak:{mode:['css'],avoid:['tr','.card:not(.longue)','.tile','.hero','.fs-hcsf']}}));
+    const blob=await f.contentWindow.html2pdf().set(options).from(doc.getElementById('pt-studio')).outputPdf('blob');
+    // Copie du fichier dans la fenêtre principale : le cadre est supprimé juste après.
+    const pdf=new Blob([await blob.arrayBuffer()],{type:'application/pdf'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(pdf);a.download=fichier;document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);
+  }catch(e){alert('PDF impossible : '+e.message+'. Utilisez « Imprimer » puis « Enregistrer au format PDF ».')}
+  finally{f.remove();if(bouton){bouton.disabled=false;bouton.textContent=texte}}
 }
 function imprimerDoc(titreDoc,sections){
   const html=docHtml(titreDoc,sections);
