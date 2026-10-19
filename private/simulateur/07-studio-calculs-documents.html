@@ -117,7 +117,9 @@ function infoPTZ(){
 // Plafonds Action Logement (prêt accession) : grille « logements intermédiaires » au 10/03/2026 (actionlogement.fr).
 const PLAFONDS_AL={zones:['A bis / A','B1','B2 et C'],lignes:[['1 personne seule',[44344,36144,32530]],['2 personnes',[66276,48268,43439]],['3 personnes (ou 1 + 1 à charge)',[79666,58043,52239]],['4 personnes (ou 1 + 2 à charge)',[95427,70073,63066]],['5 personnes (ou 1 + 3 à charge)',[112968,82432,74189]],['6 personnes (ou 1 + 4 à charge)',[127122,92900,83611]],['Par personne en plus',[14164,10364,9325],'+']],abis:[44344,66276,86878,103727,123415,138874,15471]};
 // Montant proposé : 40 % du coût de l'opération, plafonné à 30 000 €.
-const montantAL=()=>{const cout=fv('price')+fv('works')+fv('notary');return cout>0?Math.min(30000,Math.floor(cout*0.4/100)*100):30000};
+// Valeurs par défaut du prêt Action Logement (modifiables ensuite) ; Action Logement le limite à 40 % du coût de l'opération.
+const AL_DEFAUT={montant:30000,taux:1,ans:25};
+const limiteAL=()=>{const cout=fv('price')+fv('works')+fv('notary');return cout>0?cout*0.4:Infinity};
 // Plafond de revenus du foyer selon la zone et le nombre d'occupants (saisis dans Budget max).
 function controleAL(){
   const b=lireDiagBase(),rfr=num(m('dg-rfr').value)||fv('v9rfr'),occ=Math.max(1,num(m('dg-occ').value)||((b.adultes||1)+(b.enfants||0)));
@@ -125,6 +127,13 @@ function controleAL(){
   const plafond=occ<=6?L[occ-1][1][col]:L[5][1][col]+(occ-6)*L[6][1][col];
   return {ancien:$('v9operation')?.value==='old',rfr,occ,zone:PLAFONDS_AL.zones[col],plafond};
 }
+window.ptPlafondsAL=PLAFONDS_AL;
+/** Ajout depuis « Prêts et aides » : remplace le prêt Action Logement existant, avec l'assurance et la garantie du prêt principal. */
+window.ptAjouterAL=(montant,taux,ans)=>{
+  if(typeof loans==='undefined')return;for(let i=loans.length-1;i>=0;i--)if(loans[i].type==='action')loans.splice(i,1);
+  addLoan({name:'Prêt Action Logement',type:'action',amount:montant,rate:taux??1,years:ans||25,delay:0,insurance:window.mainSettings?.insurance??fv('mainIns')??0.15,garantie:$('guarantee')?.value||'none',suit:true});
+  fraisAuto();if(studio.classList.contains('open'))rafraichir();
+};
 function infoAL(){
   const fr=n=>new Intl.NumberFormat('fr-FR').format(n),deja=(typeof loans!=='undefined'?loans:[]).some(l=>l.type==='action');
   const k=controleAL(),rouge='background:#f9e3e1;border:1px solid #e9b8b3;color:#9d3535',vert='background:#e6f2e8;border:1px solid #b9d8c0;color:#2f6b45',gris='background:#f3ede8;border:1px solid #e3d6cc;color:#5e4f48';
@@ -141,7 +150,8 @@ function infoAL(){
   <table class="t-aide"><tr><th>Foyer</th>${PLAFONDS_AL.zones.map(z=>`<th>Zone ${z}</th>`).join('')}</tr>${PLAFONDS_AL.lignes.map(([l,v,plus])=>`<tr><td>${l}</td>${v.map(x=>`<td>${plus||''}${fr(x)} €</td>`).join('')}</tr>`).join('')}</table>
   <p class="hint">Zone A bis : mêmes plafonds que la zone A pour 1 et 2 personnes, un peu plus élevés au-delà (3 personnes : ${fr(PLAFONDS_AL.abis[2])} €). Barème Action Logement au 10 mars 2026 ; conditions définitives fixées par Action Logement.</p>
   ${verdict}
-  ${deja?'<p class="hint"><b>Le prêt Action Logement est déjà dans le plan</b> (un seul par dossier) : modifiez-le dans la liste ci-dessus.</p>':`<p class="hint">Ajouté avec <b>${fr(montantAL())} €</b> (40 % du coût de l'opération, 30 000 € maximum), 1 % sur 25 ans, avec l'assurance et la garantie du prêt principal.</p><button type="button" class="mini" id="sp-al">+ Ajouter le prêt Action Logement</button>`}`;
+  ${(()=>{const l=(typeof loans!=='undefined'?loans:[]).find(x=>x.type==='action');return l&&+l.amount>limiteAL()?`<p class="hint" style="color:#9d3535"><b>Attention</b> : ${fr(+l.amount)} € dépasse 40 % du coût de l'opération (${fr(Math.floor(limiteAL()))} €), limite fixée par Action Logement.</p>`:''})()}
+  ${deja?'<p class="hint"><b>Le prêt Action Logement est déjà dans le plan</b> (un seul par dossier) : modifiez-le dans la liste ci-dessus.</p>':`<p class="hint">Ajouté avec <b>${fr(AL_DEFAUT.montant)} €</b> à 1 % sur 25 ans (modifiable ensuite dans la liste), avec l'assurance et la garantie du prêt principal.</p><button type="button" class="mini" id="sp-al">+ Ajouter le prêt Action Logement</button>`}`;
 }
 function formPlan(){
   const invest=$('purpose')?.value==='invest',ancien=$('v9operation')?.value==='old',ans=fv('mainYears')||window.mainSettings?.years||25;
@@ -337,7 +347,7 @@ function bindPlan(){
   const assPrincipal=()=>window.mainSettings?.insurance??fv('mainIns')??0.15;
   const ajouter=x=>{addLoan(x);ouvertPret=loans[loans.length-1]?.id;fraisAuto();rafraichir()};
   // Un seul prêt Action Logement par dossier : le bouton disparaît dès qu'il y en a un.
-  const bAl=$('sp-al');if(bAl)bAl.onclick=()=>ajouter({name:'Prêt Action Logement',type:'action',amount:montantAL(),rate:1,years:25,delay:0,insurance:assPrincipal(),garantie:$('guarantee')?.value||'none',suit:true});
+  const bAl=$('sp-al');if(bAl)bAl.onclick=()=>ajouter({name:'Prêt Action Logement',type:'action',amount:AL_DEFAUT.montant,rate:AL_DEFAUT.taux,years:AL_DEFAUT.ans,delay:0,insurance:assPrincipal(),garantie:$('guarantee')?.value||'none',suit:true});
   $('sp-autre').onclick=()=>ajouter({name:'Prêt externe',type:'external',amount:15000,rate:window.mainSettings?.rate||fv('mainRate')||3,years:15,delay:0,insurance:assPrincipal(),garantie:$('guarantee')?.value||'none'});
   // Modification d'un prêt complémentaire : écrit dans le moteur puis recalcule.
   const pretDe=el=>loans.find(l=>l.id===+el.closest('[data-pret]').dataset.pret);
@@ -364,7 +374,7 @@ function lireDiagBase(){
   const g=id=>num(m(id).value),rev2=g('dg-rev2');
   const RF_PCT=70;
   return {rf:g('dg-rf'),rfPct:RF_PCT,pensRecue:g('dg-pensr'),pensVersee:g('dg-pensv'),creditsConso:g('dg-charges'),creditsImmo:g('dg-credimmo'),revenus:g('dg-rev1')+rev2+g('dg-autres')+g('dg-pensr')+g('dg-rf')*RF_PCT/100,charges:g('dg-charges')+g('dg-credimmo')+g('dg-pensv'),apport:g('dg-apport'),ans:g('dg-duree')||25,enfants:g('dg-enfants'),adultes:rev2>0?2:1,
-    type:m('dg-type').value||'neuf',zone:m('dg-zone').value||'A',rfr:g('dg-rfr'),primo:m('dg-primo').value!=='non',occupants:g('dg-occ')||null,notaireOfferts:m('dg-notoff').value==='oui',garantie:m('dg-gar').value||'cl_classic',prets:m('dg-al').value==='oui'?[{neufSeul:true,nom:'Prêt Action Logement',montant:g('dg-almt')||30000,taux:m('dg-altx').value===''?1:num(m('dg-altx').value.replace(',','.')),ans:g('dg-alans')||Math.min(25,g('dg-duree')||25)}]:[],notairePct:m('dg-notpct').value===''?null:num(m('dg-notpct').value.replace(',','.')),ptzType:m('dg-ptztype').value||'coll',
+    type:m('dg-type').value||'neuf',zone:m('dg-zone').value||'A',rfr:g('dg-rfr'),primo:m('dg-primo').value!=='non',occupants:g('dg-occ')||null,notaireOfferts:m('dg-notoff').value==='oui',garantie:m('dg-gar').value||'cl_classic',prets:m('dg-al').value==='oui'?[{neufSeul:true,nom:'Prêt Action Logement',montant:g('dg-almt')||30000,taux:m('dg-altx').value===''?1:num(m('dg-altx').value.replace(',','.')),ans:g('dg-alans')||25}]:[],notairePct:m('dg-notpct').value===''?null:num(m('dg-notpct').value.replace(',','.')),ptzType:m('dg-ptztype').value||'coll',
     taux:m('dg-taux').value===''?null:g('dg-taux'),ass:m('dg-ass').value===''?null:g('dg-ass'),endet:m('dg-endet').value===''?null:g('dg-endet')};
 }
 /** Crédits en cours : conservés (charge), lissés (dans la mensualité) ou soldés (sur le budget). */
@@ -534,7 +544,7 @@ function formDiag(){
   <div class="f"><label for="sd-gar">Garantie <span style="font-weight:400;color:#8a7a70">appliquée à tous les prêts</span></label><select autocomplete="off" id="sd-gar" data-memo="dg-gar">${[{cle:'none',nom:'Aucune'},...((window.ptCatalogueGaranties&&window.ptCatalogueGaranties.length)?window.ptCatalogueGaranties:[{cle:'cl_classic',nom:'Crédit Logement · Classic'}])].map(x=>`<option value="${x.cle}" ${(d.garantie||'cl_classic')===x.cle?'selected':''}>${esc(x.nom)}${window.ptTauxGarantie(x.cle)!=null&&x.cle!=='none'?' · '+String(window.ptTauxGarantie(x.cle)).replace('.',',')+' %':''}</option>`).join('')}</select><div class="hint" id="sd-garmt" style="margin:4px 0 0"></div></div>
   ${d.type==='neuf'?`<div class="f"><label>Prêt Action Logement <span style="font-weight:400;color:#8a7a70">neuf uniquement</span></label><div class="seg" data-dseg="dg-al"><button type="button" data-v="oui" class="${d.prets.some(x=>x.neufSeul)?'on':''}">Oui</button><button type="button" data-v="non" class="${d.prets.some(x=>x.neufSeul)?'':'on'}">Non</button></div></div>
   ${d.prets.some(x=>x.neufSeul)?`<div class="duo"><div class="f"><label for="sd-almt">Montant</label><div class="euro" data-u="€"><input autocomplete="off" id="sd-almt" data-memo="dg-almt" inputmode="numeric" placeholder="30000" value="${v('dg-almt')}"></div></div><div class="f"><label for="sd-altx">Taux</label><div class="euro" data-u="%"><input autocomplete="off" id="sd-altx" data-memo="dg-altx" inputmode="decimal" placeholder="1" value="${v('dg-altx')}"></div></div></div>
-  <div class="f"><label for="sd-alans">Durée Action Logement</label><div class="euro" data-u="ans"><input autocomplete="off" id="sd-alans" data-memo="dg-alans" type="number" min="1" max="25" placeholder="${Math.min(25,d.ans)}" value="${v('dg-alans')}"></div><div class="hint" style="margin:4px 0 0">30 000 € maximum à 1 %, sous conditions (salarié du privé, entreprise de 10 salariés et plus, ressources). Lissé avec le prêt bancaire.</div></div>`:''}`:''}
+  <div class="f"><label for="sd-alans">Durée Action Logement</label><div class="euro" data-u="ans"><input autocomplete="off" id="sd-alans" data-memo="dg-alans" type="number" min="1" max="25" placeholder="25" value="${v('dg-alans')}"></div><div class="hint" style="margin:4px 0 0">30 000 € maximum à 1 %, sous conditions (salarié du privé, entreprise de 10 salariés et plus, ressources). Lissé avec le prêt bancaire.</div></div>`:''}`:''}
   <div class="f"><label>Prêt complémentaire</label><div class="seg" data-dseg="dg-pc"><button type="button" data-v="oui" class="${m('dg-pc').value==='oui'?'on':''}">Oui</button><button type="button" data-v="non" class="${m('dg-pc').value==='oui'?'':'on'}">Non</button></div></div>
   ${m('dg-pc').value==='oui'?`<div class="duo"><div class="f"><label for="sd-pcmt">Montant</label><div class="euro" data-u="€"><input autocomplete="off" id="sd-pcmt" data-memo="dg-pcmt" inputmode="numeric" value="${v('dg-pcmt')}"></div></div><div class="f"><label for="sd-pctx">Taux</label><div class="euro" data-u="%"><input autocomplete="off" id="sd-pctx" data-memo="dg-pctx" inputmode="decimal" placeholder="${String(d.taux??'').replace('.',',')}" value="${v('dg-pctx')}"></div></div></div>
   <div class="f"><label for="sd-pcans">Durée</label><div class="euro" data-u="ans"><input autocomplete="off" id="sd-pcans" data-memo="dg-pcans" type="number" min="1" max="30" placeholder="${d.ans}" value="${v('dg-pcans')}"></div></div>`:''}
@@ -727,7 +737,7 @@ function ficheSolvabilite(d,c,ctx){
    <tr><td>Reste à vivre mensuel</td><td class="n">${reste(avantH)}</td><td class="n">${reste(avantL)}</td><td class="n">${reste(apres)}</td></tr>
    <tr><td>Supplément de charge lié au projet</td><td class="n">—</td><td class="n">—</td><td class="n">${eur(apres-avantL)}</td></tr>
    <tr><td>Reste à vivre minimum (repère équipe)</td><td class="n" colspan="3">${eur(c.resteMin)}</td></tr></table>
-  <div class="fs-hcsf"><b>Critères HCSF :</b><span class="${hcsfDuree?'fs-ok':'fs-ko'}">${hcsfDuree?'✓':'✕'} Durée maximale (${dureeMax} ans${d.type==='neuf'?', 27 ans possible dans le neuf':''})</span><span class="${hcsfEndet?'fs-ok':'fs-ko'}">${hcsfEndet?'✓':'✕'} Endettement maximal 35 % (${tx(apres)})</span></div>`;
+  <div class="fs-hcsf"><b>Critères HCSF :</b><span class="${hcsfDuree?'fs-ok':'fs-ko'}">${hcsfDuree?'✓':'✕'} Durée : ${dureeMax} ans · maximum 25 ans${d.type==='neuf'?' (27 ans dans le neuf : 25 ans + 24 mois de différé pendant la construction)':''}</span><span class="${hcsfEndet?'fs-ok':'fs-ko'}">${hcsfEndet?'✓':'✕'} Endettement : ${tx(apres)} · maximum 35 %</span></div>`;
 }
 function simulationDoc(d,c,ctx){
   const z=c.ptz||{montant:0},fraisG=c.fraisGarantie+c.courtage;

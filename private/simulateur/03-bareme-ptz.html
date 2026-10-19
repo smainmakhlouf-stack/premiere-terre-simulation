@@ -34,12 +34,36 @@
 #pt-ptz summary{cursor:pointer;color:#9c482d;font-weight:600;font-size:13px}
 #pt-ptz details table input{width:84px;padding:5px 6px;font-size:13px;text-align:right;margin:0}
 #pt-ptz details .actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+#pt-ptz .onglets{display:flex;gap:6px;padding:12px 24px 0;background:#fff;border-bottom:1px solid #e9d8cd}
+#pt-ptz .onglets button{background:transparent;border:0;border-bottom:3px solid transparent;padding:8px 14px 10px;font:600 14px Inter,Arial,sans-serif;color:#7b6b62;cursor:pointer}
+#pt-ptz .onglets button.on{color:#9c482d;border-bottom-color:#a34d31}
+#pt-ptz .res .ok{color:#2f6b45;font-weight:600}
+#pt-ptz .body[hidden]{display:none}
 @media(max-width:900px){#pt-ptz .body{grid-template-columns:1fr}}
 @media print{#pt-ptz{display:none!important}}
 </style>
 <div id="pt-ptz" role="dialog" aria-modal="true" aria-labelledby="pt-ptz-title"><div class="win">
 <div class="head"><div><small>PRÊTS ET AIDES</small><h2 id="pt-ptz-title">Barème PTZ applicable au 01/04/2025</h2></div><button class="x" id="ptz-close" aria-label="Fermer">×</button></div>
-<div class="body">
+<div class="onglets" role="tablist"><button type="button" role="tab" data-onglet="ptz" class="on">PTZ</button><button type="button" role="tab" data-onglet="al">Prêt Action Logement</button></div>
+<div class="body" id="ptz-vue-al" hidden>
+<div>
+<div class="bloc"><h3>Plafonds de ressources · prêt accession Action Logement (logements intermédiaires, au 10/03/2026)</h3><div class="tw"><table id="al-t1"></table></div></div>
+<div class="crit" style="font-size:13px;line-height:1.55"><h3>Conditions</h3>
+<ul style="margin:0;padding-left:18px"><li>Achat de la <b>résidence principale dans le neuf</b>.</li><li>Être <b>salarié d'une entreprise du secteur privé non agricole de 10 salariés et plus</b>.</li><li>Primo-accédant, ou pas propriétaire de sa résidence principale depuis 2 ans.</li><li>Revenu fiscal de référence N-2 du foyer sous le plafond ci-dessus.</li><li>Jusqu'à <b>30 000 €</b>, dans la limite de <b>40 % du coût de l'opération</b>, à <b>1 %</b> hors assurance sur <b>25 ans</b> maximum.</li></ul>
+<p class="note">Barème Action Logement au 10 mars 2026 ; conditions définitives fixées par Action Logement.</p></div>
+</div>
+<div>
+<div class="crit"><h3>Critères de calcul</h3>
+<label>Zone<select autocomplete="off" id="al-zone"><option value="Abis">A bis</option><option value="A">A</option><option value="B1">B1</option><option value="B2C">B2 et C</option></select></label>
+<label>Ménage (personnes destinées à occuper le logement)<select autocomplete="off" id="al-pers"><option value="1">1 personne</option><option value="2">2 personnes</option><option value="3">3 personnes</option><option value="4">4 personnes</option><option value="5">5 personnes</option><option value="6">6 personnes</option><option value="7">7 personnes</option><option value="8">8 personnes et plus</option></select></label>
+<label>Achat<select autocomplete="off" id="al-type"><option value="neuf">Neuf</option><option value="ancien">Ancien</option></select></label>
+<label>Coût de l'opération, frais compris (€)<input autocomplete="off" id="al-cout" type="number" min="0" step="1000" placeholder="ex. 250000"></label>
+<label>Revenu fiscal de référence N-2 du foyer (€)<input autocomplete="off" id="al-rfr" type="number" min="0" step="500" placeholder="ex. 38000"></label>
+</div>
+<div class="res" id="al-res"></div>
+</div>
+</div>
+<div class="body" id="ptz-vue-ptz">
 <div>
 <div class="bloc"><h3 id="ptz-t1-title">Montant maximum du PTZ</h3><div class="tw"><table id="ptz-t1"></table></div></div>
 <div class="bloc"><h3 id="ptz-t2-title">Tranches de revenu</h3><div class="tw"><table id="ptz-t2"></table></div></div>
@@ -183,9 +207,74 @@ function ouvrir(){
   const cout=(+v('price')||0)+(v('v9operation')==='old'?(+v('works')||0):0);
   if(!$('ptz-prix').value&&cout)$('ptz-prix').value=Math.round(cout);
   if(!$('ptz-rfr').value&&+v('v9rfr'))$('ptz-rfr').value=+v('v9rfr');
-  editeur();rendre();dialog.classList.add('open');
+  preremplirAL();editeur();rendre();choisirOnglet('ptz');dialog.classList.add('open');
+}
+// ---------- Onglet Prêt Action Logement ----------
+let onglet='ptz';
+function choisirOnglet(o){
+  onglet=o;dialog.querySelectorAll('[data-onglet]').forEach(b=>b.classList.toggle('on',b.dataset.onglet===o));
+  $('ptz-vue-ptz').hidden=o!=='ptz';$('ptz-vue-al').hidden=o!=='al';
+  $('pt-ptz-title').textContent=o==='al'?'Prêt accession Action Logement':'Barème PTZ applicable au 01/04/2025';
+  if(o==='al')rendreAL();
+}
+dialog.querySelectorAll('[data-onglet]').forEach(b=>b.onclick=()=>choisirOnglet(b.dataset.onglet));
+const COLS_AL={Abis:0,A:0,B1:1,B2C:2};
+let alSaisie={montant:30000,taux:1,ans:25};
+/** Plafond de ressources Action Logement pour une zone et un nombre d'occupants. */
+function plafondAL(G,zone,pers){
+  if(zone==='Abis')return pers<=6?G.abis[pers-1]:G.abis[5]+(pers-6)*G.abis[6];
+  const c=COLS_AL[zone],L=G.lignes;return pers<=6?L[pers-1][1][c]:L[5][1][c]+(pers-6)*L[6][1][c];
+}
+function rendreAL(){
+  const G=window.ptPlafondsAL;if(!G){$('al-res').innerHTML='<p>Barème Action Logement indisponible.</p>';return}
+  const zone=$('al-zone').value,pers=+$('al-pers').value,type=$('al-type').value,cout=+$('al-cout').value||0,rfr=+$('al-rfr').value||0,col=COLS_AL[zone];
+  let h='<tr><th>Foyer</th><th class="sep">Zone A bis</th>'+G.zones.map(z=>`<th class="sep">Zone ${z.replace('A bis / A','A')}</th>`).join('')+'</tr>';
+  G.lignes.forEach(([l,v,plus],i)=>{const actif=i===Math.min(6,pers)-1||(pers>6&&plus);
+    h+=`<tr${actif?'':' class="dim"'}><td>${l}</td><td class="sep${actif&&zone==='Abis'?' on':''}">${plus||''}${eur(i<6?G.abis[i]:G.abis[6])} €</td>`+v.map((x,c)=>`<td class="sep${actif&&zone!=='Abis'&&c===col?' on':''}">${plus||''}${eur(x)} €</td>`).join('')+'</tr>'});
+  $('al-t1').innerHTML=h;
+  const plafond=plafondAL(G,zone,pers),motifs=[];
+  if(type==='ancien')motifs.push('Le prêt Action Logement est réservé au <b>neuf</b>.');
+  if($('al-rfr').value&&rfr>plafond)motifs.push(`Revenus trop élevés : RFR ${eur(rfr)} € pour un plafond de ${eur(plafond)} €.`);
+  let o='';
+  if(motifs.length)o=`<div><b class="ko">✕ Non éligible</b></div><p class="ko" style="margin:6px 0 0">${motifs.join('<br>')}</p>`;
+  else{
+    o=`<div>Prêt Action Logement</div>
+    <label style="margin-top:6px">Montant (€)<input autocomplete="off" id="al-mt" type="number" min="0" max="30000" step="500" value="${alSaisie.montant}"></label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label>Taux (%)<input autocomplete="off" id="al-tx" type="number" min="0" step="0.05" value="${alSaisie.taux}"></label><label>Durée (ans)<input autocomplete="off" id="al-ans" type="number" min="1" max="25" step="1" value="${alSaisie.ans}"></label></div>
+    <div id="al-calc"></div>
+    <div class="ligne"><span>Plafond de ressources</span><b>${eur(plafond)} €</b></div>
+    <div class="ligne"><span>Revenu fiscal N-2</span><b>${$('al-rfr').value?`<span class="ok">✓ ${eur(rfr)} €</span>`:'à renseigner'}</b></div>
+    <div class="ligne"><span>40 % du coût (30 000 € max)</span><b>${cout?eur(Math.min(30000,cout*0.4))+' €':'30 000 €'}</b></div>
+    <button class="btn1" id="al-ajout" type="button">Ajouter au plan de financement</button>`;
+  }
+  o+='<p class="note">Ajouté au plan avec l\'assurance et la garantie du prêt principal ; il remplace un prêt Action Logement déjà présent (un seul par dossier).</p>';
+  $('al-res').innerHTML=o;
+  // Montant, taux et durée : 30 000 €, 1 %, 25 ans par défaut, modifiables ; la mensualité suit la saisie.
+  const calc=()=>{
+    alSaisie={montant:Math.max(0,+$('al-mt').value||0),taux:Math.max(0,+$('al-tx').value||0),ans:Math.min(25,Math.max(1,Math.round(+$('al-ans').value||25)))};
+    const r=alSaisie.taux/1200,n=alSaisie.ans*12,mens=r?alSaisie.montant*r/(1-Math.pow(1+r,-n)):alSaisie.montant/n,alerte=[];
+    if(alSaisie.montant>30000)alerte.push('30 000 € maximum.');
+    if(cout&&alSaisie.montant>cout*0.4)alerte.push('Dépasse 40 % du coût de l\'opération ('+eur(cout*0.4)+' €).');
+    $('al-calc').innerHTML=`<div class="ligne"><span>Mensualité hors assurance</span><b>${new Intl.NumberFormat('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}).format(mens)} €/mois</b></div>${alerte.length?`<p class="ko" style="margin:4px 0">${alerte.join(' ')}</p>`:''}`;
+  };
+  if($('al-mt')){['al-mt','al-tx','al-ans'].forEach(id=>$(id).addEventListener('input',calc));calc()}
+  const b=$('al-ajout');if(b)b.onclick=()=>{
+    if(typeof window.ptAjouterAL!=='function'){alert('Plan de financement indisponible.');return}
+    calc();window.ptAjouterAL(alSaisie.montant,alSaisie.taux,alSaisie.ans);fermer();
+  };
+}
+['al-zone','al-pers','al-type','al-cout','al-rfr'].forEach(id=>$(id).addEventListener('input',rendreAL));
+function preremplirAL(){
+  alSaisie={montant:30000,taux:1,ans:25};
+  const v=id=>document.getElementById(id)?.value;
+  const z={'A bis':'Abis','A':'A','B1':'B1','B2':'B2C','C':'B2C'}[v('v9zone')];if(z)$('al-zone').value=z;
+  const pers=+v('v9people');if(pers>0)$('al-pers').value=String(Math.min(8,Math.round(pers)));
+  $('al-type').value=v('v9operation')==='old'?'ancien':'neuf';
+  const cout=(+v('price')||0)+(+v('works')||0)+(+v('notary')||0);if(!$('al-cout').value&&cout)$('al-cout').value=Math.round(cout);
+  const rfr=+v('v9rfr')||+v('dg-rfr');if(!$('al-rfr').value&&rfr)$('al-rfr').value=rfr;
 }
 window.ptOpenPTZ=ouvrir;
+window.ptOpenAL=()=>{ouvrir();choisirOnglet('al')};
 window.ptBaremePTZ=()=>B;
 $('ptz-close').onclick=fermer;
 dialog.addEventListener('click',e=>{if(e.target===dialog)fermer()});
