@@ -57,6 +57,13 @@ input:focus, select:focus { outline: 2px solid rgba(140, 76, 61, 0.25); border-c
 .tableau th, .tableau td { padding: 10px 8px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
 .tableau th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gris); }
 .actions-ligne { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+/* Comptes vendeurs : champs et bouton à la même hauteur ; actions rangées en grille fixe pour que chaque ligne s'aligne. */
+.grille-ajout input, .grille-ajout select, .grille-ajout .btn { height: 42px; box-sizing: border-box; margin: 0; }
+.grille-ajout select { padding-top: 0; padding-bottom: 0; }
+.grille-ajout .btn { white-space: nowrap; }
+.tableau th { white-space: nowrap; }
+.actions-grille { display: grid; grid-template-columns: 118px 108px; gap: 6px; justify-content: end; }
+.actions-grille .btn { width: 100%; white-space: nowrap; text-align: center; }
 .pastille { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 11px; background: #efe3da; color: var(--brun-fonce); }
 .pastille.off { background: #f3e1df; color: #9d3535; }
 .defile { overflow-x: auto; }

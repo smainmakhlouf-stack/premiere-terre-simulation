@@ -312,7 +312,16 @@ async function ouvrir(clientId,proposerEnregistrement){
   await chargerListe();
   if(clientId)await choisir(clientId,proposerEnregistrement);
 }
-window.ptOpenDossiers=()=>ouvrir(courant?.clientId);
+window.ptOpenDossiers=id=>ouvrir(typeof id==='string'&&id?id:courant?.clientId);
+// Accueil : les 5 derniers dossiers modifiés, à rouvrir en un clic.
+async function accueilRecents(){
+  const bloc=document.getElementById('pt-home-recents'),liste=document.getElementById('pt-home-liste');if(!bloc||!liste)return;
+  const u=window.ptUtilisateur;const b=document.getElementById('pt-home-bonjour');if(b&&u?.nom)b.textContent='BONJOUR '+String(u.nom).toUpperCase();
+  try{const j=await api('/api/dossiers');const l=(j.clients||[]).slice(0,5);if(!l.length)return;
+    liste.innerHTML=l.map(c=>`<button type="button" class="rec" data-go="dossier:${esc(c.id)}"><b>${esc(nomClient(c)||'Sans nom')}</b><span class="stt ${esc(c.statut||'en_cours')}">${STATUTS[c.statut]||'En cours'}</span><span class="meta">${c.nbSimulations} simulation${c.nbSimulations>1?'s':''} · ${esc(new Date(c.majLe).toLocaleDateString('fr-FR'))}${j.admin&&c.conseiller?' · '+esc(c.conseiller):''}</span></button>`).join('');
+    bloc.hidden=false}catch{}
+}
+accueilRecents();
 /** Ferme la simulation en cours et repart d'un formulaire vide (après confirmation). */
 function nouvelle(){
   if(!confirm(courant?.simId?'Fermer « '+(courant.simNom||'cette simulation')+' » et commencer une nouvelle simulation vierge ?\n\nLes modifications non enregistrées seront perdues.':'Commencer une nouvelle simulation vierge ?\n\nLes saisies non enregistrées seront perdues.'))return;

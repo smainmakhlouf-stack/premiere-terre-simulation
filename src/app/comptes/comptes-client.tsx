@@ -91,7 +91,7 @@ export function ComptesClient({ comptes, moiId }: { comptes: Compte[]; moiId: st
                     <td><span className={`pastille${c.actif ? "" : " off"}`}>{c.actif ? "Actif" : "Désactivé"}</span></td>
                     <td>{dateCourte(c.derniereConnexion)}</td>
                     <td>
-                      <div className="actions-ligne">
+                      <div className="actions-grille">
                         <button className="btn secondaire petit" disabled={enCours} onClick={() => lancer(() => renvoyerInvitation(c.id))}>
                           Renvoyer le lien
                         </button>
