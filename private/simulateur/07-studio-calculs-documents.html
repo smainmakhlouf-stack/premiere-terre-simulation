@@ -599,41 +599,53 @@ function tableEnveloppe(d){
 }
 // ---------- Projet tremplin : ce que le client récupère s'il revend ----------
 let anRevente=5;
-/** Pour chaque année de revente : capital restant dû des prêts du projet (banque, PTZ, autres nouveaux prêts), capital remboursé et somme récupérée, revente au prix d'achat. */
+const revalTremplin=()=>Math.max(-10,Math.min(10,num(m('dg-reval').value)));
+/** Pour chaque année de revente : capital restant dû des prêts du projet (banque, PTZ, autres nouveaux prêts), capital remboursé et somme récupérée,
+ *  au prix d'achat (hypothèse prudente) et, si une revalorisation annuelle est saisie, au prix revalorisé. */
 function tremplin(d,c){
   const ech=echeancier(c),projet=new Set(['Prêt bancaire','PTZ',...(c.ext||[]).filter(x=>!x.existant&&!x.horsLissage).map(x=>x.nom)]);
   const prets=ech.prets.filter(p=>p.nom==='PTZ'||p.nom.startsWith('Prêt bancaire')||projet.has(p.nom)&&!p.horsLissage);
-  const emprunte=prets.reduce((a,p)=>a+p.montant,0),frais=d.apport+emprunte-c.budget,ans=Math.max(1,Math.round(c.n/12));
+  const emprunte=prets.reduce((a,p)=>a+p.montant,0),frais=d.apport+emprunte-c.budget,ans=Math.max(1,Math.round(c.n/12)),r=revalTremplin()/100;
   const lignes=[];for(let a=1;a<=ans;a++){let crd=0,verse=0,cout=0;prets.forEach(p=>{const t=Math.min(a*12,p.lignes.length);crd+=a*12<=p.lignes.length?p.lignes[a*12-1].crd:0;for(let i=0;i<t;i++){verse+=p.lignes[i].pay;cout+=p.lignes[i].int+p.lignes[i].ins}});
-    crd=Math.max(0,crd);lignes.push({a,crd,rembourse:emprunte-crd,recupere:c.budget-crd,verse,cout})}
-  return {lignes,emprunte,frais,ans};
+    crd=Math.max(0,crd);const prix=c.budget*Math.pow(1+r,a);lignes.push({a,crd,rembourse:emprunte-crd,recupere:c.budget-crd,prix,recupereReval:prix-crd,verse,cout})}
+  return {lignes,emprunte,frais,ans,r};
 }
-function htmlTremplin(d,c){
-  const t=tremplin(d,c);anRevente=Math.min(Math.max(1,anRevente),t.ans);const x=t.lignes[anRevente-1],loyer=num(m('dg-loyer').value);
+/** doc = version figée pour les sorties client (années clés, sans clic). */
+function htmlTremplin(d,c,doc){
+  const t=tremplin(d,c);anRevente=Math.min(Math.max(1,anRevente),t.ans);const x=t.lignes[anRevente-1],loyer=num(m('dg-loyer').value),rv=t.r!==0,rtxt=pc(t.r*100,1).replace(/,0 %$/,' %')+' / an';
+  const cles=new Set([1,2,3,5,7,10,12,15,20,25,t.ans,anRevente]),vues=doc?t.lignes.filter(l=>cles.has(l.a)):t.lignes;
   const ligne=(l,v,fort)=>`<div style="display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid #f4ece7;${fort?'font-weight:700;font-size:15px':''}"><span>${l}</span><b style="font-variant-numeric:tabular-nums;white-space:nowrap">${v}</b></div>`;
-  return `<div class="remb-grid"><div><table class="st-env st-trem"><thead><tr><th>Revente</th><th>Capital restant dû</th><th>Récupéré</th></tr></thead><tbody>${t.lignes.map(l=>`<tr data-an="${l.a}" class="${l.a===anRevente?'on':''}" title="Revente après ${l.a} an${l.a>1?'s':''}"><td>${l.a} an${l.a>1?'s':''}</td><td>${eur(l.crd)}</td><td>${eur(l.recupere)}</td></tr>`).join('')}</tbody></table></div>
+  const ans=a=>a+' an'+(a>1?'s':'');
+  return `<div class="trem-grid${doc?' doc':''}"><div><table class="st-env st-trem"><thead><tr><th>Revente</th><th>Restant dû</th><th>Récupéré</th>${rv?`<th>Avec ${rtxt}</th>`:''}</tr></thead><tbody>${vues.map(l=>`<tr data-an="${l.a}" class="${l.a===anRevente?'on':''}" title="Revente après ${ans(l.a)}"><td>${ans(l.a)}</td><td>${eur(l.crd)}</td><td>${eur(l.recupere)}</td>${rv?`<td>${eur(l.recupereReval)}</td>`:''}</tr>`).join('')}</tbody></table></div>
    <div><div style="border:1px solid #ecdfd8;border-radius:12px;padding:16px;border-top:4px solid ${C.main}">
-    <div style="font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:#7b6b62">Revente après ${anRevente} an${anRevente>1?'s':''}, au prix d'achat</div>
-    <div style="font:34px Georgia,serif;margin:6px 0 2px;color:${x.recupere>=0?'#2b2320':'#b3261e'}">${eur(x.recupere)}</div>
-    <div class="sub" style="margin:0 0 12px">récupérés par le client une fois les prêts soldés, à réinvestir comme apport dans le projet suivant</div>
-    ${ligne('Prix de revente (prix d\'achat)',eur(c.budget))}
+    <div style="font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:#7b6b62">Revente après ${ans(anRevente)}</div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-end;margin:6px 0 2px">
+     <div><div style="font:34px Georgia,serif;color:${x.recupere>=0?'#2b2320':'#b3261e'}">${eur(x.recupere)}</div><div class="sub" style="margin:0">au prix d'achat (prudent)</div></div>
+     ${rv?`<div><div style="font:34px Georgia,serif;color:${x.recupereReval>=0?C.main:'#b3261e'}">${eur(x.recupereReval)}</div><div class="sub" style="margin:0">avec un prix ${t.r>0?'revalorisé':'en baisse'} de ${rtxt}</div></div>`:''}
+    </div>
+    <div class="sub" style="margin:6px 0 12px">récupérés ${doc?"":"par le client "}une fois les prêts soldés, à réinvestir comme apport dans le projet suivant</div>
+    ${ligne('Prix d\'achat',eur(c.budget))}
     ${ligne('− Capital restant dû'+(c.ptz?.montant?' (PTZ compris, remboursé à la vente)':''),'− '+eur(x.crd))}
-    ${ligne('= Somme récupérée',eur(x.recupere),1)}
+    ${ligne('= Somme récupérée au prix d\'achat',eur(x.recupere),1)}
+    ${rv?ligne((t.r>0?'+ Plus-value':'− Moins-value')+' ('+rtxt+' pendant '+ans(anRevente)+')',(t.r>0?'+ ':'− ')+eur(Math.abs(x.prix-c.budget)))+ligne('= Somme récupérée, prix de revente '+eur(x.prix),eur(x.recupereReval),1):''}
     <div style="height:10px"></div>
-    ${ligne('Capital remboursé en '+anRevente+' an'+(anRevente>1?'s':''),eur(x.rembourse))}
+    ${ligne('Capital remboursé en '+ans(anRevente),eur(x.rembourse))}
     ${ligne('+ Apport mis dans le projet',eur(d.apport))}
     ${t.frais>0.5?ligne('− Frais d\'achat ('+(c.offerts?'garantie, dossier':'notaire, garantie, dossier')+(c.solde?', crédits soldés':'')+')','− '+eur(t.frais)):''}
-    ${ligne('= Somme récupérée',eur(x.recupere),1)}
+    ${ligne('= Somme récupérée au prix d\'achat',eur(x.recupere),1)}
     <div style="height:10px"></div>
-    ${ligne('Mensualités versées en '+anRevente+' an'+(anRevente>1?'s':''),eur(x.verse))}
+    ${ligne('Mensualités versées en '+ans(anRevente),eur(x.verse))}
     ${ligne('dont intérêts et assurance',eur(x.cout))}
     ${loyer?ligne('Loyers versés sur la même durée ('+eur(loyer)+' / mois), sans rien récupérer',eur(loyer*12*anRevente)):''}
    </div>
-   <p class="note" style="margin-top:10px">Hypothèse prudente : revente au prix d'achat, sans plus-value ni moins-value, avant frais de vente (agence, diagnostics) et pénalités de remboursement anticipé éventuelles.${d.redevance?' En BRS, le prix de revente est encadré par l\'organisme foncier solidaire.':''} Cliquez une année pour voir le détail.</p></div></div>`;
+   <p class="note" style="margin-top:10px">Revente avant frais de vente (agence, diagnostics) et pénalités de remboursement anticipé éventuelles. ${rv?`Revalorisation de ${rtxt} : hypothèse de travail, pas une prévision ; le chiffre au prix d'achat reste la référence prudente. `:'Hypothèse prudente : revente au prix d\'achat, sans plus-value. '}En résidence principale, la plus-value est exonérée d'impôt.${d.redevance?' En BRS, le prix de revente est encadré par l\'organisme foncier solidaire.':''}${doc?'':' Cliquez une année pour voir le détail.'}</p></div></div>`;
 }
+function champReval(){const v=m('dg-reval').value;return `<div class="f" style="max-width:260px;margin:0 0 12px"><label for="sd-reval">Revalorisation du prix <span style="font-weight:400;color:#8a7a70">/ an, facultatif</span></label><div class="euro" data-u="%"><input autocomplete="off" id="sd-reval" inputmode="decimal" placeholder="0" value="${esc(v)}"></div></div>`}
 function lierTremplin(d,c){
   const box=$('sd-trem');if(!box)return;
-  box.querySelectorAll('.st-trem tr[data-an]').forEach(tr=>tr.onclick=()=>{anRevente=+tr.dataset.an;const y=$('pt-studio').scrollTop;box.innerHTML=htmlTremplin(d,c);lierTremplin(d,c);$('pt-studio').scrollTop=y});
+  const maj=()=>{const y=$('pt-studio').scrollTop;box.innerHTML=htmlTremplin(d,c);lierTremplin(d,c);$('pt-studio').scrollTop=y};
+  box.querySelectorAll('.st-trem tr[data-an]').forEach(tr=>tr.onclick=()=>{anRevente=+tr.dataset.an;maj()});
+  const rv=$('sd-reval');if(rv&&!rv.dataset.lie){rv.dataset.lie='1';rv.oninput=()=>{m('dg-reval').value=rv.value.trim();maj()}}
 }
 // ---------- Comparaison de scénarios ----------
 function lireScenarios(){try{return JSON.parse(m('dg-scen').value||'[]')}catch{return []}}
@@ -799,7 +811,7 @@ function pageGarde(d,c,ctx){
   return `<div style="text-align:center;padding:60px 20px"><img src="${location.origin}/logo-premiere-terre.png?v=2" alt="Première Terre" style="height:110px"><div style="font:34px Georgia,serif;color:#2b2320;margin:30px 0 8px">Étude de financement</div><div style="font-size:18px;color:#a34d31">${esc(ctx.nom||'')}</div>
   <div style="margin:40px auto 0;max-width:420px;border:1px solid #eaded7;border-radius:14px;padding:18px;text-align:left;font-size:14px;line-height:1.9">Projet : <b>${d.type==='neuf'?'logement neuf':'logement ancien'}</b><br>Budget d'achat maximum : <b>${eur(c.budget)}</b><br>Mensualité : <b>${eur(c.mensualite)}</b> sur <b>${d.ans} ans</b><br>${d.redevance?'Redevance BRS : <b>'+eur(d.redevance)+'</b> / mois<br>':''}${conseiller?'Votre conseiller : <b>'+esc(conseiller)+'</b><br>':''}Date : <b>${new Date().toLocaleDateString('fr-FR')}</b></div></div>`;
 }
-const SORTIES=[['garde','Page de garde',false],['solv','Fiche de solvabilité',true],['simu','Simulation de financement',true],['graph','Présentation graphique',true],['scen','Comparaison des scénarios',true],['remb','Tableau de remboursement (tous les prêts)',false],['echeanciers','Échéanciers par prêt',false]];
+const SORTIES=[['garde','Page de garde',false],['solv','Fiche de solvabilité',true],['simu','Simulation de financement',true],['graph','Présentation graphique',true],['scen','Comparaison des scénarios',true],['remb','Tableau de remboursement (tous les prêts)',false],['echeanciers','Échéanciers par prêt',false],['tremplin','Projet tremplin : si le client revend',false]];
 function sectionsSorties(choix,d,c,ctx){
   const s=[];
   if(choix.includes('garde'))s.push(['Votre étude',pageGarde(d,c,ctx)]);
@@ -809,6 +821,7 @@ function sectionsSorties(choix,d,c,ctx){
   if(choix.includes('scen')&&lireScenarios().length)s.push(['Comparaison des scénarios',`<div class="card">${htmlScenarios().replace(/<tr><td><\/td>(?:(?!<\/tr>).)*<\/tr><\/table>/s,'</table>')}</div>`]);
   if(choix.includes('remb'))s.push(['Tableau de remboursement',tableauRemb(c,false)]);
   if(choix.includes('echeanciers'))s.push(['Échéanciers de prêt',tableauRemb(c,true)]);
+  if(choix.includes('tremplin'))s.push(['Projet tremplin',`<div class="card"><h2>Projet tremplin : si vous revendez</h2><p class="sub">Ce que vous récupérez selon l'année de revente : le capital déjà remboursé plus votre apport, moins les frais d'achat. Cette somme devient l'apport de votre prochain achat.</p>${htmlTremplin(d,c,true)}</div>`]);
   return s;
 }
 /** Fenêtre « Sorties client » : choix des documents puis présentation à l'écran ou impression. */
@@ -869,7 +882,7 @@ function resDiag(){
   <div class="card"><h2>Évolution des remboursements</h2><p class="sub">Attrapez la barre noire et montez-la ou descendez-la : la mensualité, le taux d'endettement et le budget suivent. Cliquez une durée dans le tableau pour la choisir.</p>
    <div class="remb-grid"><div>${tableEnveloppe(d)}</div><div>${grapheRemb(d,c)}</div></div>
    <div class="srt-row" style="margin:14px 0 0"><button type="button" class="srt-btn prim" id="sd-solv">Fiche de solvabilité</button><button type="button" class="srt-btn" id="sd-sorties">Sorties client…</button></div></div>
-  <div class="card"><h2>Projet tremplin : si le client revend</h2><p class="sub">Ce qu'il récupère selon l'année de revente : le capital déjà remboursé plus son apport. Cette somme devient l'apport de son prochain achat.</p><div id="sd-trem">${htmlTremplin(d,c)}</div></div>
+  <div class="card"><h2>Projet tremplin : si le client revend</h2><p class="sub">Ce qu'il récupère selon l'année de revente : le capital déjà remboursé plus son apport. Cette somme devient l'apport de son prochain achat.</p>${champReval()}<div id="sd-trem">${htmlTremplin(d,c)}</div></div>
   <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="margin:0">Comparer des scénarios</h2><button type="button" class="srt-btn prim" id="sd-scen-add">Garder ce scénario</button></div><div id="sd-scen" style="margin-top:10px">${htmlScenarios()}</div></div>
   <div class="card"><h2>Neuf ou ancien : la différence de budget</h2><p class="sub">Même foyer, même mensualité. ${ecart>0?`Dans le neuf, votre client peut viser <b style="color:#a34d31">${eur(ecart)} de plus</b> : frais de notaire ${neuf.offerts?'offerts':'réduits'}${neuf.ptz.montant?' et PTZ à 0 %':''}.`:'Avec ces critères, le neuf n\'apporte pas de budget supplémentaire.'}${neuf.ptz.motif&&d.primo?' '+esc(neuf.ptz.motif)+(d.rfr?'':` (RFR non saisi, estimé à ${eur(d.revenus*12*0.9)} : saisissez le RFR N-2 réel dans le bloc PTZ)`):''}${!d.primo?' PTZ non retenu : le client n\'est pas primo-accédant.':''}</p>
    <div class="cols">${colonne(neuf,'Neuf',C.main)}${colonne(ancien,'Ancien',C.frais,neuf)}</div></div>
