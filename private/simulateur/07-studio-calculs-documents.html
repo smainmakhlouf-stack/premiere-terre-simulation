@@ -987,7 +987,7 @@ const surfaceRetenue=x=>x.surface+Math.min(8,(x.annexes||0)/2);
 const coefSurface=S=>S>0?Math.min(1.2,Math.round((0.7+19/S)*100)/100):0;
 function loyerMax(x,niveau){const S=surfaceRetenue(x),pl=(window.ptParametres?.plafondsLoyer||PLAFONDS_LOYER_2026)[niveau]?.[x.zone];if(!S||!pl)return null;const c=coefSurface(S);return {S,plafond:pl,coef:c,max:Math.round(S*pl*c*100)/100}}
 const REGIMES_OF=[
-  ['nu_micro','Location nue · micro-foncier',''],['nu_reel','Location nue · réel',''],['lmnp_micro','LMNP · micro-BIC',''],['lmnp_reel','LMNP · réel',''],
+  ['nu_micro','Droit commun · location nue, micro-foncier',''],['nu_reel','Droit commun · location nue au réel',''],['lmnp_micro','LMNP · micro-BIC',''],['lmnp_reel','LMNP · réel',''],
   ['jb_int','Jeanbrun intermédiaire',''],['jb_soc','Jeanbrun social',''],['jb_tsoc','Jeanbrun très social',''],
   ['den6','Denormandie 6 ans',''],['den9','Denormandie 9 ans',''],['den12','Denormandie 12 ans',''],
   ['mal22','Malraux 22 % (site patrimonial avec PVAP)',''],['mal30','Malraux 30 % (secteur sauvegardé PSMV)',''],
@@ -1149,7 +1149,7 @@ function resFiscal(){
   if(x.prix<=0||(x.loyer<=0&&!(nivChoix&&lmChoix))){$('st-res').innerHTML=`<div class="card"><h2>Indiquez le prix du logement et le loyer</h2><p class="sub">Le rendement, le cash-flow, l'impôt et l'enrichissement à la revente se calculent dès que le prix et le loyer mensuel sont saisis.</p></div>`;return}
   // Le régime choisi est comparé aux régimes de droit commun (location nue et LMNP).
   const choix=regimeOF(),droitCommun=['nu_micro','nu_reel','lmnp_micro','lmnp_reel'];
-  const liste=[...new Set([choix,...droitCommun])].map(r=>projeterOF(x,r));
+  const liste=[...new Set([...droitCommun,choix])].map(r=>projeterOF(x,r));
   const ret=liste.find(r=>r.regime===choix);
   const nom=k=>(REGIMES_OF.find(r=>r[0]===k)||[k,k])[1];
   const brut=(ret.loyerReg+x.parkloyer)*12/(x.prix+x.parkval+x.travaux+x.mobilier)*100,l1=ret.lignes[0];
@@ -1164,7 +1164,8 @@ function resFiscal(){
    <div class="tile"><small>Rendement net-net</small><b>${pc(netnet,2)}</b><em class="ok" style="background:#f3ece8;color:#5e4f48">après impôt, 1<sup>re</sup> année</em></div>
   </div>
   ${ret.ok?participation(ret,x):''}
-  <div class="card"><h2>Comparaison des régimes sur ${H} ans</h2><p class="sub">Enrichissement = valeur nette à la revente (après impôt sur la plus-value et capital restant dû) + cash-flows cumulés − apport.</p>
+  ${ret.ok?duelDroitCommun(x,ret,liste,nom):''}
+  <div class="card" data-titre="Comparaison des régimes"><h2>Comparaison des régimes sur ${H} ans</h2><p class="sub">Enrichissement = valeur nette à la revente (après impôt sur la plus-value et capital restant dû) + cash-flows cumulés − apport.</p>
    <div style="overflow-x:auto"><table class="prets" style="min-width:720px"><tr><th>Régime</th><th>Loyer retenu</th><th>Cash-flow / mois (an 1)</th><th>Impôt cumulé</th><th>Réductions</th><th>Plus-value taxée</th><th>Enrichissement</th><th>TRI</th></tr>
    ${liste.map(r=>`<tr style="${r===ret?'background:#fbf3ee;font-weight:600':''}"><td>${esc(nom(r.regime))}${r.ok?(r.engagement?` <span style="color:#7b6b62;font-weight:400">· engagement ${r.engagement} ans${r.info?' · '+esc(r.info):''}</span>`:''):` <span style="color:#b04d3e;font-weight:400">· ${esc(r.motif)}</span>`}</td><td>${r.ok?eur(r.loyerReg)+(r.niveau?' <span style="color:#7b6b62;font-weight:400">maximum</span>':''):'—'}</td><td>${r.ok?eur(r.cf1):'—'}</td><td>${r.ok?eur(r.impotTot):'—'}</td><td>${r.ok&&r.reductionsTot?eur(r.reductionsTot):'—'}</td><td>${r.ok?eur(r.impotPV):'—'}</td><td>${r.ok?eur(r.enrichissement):'—'}</td><td>${r.ok&&r.tri!=null?pc(r.tri,1):'—'}</td></tr>`).join('')}</table></div></div>
   <div class="card"><h2>Patrimoine : valeur du bien et capital restant dû</h2>${courbes([{l:'Valeur du bien',c:C.apport,v:[x.prix+x.travaux,...ret.lignes.map(l=>l.valeur)]},{l:'Capital restant dû',c:C.main,v:[x.pret,...ret.lignes.map(l=>l.crd)]}],H)}</div>
@@ -1186,9 +1187,60 @@ function resFiscal(){
     const vueAvant=m('of-partvue').value,part=v=>{m('of-partvue').value=v;const h=participation(ret,x).replace(/<div class="seg" id="sof-partvue"[\s\S]*?<\/div><\/div>/,'</div>');return h};
     const partMoy=part('moyenne'),partAns=part('annees').replace('max-height:460px;overflow:auto;','');m('of-partvue').value=vueAvant;
     const sansPart=autres.filter(h=>!h.includes('id="sof-part"'));
-    presenterDoc('Étude d’investissement locatif',[['Synthèse',synth+projet],['Participation mensuelle',partMoy+partAns],...sansPart.map((h,i)=>[['Comparaison des régimes','Patrimoine','Année par année'][i]||'Détail',h]),['Hypothèses',note]],ctxRapide(lireDiag()).nom);
+    const titres=['Patrimoine','Année par année'];let k=0;
+    presenterDoc('Étude d’investissement locatif',[['Synthèse',synth+projet],['Participation mensuelle',partMoy+partAns],...sansPart.map(h=>[(h.match(/data-titre="([^"]+)"/)||[])[1]||titres[k++]||'Détail',h]),['Hypothèses',note]],ctxRapide(lireDiag()).nom);
   };
   const b=$('sof-vers-plan');if(b)b.onclick=()=>{poser('purpose','invest');poser('v9operation',x.type==='vefa'?'new':'old');poser('price',x.prix);poser('works',x.travaux);poser('deposit',x.apport);poser('futureRent',x.loyer);fixerPrincipal(x.taux,x.duree,x.ass);fraisAuto();ouvrir('plan')};
+}
+// ---------- Stratégie choisie face au droit commun ----------
+/** Contraintes propres au régime, que la location nue de droit commun n'impose pas. */
+function contraintesRegime(r){
+  const c=[];if(r.engagement)c.push(`Engagement de location de ${r.engagement} ans : une revente ou un arrêt de la location avant le terme fait perdre l'avantage fiscal (reprise).`);
+  if(r.niveau)c.push(`Loyer plafonné (${NOM_NIVEAU[r.niveau]}) et ressources du locataire plafonnées.`);
+  if(r.regime.startsWith('lmnp'))c.push('Location meublée : mobilier complet obligatoire, bail meublé.');
+  if(r.regime==='lmnp_reel')c.push('Comptabilité au réel (expert-comptable conseillé) ; amortissements réintégrés dans la plus-value à la revente.');
+  if(r.info)c.push(r.info.charAt(0).toUpperCase()+r.info.slice(1));
+  return c;
+}
+/** Bloc « stratégie choisie / droit commun » : chiffres côte à côte, écart, point de bascule, contraintes, effet de la TMI. */
+function duelDroitCommun(x,ret,liste,nom){
+  if(ret.regime.startsWith('nu_'))return `<div class="card" data-titre="Face au droit commun"><h2>Votre stratégie face au droit commun</h2><p class="sub" style="margin:0">Le régime choisi est le droit commun (location nue). Choisissez une stratégie (LMNP, Jeanbrun, LLI, Denormandie…) pour la comparer au droit commun.</p></div>`;
+  const dcs=liste.filter(r=>r.regime.startsWith('nu_')&&r.ok);if(!dcs.length)return '';
+  const dc=dcs.reduce((a,b)=>b.enrichissement>a.enrichissement?b:a),H=x.horizon;
+  const ecart=ret.enrichissement-dc.enrichissement,parMois=ecart/H/12;
+  const v=(a,b,mieuxSiPlus)=>{const d=a-b,bon=mieuxSiPlus?d>0.5:d<-0.5,mauvais=mieuxSiPlus?d<-0.5:d>0.5;return `<td style="font-weight:700;color:${bon?'#1f7a3d':mauvais?'#b04d3e':'#7b6b62'}">${Math.abs(d)<0.5?'=':(d>0?'+ ':'− ')+eur(Math.abs(d))}</td>`};
+  const ligne=(l,a,b,f,mieuxSiPlus)=>`<tr><td>${l}</td><td>${f(a)}</td><td>${f(b)}</td>${v(a,b,mieuxSiPlus)}</tr>`;
+  const mens=n=>eur(n)+' / mois';
+  // Point de bascule : enrichissement si l'on revend au bout de 1, 2… H ans, sous chaque régime.
+  const ans=[];for(let y=1;y<=H;y++){const a=projeterOF({...x,horizon:y},ret.regime),b=projeterOF({...x,horizon:y},dc.regime);ans.push({y,d:a.enrichissement-b.enrichissement,bloque:!!ret.engagement&&y<ret.engagement})}
+  let bascule=null;for(let i=ans.length-1;i>=0;i--){if(ans[i].d>0&&!ans[i].bloque)bascule=ans[i].y;else break}
+  const W=600,Hh=200,L=8,R=8,T=14,B=26,max=Math.max(1,...ans.map(a=>Math.abs(a.d))),y0=T+(Hh-T-B)/2,ech=(Hh-T-B)/2/max,bw=(W-L-R)/ans.length;
+  const barres=ans.map((a,i)=>{const h=Math.abs(a.d)*ech,x0=L+i*bw+1,col=a.bloque?'#d9cfc9':a.d>=0?'#2f8a4f':'#c0584a';return `<g data-tip="${`<b>Revente après ${a.y} an${a.y>1?'s':''}</b><br>${a.bloque?'Avant la fin de l\'engagement : avantage repris':(a.d>=0?'Avantage stratégie : ':'Avantage droit commun : ')+eur(Math.abs(a.d))}`.replace(/"/g,'&quot;')}"><rect x="${x0}" y="${a.d>=0?y0-h:y0}" width="${Math.max(1,bw-2)}" height="${Math.max(1,h)}" fill="${col}" rx="2"></rect>${a.y%5===0||a.y===1?`<text x="${x0+bw/2}" y="${Hh-8}" text-anchor="middle" font-size="12" fill="#8a7a70">${a.y} an${a.y>1?'s':''}</text>`:''}</g>`}).join('');
+  const graphe=`<svg viewBox="0 0 ${W} ${Hh}" width="100%" role="img" aria-label="Écart d'enrichissement selon l'année de revente"><line x1="${L}" x2="${W-R}" y1="${y0}" y2="${y0}" stroke="#bfb2aa"></line>${barres}</svg>
+   <div class="legend"><span><i style="background:#2f8a4f"></i>la stratégie rapporte plus</span><span><i style="background:#c0584a"></i>le droit commun rapporte plus</span>${ret.engagement?`<span><i style="background:#d9cfc9"></i>avant ${ret.engagement} ans : engagement non tenu, avantage repris</span>`:''}</div>`;
+  // Effet de la tranche marginale d'imposition sur l'écart.
+  const tmis=[0.11,0.3,0.41,0.45].map(t=>{const a=projeterOF({...x,tmi:t},ret.regime),b=[...new Set(['nu_micro','nu_reel'])].map(r=>projeterOF({...x,tmi:t},r)).filter(r=>r.ok);const bb=b.length?b.reduce((p,q)=>q.enrichissement>p.enrichissement?q:p):null;return {t,d:a.ok&&bb?a.enrichissement-bb.enrichissement:null}});
+  const ctr=contraintesRegime(ret);
+  return `<div class="card" data-titre="Face au droit commun"><h2>${esc(nom(ret.regime))} face au droit commun</h2>
+   <p class="sub">Même bien, même financement, même revente à ${H} ans. Droit commun retenu : ${esc(nom(dc.regime).replace('Droit commun · ',''))}, le plus favorable des deux régimes de location nue.</p>
+   <div style="font:22px Georgia,serif;margin:4px 0 12px;color:${ecart>=0?'#1f7a3d':'#b04d3e'}">${ecart>=0?`${esc(nom(ret.regime))} rapporte <b>${eur(ecart)} de plus</b> que le droit commun sur ${H} ans, soit ${eur(parMois)} par mois.`:`Avec ces hypothèses, le droit commun rapporte <b>${eur(-ecart)} de plus</b> sur ${H} ans.`}</div>
+   <div style="overflow-x:auto"><table class="prets" style="min-width:560px"><tr><th></th><th>${esc(nom(ret.regime))}</th><th>Droit commun</th><th>Écart</th></tr>
+    ${ligne('Cash-flow après impôt, 1<sup>re</sup> année',ret.cf1,dc.cf1,mens,true)}
+    ${ligne('Cash-flow moyen sur '+H+' ans',ret.cfMoy,dc.cfMoy,mens,true)}
+    ${ligne('Impôt sur les loyers (cumulé)',ret.impotTot,dc.impotTot,eur,false)}
+    ${ret.reductionsTot||dc.reductionsTot?ligne('Réductions d\'impôt',ret.reductionsTot,dc.reductionsTot,eur,true):''}
+    ${ligne('Impôt sur la plus-value à la revente',ret.impotPV,dc.impotPV,eur,false)}
+    ${ligne('Enrichissement à '+H+' ans',ret.enrichissement,dc.enrichissement,eur,true)}
+    <tr><td>Rendement interne (TRI)</td><td>${ret.tri==null?'—':pc(ret.tri,1)}</td><td>${dc.tri==null?'—':pc(dc.tri,1)}</td><td style="font-weight:700;color:#7b6b62">${ret.tri!=null&&dc.tri!=null?(ret.tri-dc.tri>=0?'+ ':'− ')+pc(Math.abs(ret.tri-dc.tri),1).replace(' %',' pt'):'—'}</td></tr>
+   </table></div>
+   <h3 style="margin:18px 0 4px">Selon l'année de revente</h3>
+   <p class="sub" style="margin:0 0 6px">${bascule?`La stratégie devient plus intéressante que le droit commun <b>à partir de ${bascule} an${bascule>1?'s':''} de détention</b>${bascule>1?' et le reste jusqu\'à '+H+' ans':''}.`:'Sur ces hypothèses, la stratégie ne dépasse pas durablement le droit commun avant '+H+' ans.'} Écart d'enrichissement si le bien est revendu au bout de 1, 2… ${H} ans.</p>
+   ${graphe}
+   <h3 style="margin:18px 0 4px">Selon la tranche d'impôt du client</h3>
+   <div style="overflow-x:auto"><table class="prets" style="min-width:420px"><tr><th>Tranche marginale (TMI)</th>${tmis.map(t=>`<th${Math.abs(t.t-x.tmi)<1e-9?' style="color:#a34d31"':''}>${pc(t.t*100,0)}${Math.abs(t.t-x.tmi)<1e-9?' (client)':''}</th>`).join('')}</tr>
+    <tr><td>Écart avec le droit commun à ${H} ans</td>${tmis.map(t=>`<td style="font-weight:700;color:${t.d==null?'#7b6b62':t.d>=0?'#1f7a3d':'#b04d3e'}">${t.d==null?'—':(t.d>=0?'+ ':'− ')+eur(Math.abs(t.d))}</td>`).join('')}</tr></table></div>
+   ${ctr.length?`<h3 style="margin:18px 0 4px">En contrepartie</h3><ul style="margin:4px 0 0;padding-left:18px;line-height:1.6">${ctr.map(t=>`<li>${esc(t)}</li>`).join('')}</ul><p class="sub" style="margin:6px 0 0">Droit commun : aucun engagement de durée, loyer et locataire libres, revente libre.</p>`:''}
+  </div>`;
 }
 /**
  * Participation mensuelle (effort d'épargne) : ce que l'investisseur met de sa poche chaque mois,
