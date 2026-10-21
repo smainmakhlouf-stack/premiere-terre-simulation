@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client"
 import { db } from "@/lib/db"
 import { ErreurApi, lireJson, traiter, utilisateur } from "@/lib/api"
 import { GARANTIES, horodater, normaliser, rappels, type MisesAJour } from "@/lib/parametres"
+import { tauxUsure } from "@/lib/usure"
 
 export const dynamic = "force-dynamic"
 
@@ -11,7 +12,9 @@ export function GET(request: Request) {
     const u = await utilisateur(request)
     const ligne = await db.parametres.findUnique({ where: { id: "equipe" } })
     const m = (ligne?.misesAJour ?? {}) as MisesAJour
+    const usure = await tauxUsure()
     return NextResponse.json({
+      usure,
       admin: u.admin, parametres: normaliser(ligne?.data), garanties: GARANTIES.map(({ cle, nom }) => ({ cle, nom })),
       majLe: ligne?.updatedAt ?? null, majPar: ligne?.majPar ?? null, misesAJour: m,
       rappels: u.admin ? rappels(m, ligne?.updatedAt ?? null) : [],

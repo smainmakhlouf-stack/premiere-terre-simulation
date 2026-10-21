@@ -602,6 +602,18 @@ function tableEnveloppe(d){
   const lignes=[];for(let a=5;a<=25;a++){const x=capacite({...d,ans:a,taux:d.taux==null?null:tauxDiag(d,a)},d.type);lignes.push({a,x})}
   return `<table class="st-env"><thead><tr><th>Durée</th><th>Enveloppe</th><th>PTZ</th></tr></thead><tbody>${lignes.map(l=>`<tr data-ans="${l.a}" class="${l.a===d.ans?'on':''}" title="Choisir ${l.a} ans"><td>${l.a} ans</td><td>${eur(l.x.budget)}</td><td>${l.x.ptz.montant?eur(l.x.ptz.montant):'—'}</td></tr>`).join('')}</tbody></table>`;
 }
+// ---------- TAEG estimé et taux d'usure ----------
+/** TAEG estimé du prêt bancaire : taux actuariel qui égalise le capital net reçu (prêt − dossier, garantie et
+ *  courtage) et les échéances versées (intérêts + assurance + capital). Le TAEG légal reste établi par la banque. */
+function taegEstime(c){
+  const b=echeancier(c).prets.find(p=>p.nom.startsWith('Prêt bancaire'));if(!b||!(b.montant>0))return null;
+  const frais=(c.garPct||0)*b.montant+(c.courtage||0)+(P().frais?.dossier||0),net=b.montant-frais,pays=b.lignes.map(l=>l.pay);
+  const va=r=>pays.reduce((a,x,i)=>a+x/Math.pow(1+r,i+1),0);
+  let lo=0,hi=0.05;for(let k=0;k<80;k++){const mid=(lo+hi)/2;if(va(mid)>net)lo=mid;else hi=mid}
+  return (Math.pow(1+(lo+hi)/2,12)-1)*100;
+}
+const usureDuree=ans=>{const u=window.ptUsure;if(!u)return null;return {taux:ans<10?u.moins10:ans<20?u.de10a20:u.plus20,trim:u.trimestre,auto:u.source==='banque-de-france'}};
+
 // ---------- Projet tremplin : ce que le client récupère s'il revend ----------
 let anRevente=5;
 const revalTremplin=()=>Math.max(-10,Math.min(10,num(m('dg-reval').value)));
@@ -882,6 +894,7 @@ function resDiag(){
   const alerte=(attr,titre,txt)=>`<div ${attr} style="background:#fff7e6;border:1px solid #f3c77a;color:#7a4b00;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13.5px;line-height:1.5"><b>${titre}</b> ${txt}</div>`;
   $('st-res').innerHTML=`
   ${fragiles.length?alerte('data-alerte-contrat','Budget à confirmer par la banque.',fragiles.map(([q,x])=>`${q} : ${esc(CONTRATS_FRAGILES[x])}.`).join(' ')):''}
+  ${(()=>{const t=taegEstime(c),u=usureDuree(d.ans);return t!=null&&u&&t>u.taux?`<div data-alerte-usure style="background:#fdecea;border:1px solid #f3b8b2;color:#8c1d14;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13.5px;line-height:1.5"><b>TAEG estimé ${pc(t,2)} au-dessus du taux d'usure (${pc(u.taux,2)}, ${esc(u.trim.replace('-Q',' T'))}).</b> Prêt impossible en l'état : baissez l'assurance (délégation), les frais de garantie ou de courtage.</div>`:''})()}
   ${ages.length?alerte('data-alerte-age',`Âge en fin de prêt au-delà de ${ageMax} ans.`,ages.map(([q,a])=>`${q} : ${a+d.ans} ans à la dernière échéance (${a} ans aujourd'hui, prêt sur ${d.ans} ans)${ageMax-a>=5?` ; durée maximale pour rester à ${ageMax} ans : ${ageMax-a} ans`:''}.`).join(' ')+' Assurance et accord de la banque à vérifier.'):''}
   <div class="hero"><div><small>Budget d'achat maximum · ${d.type==='neuf'?'neuf':'ancien'}</small><strong>${eur(c.budget)}</strong><span>prix du bien, hors frais de notaire · sur ${d.ans} ans à ${pc(c.taux,2)}${c.ptz.montant?' · PTZ compris':''}</span></div>
   <div class="side">Prêt bancaire <b>${eur(c.pret)}</b>${c.ptz.montant?`<br>PTZ <b>${eur(c.ptz.montant)}</b>`:''}${c.ext.map(x=>x.existant?`<br>${esc(x.nom)} <b>${eur(x.mens)}/mois · ${x.mois} mois</b>`:`<br>${esc(x.nom)} <b>${eur(x.montant)}</b>`).join('')}${c.solde?`<br>Crédits soldés <b>${eur(c.solde)}</b>`:''}${d.redevance?`<br>Redevance BRS <b>${eur(d.redevance)}/mois</b>`:''}<br>Apport <b>${eur(d.apport)}</b><br>Garantie <b>${eur(c.fraisGarantie)}</b><br>Frais de notaire ${d.type==='neuf'?'neuf':'ancien'} <b>${c.offerts?'offerts ('+eur(c.notaireOffert)+')':eur(c.notaire)}</b></div></div>
@@ -910,7 +923,7 @@ function resDiag(){
    <div class="card"><h2>Budget selon la durée</h2><p class="sub">${d.type==='neuf'?'Neuf':'Ancien'}, même apport.</p>${barresH(durees.map(x=>({l:x.a+' ans',v:x.c.budget,c:x.a===d.ans?C.main:'#d9b9aa',d:'Prêt '+eur(x.c.pret)+(x.c.ptz.montant?' + PTZ '+eur(x.c.ptz.montant):'')+' · mensualité '+eur(x.c.mensualite)})))}</div>
   </div>
   <button type="button" class="cta" id="sd-vers-plan">Construire le plan de financement avec ce budget →</button>
-  <p class="note">Estimation indicative : taux ${pc(c.taux,2)}, assurance ${pc(d.ass==null?assDefaut():d.ass,2)} par emprunteur, frais et seuils de l'équipe, barème PTZ (${d.ptzType==='indiv'?'maison individuelle':'logement collectif'}, ${d.occupants||d.adultes+d.enfants} occupant${(d.occupants||d.adultes+d.enfants)>1?'s':''}). Avec un PTZ, le prêt bancaire est lissé : la mensualité totale reste au niveau maximum pendant toute la durée. Elle ne vaut pas accord de financement.</p>`;
+  <p class="note">Estimation indicative : taux ${pc(c.taux,2)}, assurance ${pc(d.ass==null?assDefaut():d.ass,2)} par emprunteur, frais et seuils de l'équipe, barème PTZ (${d.ptzType==='indiv'?'maison individuelle':'logement collectif'}, ${d.occupants||d.adultes+d.enfants} occupant${(d.occupants||d.adultes+d.enfants)>1?'s':''}). Avec un PTZ, le prêt bancaire est lissé : la mensualité totale reste au niveau maximum pendant toute la durée. Elle ne vaut pas accord de financement.${(()=>{const t=taegEstime(c),u=usureDuree(d.ans);return t!=null?` <span data-taeg>TAEG estimé du prêt bancaire : <b>${pc(t,2)}</b>${u?` (taux d'usure ${pc(u.taux,2)} pour ${d.ans} ans, ${esc(u.trim.replace('-Q',' T'))}${u.auto?', Banque de France':''})`:''}.</span>`:''})()}</p>`;
   lierRemb(d,$('st-res'));
   lierTremplin(d,c);
   lierScenarios(d,c);

@@ -86,7 +86,7 @@ let P=null,admin=false,majLe=null,majPar=null,modifie=false,CATALOGUE=[],RAPPELS
 async function charger(){
   const r=await fetch('/api/parametres',{credentials:'same-origin'});
   if(!r.ok)throw new Error('Paramètres indisponibles');
-  const j=await r.json();P=j.parametres;admin=j.admin;majLe=j.majLe;majPar=j.majPar;RAPPELS=j.rappels||[];CATALOGUE=j.garanties||[];window.ptCatalogueGaranties=CATALOGUE;if(j.parametres?.defauts)window.ptDefauts=j.parametres.defauts;window.ptParametres=P;if(window.ptGuaranteeCompute)try{window.ptGuaranteeCompute()}catch(e){}return P;
+  const j=await r.json();P=j.parametres;admin=j.admin;majLe=j.majLe;majPar=j.majPar;RAPPELS=j.rappels||[];CATALOGUE=j.garanties||[];window.ptCatalogueGaranties=CATALOGUE;if(j.usure)window.ptUsure=j.usure;if(j.parametres?.defauts)window.ptDefauts=j.parametres.defauts;window.ptParametres=P;if(window.ptGuaranteeCompute)try{window.ptGuaranteeCompute()}catch(e){}return P;
 }
 const lire=(chemin)=>chemin.split('.').reduce((o,k)=>o?.[k],P);
 function ecrire(chemin,v){const k=chemin.split('.');let o=P;for(let i=0;i<k.length-1;i++)o=o[k[i]];o[k[k.length-1]]=v}
