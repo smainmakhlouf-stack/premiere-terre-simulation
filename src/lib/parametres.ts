@@ -49,7 +49,7 @@ export const PARAMETRES_DEFAUT = {
   },
   garanties: Object.fromEntries(GARANTIES.map((g) => [g.cle, g.defaut])) as Record<string, number>,
   versionGaranties: 2,
-  seuils: { endettement: 35, resteAdulte: 800, resteEnfant: 300, apportMin: 10 },
+  seuils: { endettement: 35, resteAdulte: 800, resteEnfant: 300, apportMin: 10, ageFinPret: 75 },
   /** Valeurs proposées sur les écrans (toujours modifiables par le vendeur). */
   defauts: { taux: 3.6, assurance: 0.3, zone: "A" },
   /** Plafonds de loyer 2026, €/m²/mois hors charges, avant coefficient de surface. */
@@ -126,6 +126,7 @@ export function normaliser(brut: unknown): Parametres {
       resteAdulte: nombre(s.resteAdulte, D.seuils.resteAdulte, 1e5),
       resteEnfant: nombre(s.resteEnfant, D.seuils.resteEnfant, 1e5),
       apportMin: nombre(s.apportMin, D.seuils.apportMin, 100),
+      ageFinPret: nombre(s.ageFinPret, D.seuils.ageFinPret, 120),
     },
   }
 }
