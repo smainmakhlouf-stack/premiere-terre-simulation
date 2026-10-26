@@ -95,7 +95,7 @@ function resumer(){
   return r;
 }
 const corps=(data,extra)=>JSON.stringify({...(extra||{}),data,resume:resumer()});
-const chiffres=r=>{if(!r)return'';const e=n=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n);const l=[];if(r.budget)l.push('Budget max '+e(r.budget));if(r.emprunte)l.push('Emprunt '+e(r.emprunte));if(r.mensualite)l.push(e(r.mensualite)+'/mois');return l.join(' · ')};
+const chiffres=r=>{if(!r)return'';const e=n=>ptNF('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n);const l=[];if(r.budget)l.push('Budget max '+e(r.budget));if(r.emprunte)l.push('Emprunt '+e(r.emprunte));if(r.mensualite)l.push(e(r.mensualite)+'/mois');return l.join(' · ')};
 const STATUTS={en_cours:'En cours',finance:'Financé',perdu:'Perdu'};
 function restaurer(d){
   if(!d||d.format!=='ptf-dossier')throw new Error('Format de simulation inconnu.');

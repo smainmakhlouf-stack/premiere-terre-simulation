@@ -3,7 +3,7 @@
 (function(){
 const dlg=document.getElementById('pt-diagnostic');if(!dlg)return;
 const d=k=>dlg.querySelector('[data-d="'+k+'"]'),n=k=>Math.max(0,Number(d(k)?.value)||0);
-const eur=x=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(x||0);
+const eur=x=>ptNF('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(x||0);
 const neuf=()=>d('propertyType')?.value==='new'||d('acquisition')?.value==='vefa'||d('propertyType')?.value==='construction';
 function occupants(){return n('occupants')||((d('co')?.checked?2:1)+(window.ptBorrowerGet?.().children||[]).length)}
 function aidesAuto(){

@@ -77,7 +77,7 @@ window.ptTauxGarantie=function(cle){
 (function(){
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const eur=n=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n||0);
+const eur=n=>ptNF('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n||0);
 const pct=n=>String(Math.round(n*100)/100).replace('.',',')+' %';
 const dialog=$('pt-par');
 const TRANCHES=['Moins de 30 ans','30 à 39 ans','40 à 49 ans','50 à 59 ans','60 ans et plus'];

@@ -2,8 +2,8 @@
 (function(){
 const $=id=>document.getElementById(id);
 const C={main:'#a34d31',aide:'#d99a2b',apport:'#2f8a5a',frais:'#4a6fd1'};
-const eur=n=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(Math.round(n||0));
-const pc=(n,d=1)=>(Math.round((n||0)*10**d)/10**d).toLocaleString('fr-FR')+' %';
+const eur=n=>ptNF('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(Math.round(n||0));
+const pc=(n,d=1)=>ptNF('fr-FR',{maximumFractionDigits:3}).format(Math.round((n||0)*10**d)/10**d)+' %';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=v=>{const n=Number(String(v??'').replace(/\s/g,'').replace(',','.'));return Number.isFinite(n)?n:0};
 const P=()=>window.ptParametres||{taux:[{t10:3,t15:3.1,t20:3.2,t25:3.35}],assurance:{tranches:[{taux:.1},{taux:.15}],quotiteCouple:100},frais:{notaireNeuf:2.5,notaireAncien:7.5,dossier:1000,courtagePct:1},seuils:{endettement:35,resteAdulte:800,resteEnfant:300,apportMin:10}};
@@ -104,7 +104,7 @@ function infoPTZ(){
   const B=window.ptBaremePTZ?window.ptBaremePTZ():null,dejaPtz=(typeof loans!=='undefined'?loans:[]).some(l=>l.type==='ptz');
   if(!B)return '<p class="hint">Barème PTZ indisponible.</p>';
   const coef=[1,1.5,1.8,2.1,2.4,2.7,3,3.3],Z=[['A','A bis / A'],['B1','B1'],['B2','B2'],['C','C']];
-  const fr=n=>new Intl.NumberFormat('fr-FR').format(Math.round(n));
+  const fr=n=>ptNF('fr-FR').format(Math.round(n));
   return `<p><b>Prêt à taux zéro</b> : prêt de l'État sans intérêts qui complète le prêt bancaire, pour l'achat de la <b>résidence principale</b> d'un <b>primo-accédant</b> (pas propriétaire de sa résidence principale depuis 2 ans).</p>
   <ul><li>Neuf collectif : partout en France. Maison individuelle neuve : quotité réduite. Ancien : seulement avec travaux, en zones B2 et C.</li>
   <li>Montant = quotité (20 à 50 %) × coût de l'opération plafonné (${fr(B.plafond.A)} € pour 1 personne en zone A, plus selon le foyer).</li>
@@ -135,7 +135,7 @@ window.ptAjouterAL=(montant,taux,ans)=>{
   fraisAuto();if(studio.classList.contains('open'))rafraichir();
 };
 function infoAL(){
-  const fr=n=>new Intl.NumberFormat('fr-FR').format(n),deja=(typeof loans!=='undefined'?loans:[]).some(l=>l.type==='action');
+  const fr=n=>ptNF('fr-FR').format(n),deja=(typeof loans!=='undefined'?loans:[]).some(l=>l.type==='action');
   const k=controleAL(),rouge='background:#f9e3e1;border:1px solid #e9b8b3;color:#9d3535',vert='background:#e6f2e8;border:1px solid #b9d8c0;color:#2f6b45',gris='background:#f3ede8;border:1px solid #e3d6cc;color:#5e4f48';
   const ctrl=k.ancien?[rouge,'<b>✕ Non éligible</b> : le prêt Action Logement est réservé au <b>neuf</b>.']
     :!k.rfr?[gris,`Plafond pour ce foyer (${nbP(k.occ)}, zone ${k.zone}) : <b>${fr(k.plafond)} €</b>. Renseignez le RFR N-2 dans « Budget max » pour le vérifier.`]
@@ -588,7 +588,7 @@ function grapheRemb(d,c){
   const x=t=>L+t/(ansMax*12)*PW,y=v=>T+PH-Math.min(v,top)/top*PH;
   // Paliers : on ne garde que les mois où la répartition change.
   const pts=[];for(let t=1;t<=mois;t++){const pz=partPTZ(t),pe=partExt(t),pl=partLisse(t),ph=partHors(t),pk=partGarde(t),pb=t<=c.n?Math.max(0,c.mensualite-pz-pe-pl):0;const der=pts[pts.length-1];if(!der||Math.abs(der.pz-pz)>0.5||Math.abs(der.pb-pb)>0.5||Math.abs(der.pe-pe)>0.5||Math.abs(der.pl-pl)>0.5||Math.abs(der.ph-ph)>0.5||Math.abs(der.pk-pk)>0.5)pts.push({t0:t-1,pz,pe,pl,pb,ph,pk,t1:t});else der.t1=t}
-  let g='';for(let v=0;v<=top;v+=pas)g+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#efe5df"></line><text x="${L-8}" y="${y(v)+4}" text-anchor="end" font-size="13" fill="#8a7a70">${new Intl.NumberFormat('fr-FR').format(v)} €</text>`;
+  let g='';for(let v=0;v<=top;v+=pas)g+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#efe5df"></line><text x="${L-8}" y="${y(v)+4}" text-anchor="end" font-size="13" fill="#8a7a70">${ptNF('fr-FR').format(v)} €</text>`;
   for(let a=0;a<=ansMax;a+=5)g+=`<text x="${x(a*12)}" y="${H-8}" text-anchor="${a===0?'start':a===ansMax?'end':'middle'}" font-size="13" fill="#8a7a70">${a===0?'départ':a+' ans'}</text>`;
   const blocs=pts.map(p=>{const x0=x(p.t0),w=Math.max(1,x(p.t1)-x0-2),hb=PH*p.pb/top,hz=PH*p.pz/top,he=PH*p.pe/top,hh=PH*p.ph/top,hk=PH*p.pk/top,hl=PH*p.pl/top;
     const tip=`<b>De l'an ${Math.floor(p.t0/12)+1} à l'an ${Math.ceil(p.t1/12)}</b><br>Prêt bancaire : ${eur(p.pb)}${z.montant?'<br>PTZ : '+eur(p.pz):''}${p.pe?'<br>Autres prêts : '+eur(p.pe):''}${p.pl?'<br>Crédits en cours (lissés) : '+eur(p.pl):''}${p.pk?'<br>Crédits en cours conservés : '+eur(p.pk):''}${p.ph?'<br>Prêt relais (en plus) : '+eur(p.ph):''}<br>Total : ${eur(p.pb+p.pz+p.pe+p.pl+p.ph+p.pk)} / mois`;
@@ -781,7 +781,7 @@ function ficheSolvabilite(d,c,ctx){
   const tx=v=>d.revenus?pc(v/d.revenus*100):'—',reste=v=>eur(d.revenus-v);
   // Endettement comparé au dixième près, comme il est affiché.
   const dureeMax=c.n/12,hcsfDuree=dureeMax<=25||(d.type==='neuf'&&dureeMax<=27),hcsfEndet=Math.round(apres/d.revenus*1000)/10<=35;
-  const eur2=v=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
+  const eur2=v=>ptNF('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
   const l=(a,b)=>`<tr><td>${a}</td><td class="n">${b}</td></tr>`;
   const ligPret=pr=>`<tr><td>${esc(pr.nom)}</td><td class="n">${eur(pr.montant)}</td><td class="n">${pc(pr.taux,2)}</td><td class="n">${pr.mois} mois</td>${pal.map((x,i)=>`<td class="n">${x.v[ech.prets.indexOf(pr)]>=0.005?eur2(x.v[ech.prets.indexOf(pr)]):'—'}</td>`).join('')}</tr>`;
   return `<style>.fs{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;margin-bottom:12px}.fs th{background:#f3e9e2;color:#8e3f29;text-align:left;padding:6px 8px;font-size:12.5px}.fs td{padding:4px 8px;border-bottom:1px solid #f1e6df}.fs td.n,.fs th.n{text-align:right}.fs tr.tot td{font-weight:700;border-top:1.5px solid #c9b2a5}.fs-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.fs-hcsf{display:flex;gap:18px;border:1.5px solid #2b2320;border-radius:8px;padding:8px 12px;font-size:13px;margin-top:6px}.fs-ok{color:#2f8a5a;font-weight:700}.fs-ko{color:#b04d3e;font-weight:700}.fs-note{font-size:10.5px;color:#7b6b62;line-height:1.45}</style>
@@ -1319,11 +1319,14 @@ function versDiagDetaille(){
 function versExpert(sel){fermer();const h=$('pt-home');if(h)h.style.display='none';const t=document.querySelector(sel);if(t)t.scrollIntoView({behavior:'smooth',block:'center'})}
 function rafraichir(){const v=VUES[vue];v.form();v.bind();v.res()}
 function ouvrir(nom){
+  const avant=studio.classList.contains('open')?vue:null;
   vue=VUES[nom]?nom:'plan';principal();
   $('st-h1').textContent=VUES[vue].t;$('st-p').textContent=VUES[vue].p;
   $('st-expert').style.display=vue==='plan'?'':'none';
   studio.querySelectorAll('[data-st]').forEach(b=>b.classList.toggle('on',b.dataset.st===vue));
   studio.classList.add('open');studio.scrollTop=0;rafraichir();
+  // Changement d'écran : court fondu du contenu plutôt qu'un remplacement sec.
+  if(avant!==vue&&!matchMedia('(prefers-reduced-motion: reduce)').matches)[$('st-form'),$('st-res')].forEach(e=>e&&e.animate&&e.animate([{opacity:.3,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:180,easing:'ease-out'}));
 }
 function fermer(){studio.classList.remove('open');tip.style.display='none'}
 $('st-home').onclick=()=>{if(window.ptFermerSimulation)return window.ptFermerSimulation();fermer();const h=$('pt-home');if(h)h.style.display=''};
