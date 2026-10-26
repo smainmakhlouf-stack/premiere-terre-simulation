@@ -6,7 +6,9 @@ const eur=n=>ptNF('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits
 const pc=(n,d=1)=>ptNF('fr-FR',{maximumFractionDigits:3}).format(Math.round((n||0)*10**d)/10**d)+' %';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=v=>{const n=Number(String(v??'').replace(/\s/g,'').replace(',','.'));return Number.isFinite(n)?n:0};
-const P=()=>window.ptParametres||{taux:[{t10:3,t15:3.1,t20:3.2,t25:3.35}],assurance:{tranches:[{taux:.1},{taux:.15}],quotiteCouple:100},frais:{notaireNeuf:2.5,notaireAncien:7.5,dossier:1000,courtagePct:1},seuils:{endettement:35,resteAdulte:800,resteEnfant:300,apportMin:10}};
+/** Apport minimum : plus bas dans le neuf (frais de notaire réduits) que dans l'ancien. */
+const apportMinimum=p=>$('v9operation')?.value==='old'?p.seuils.apportMin:(p.seuils.apportMinNeuf??p.seuils.apportMin);
+const P=()=>window.ptParametres||{taux:[{t10:3,t15:3.1,t20:3.2,t25:3.35}],assurance:{tranches:[{taux:.1},{taux:.15}],quotiteCouple:100},frais:{notaireNeuf:2.5,notaireAncien:7.5,dossier:1000,courtagePct:1},seuils:{endettement:35,resteAdulte:800,resteEnfant:300,apportMin:10,apportMinNeuf:5}};
 const tauxDuree=a=>{const g=P().taux[0];return a<=10?g.t10:a<=15?g.t15:a<=20?g.t20:g.t25};
 const studio=$('pt-studio');let vue='plan';
 
@@ -202,7 +204,7 @@ function resPlan(){
   const total=prix+notaire+travaux+fraisB,ans=window.mainSettings?.years||fv('mainYears');
   // Comparé au dixième près, comme il est affiché : 35,003 % reste « 35 % ».
   const pk=Math.round(peak*10)/10,etat=pk<=seuil?'ok':pk<=seuil+3?'warn':'bad';
-  const apportPct=total?apport/total*100:0,apportMin=P().seuils.apportMin;
+  const apportPct=total?apport/total*100:0,apportMin=apportMinimum(P());
   // Mensualités par année, par type de prêt
   const N=Math.max(1,...out.map(o=>o.arr?.length||0)),annees=Array.from({length:Math.ceil(N/12)},(_,i)=>i+1);
   const type=i=>i===0?'main':defs[i]?.type==='ptz'?'ptz':defs[i]?.type==='action'?'aide':'autre';
@@ -214,7 +216,7 @@ function resPlan(){
   <div class="tiles">
    <div class="tile"><small>Taux d'endettement maximum</small><b>${pc(peak)}</b>${statut(etat,etat==='ok'?'Sous le seuil de '+pc(seuil,0):etat==='warn'?'Proche du seuil':'Au-dessus du seuil de '+pc(seuil,0))}</div>
    <div class="tile"><small>Coût du crédit</small><b>${eur(cout)}</b><em class="ok" style="background:#f3ece8;color:#5e4f48">intérêts + assurance</em></div>
-   <div class="tile"><small>Apport</small><b>${pc(apportPct,0)}</b>${statut(apportPct>=apportMin?'ok':'warn',apportPct>=apportMin?'du coût du projet':'sous le minimum de '+pc(apportMin,0))}</div>
+   <div class="tile"><small>Apport</small><b>${pc(apportPct,0)}</b>${statut(apportPct>=apportMin?'ok':'warn',apportPct>=apportMin?'du coût du projet':'sous le minimum de '+pc(apportMin,0)+($('v9operation')?.value==='old'?' (ancien)':' (neuf)'))}</div>
   </div>
   <div class="card"><h2>Comment le projet est financé</h2><p class="sub">Répartition du coût total entre l'apport, les aides et le prêt bancaire. Survolez pour le détail.</p>
    ${barre100([{l:'Apport',v:Math.min(apport,total),c:C.apport},{l:'PTZ et prêts complémentaires',v:aides,c:C.aide},{l:'Prêt principal',v:pret,c:C.main}])}</div>
@@ -304,7 +306,7 @@ function solvabilite(){
   const ind=[
     {l:"Taux d'endettement après projet",v:pc(apres),r:'≤ '+pc(seuil,0),e:etat(Math.round(apres*10)/10,seuil,seuil+3,true)},
     {l:'Reste à vivre',v:eur(reste)+' / mois',r:'≥ '+eur(resteMin),e:etat(reste,resteMin,resteMin*0.8)},
-    {l:'Apport personnel',v:eur(apport)+' ('+pc(apportPct,0)+')',r:'≥ '+pc(p.seuils.apportMin,0)+' du coût',e:apportPct>=p.seuils.apportMin?'ok':apport>=fraisAcq?'warn':'bad'},
+    {l:'Apport personnel',v:eur(apport)+' ('+pc(apportPct,0)+')',r:'≥ '+pc(apportMinimum(p),0)+' du coût'+($('v9operation')?.value==='old'?'':' (neuf)'),e:apportPct>=apportMinimum(p)?'ok':apport>=fraisAcq?'warn':'bad'},
     {l:'Saut de charge',v:loyer?eur(saut)+' / mois':'loyer actuel non renseigné',r:'≤ 10 % des revenus',e:!loyer?'warn':etat(revenus?saut/revenus*100:0,10,20,true)},
   ];
   const nb={bad:ind.filter(x=>x.e==='bad').length,warn:ind.filter(x=>x.e==='warn').length};
