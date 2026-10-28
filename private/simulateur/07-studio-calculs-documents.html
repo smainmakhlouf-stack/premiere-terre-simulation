@@ -211,7 +211,7 @@ function resPlan(){
   const serie=(t,l,c)=>({l,c,v:annees.map(a=>out.reduce((s,o,i)=>type(i)===t?s+(o.arr||[]).slice((a-1)*12,a*12).reduce((x,m)=>x+(m.pay||0),0)/12:s,0))});
   const series=[serie('main','Prêt principal',C.main),serie('ptz','PTZ',C.aide),serie('aide','Action Logement',C.apport),serie('autre','Autres prêts',C.frais)];
   $('st-res').innerHTML=`
-  <div class="hero"><div><small>Mensualité de départ</small><strong>${eur(mens)}</strong><span>assurance comprise · prêt principal sur ${ans} ans à ${pc(window.mainSettings?.rate||0,2)}</span></div>
+  <div class="hero"><div><small>Mensualité de départ</small><strong>${eur(mens)}</strong><span>assurance comprise · prêt principal sur ${ans} ans à ${pc(window.mainSettings?.rate||0,2)}</span>${ligneTauxMoyen(tauxMoyen(out.map((o,i)=>({montant:o.amount||0,taux:i===0?(window.mainSettings?.rate??defs[0]?.rate):defs[i]?.rate}))))}</div>
   <div class="side">Coût total du projet <b>${eur(total)}</b><br>Montant emprunté <b>${eur(pret+aides)}</b></div></div>
   <div class="tiles">
    <div class="tile"><small>Taux d'endettement maximum</small><b>${pc(peak)}</b>${statut(etat,etat==='ok'?'Sous le seuil de '+pc(seuil,0):etat==='warn'?'Proche du seuil':'Au-dessus du seuil de '+pc(seuil,0))}</div>
@@ -441,6 +441,9 @@ function bases(d){
   mensualite:Math.max(0,parEndettement),mensReste:Math.max(0,parReste),limite:'endettement',garCle:d.garantie||'cl_classic',garPct:(window.ptTauxGarantie(d.garantie||'cl_classic')??(d.garantie==='none'?0:1.2))/100,courtPct:p.frais.courtagePct/100,fraisPct:((window.ptTauxGarantie(d.garantie||'cl_classic')??(d.garantie==='none'?0:1.2))+p.frais.courtagePct)/100};
 }
 const ptzPour=(d,type,prix)=>d.ptzFixe?d.ptzFixe:type==='neuf'&&d.primo&&window.ptCalculPTZ?window.ptCalculPTZ(d.zone,d.occupants||d.adultes+d.enfants,d.ptzType||'coll',prix,d.rfr||d.revenus*12*0.9):{montant:0};
+/** Taux moyen pondéré par les montants : PTZ et aides à leur taux réel (0 % pour le PTZ). null s'il n'y a qu'un seul prêt. */
+const tauxMoyen=l=>{l=l.filter(x=>x.montant>0);const t=l.reduce((a,x)=>a+x.montant,0);return l.length>1&&t?l.reduce((a,x)=>a+x.montant*(+x.taux||0),0)/t:null};
+const ligneTauxMoyen=t=>t==null?'':`<div data-taux-moyen style="margin-top:6px;font-size:13px">Taux moyen avec les aides : <b>${pc(t,2)}</b></div>`;
 /** Règle anti-effet d'aubaine : le PTZ ne dépasse pas les autres prêts de 2 ans et plus (1,25 fois si sa quotité est de 50 %). */
 const plafonnerPTZ=(z,autres)=>{if(!z||!z.montant)return z;const max=Math.max(0,Math.round(autres*((z.quotite||0)>=50?1.25:1)));return z.montant>max?{...z,montant:max,montantBareme:z.montant,plafonne:true}:z};
 const annuite=(c,t,m)=>{const r=t/1200;return c<=0||m<=0?0:r?c*r/(1-Math.pow(1+r,-m)):c/m};
@@ -912,7 +915,7 @@ function resDiag(){
    Mensualité qui respecterait ce minimum : <b>${eur(c.mensReste)} / mois</b>${c.mensReste<=0?' : le foyer est déjà sous le minimum avant tout prêt':''}.<br>
    La simulation est calculée sur le taux d'endettement (${pc(c.seuil,0)}) : la banque peut refuser ou réduire le prêt à cause du reste à vivre. Pistes : revenus supplémentaires, charges en moins, ou un bien moins cher (ou un prêt plus long) pour baisser la mensualité. Seuils réglables dans Paramètres.</div></details>`}
   ${ages.length?alerte('data-alerte-age',`Âge en fin de prêt au-delà de ${ageMax} ans.`,ages.map(([q,a])=>`${q} : ${a+d.ans} ans à la dernière échéance (${a} ans aujourd'hui, prêt sur ${d.ans} ans)${ageMax-a>=5?` ; durée maximale pour rester à ${ageMax} ans : ${ageMax-a} ans`:''}.`).join(' ')+' Assurance et accord de la banque à vérifier.'):''}
-  <div class="hero"><div><small>Budget d'achat maximum · ${d.type==='neuf'?'neuf':'ancien'}</small><strong>${eur(c.budget)}</strong><span>prix du bien, hors frais de notaire · sur ${d.ans} ans à ${pc(c.taux,2)}${c.ptz.montant?' · PTZ compris':''}</span></div>
+  <div class="hero"><div><small>Budget d'achat maximum · ${d.type==='neuf'?'neuf':'ancien'}</small><strong>${eur(c.budget)}</strong><span>prix du bien, hors frais de notaire · sur ${d.ans} ans à ${pc(c.taux,2)}${c.ptz.montant?' · PTZ compris':''}</span>${ligneTauxMoyen(tauxMoyen([{montant:c.pret,taux:c.taux},{montant:c.ptz.montant||0,taux:0},...c.ext.filter(x=>!x.existant).map(x=>({montant:x.montant,taux:x.taux}))]))}</div>
   <div class="side">Prêt bancaire <b>${eur(c.pret)}</b>${c.ptz.montant?`<br>PTZ <b>${eur(c.ptz.montant)}</b>`:''}${c.ext.map(x=>x.existant?`<br>${esc(x.nom)} <b>${eur(x.mens)}/mois · ${x.mois} mois</b>`:`<br>${esc(x.nom)} <b>${eur(x.montant)}</b>`).join('')}${c.solde?`<br>Crédits soldés <b>${eur(c.solde)}</b>`:''}${d.redevance?`<br>Redevance BRS <b>${eur(d.redevance)}/mois</b>`:''}<br>Apport <b>${eur(d.apport)}</b><br>Garantie <b>${eur(c.fraisGarantie)}</b><br>Frais de notaire ${d.type==='neuf'?'neuf':'ancien'} <b>${c.offerts?'offerts ('+eur(c.notaireOffert)+')':eur(c.notaire)}</b></div></div>
   <div class="tiles">
    <div class="tile"><small>Mensualité maximale</small><b>${eur(c.mensualite)}</b><em class="ok" style="background:#f3ece8;color:#5e4f48">${d.redevance?'+ redevance BRS '+eur(d.redevance)+' = '+eur(c.mensualite+d.redevance)+' / mois':'assurance comprise'}</em></div>
