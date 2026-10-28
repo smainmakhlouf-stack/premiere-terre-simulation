@@ -8,7 +8,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const num=v=>{const n=Number(String(v??'').replace(/\s/g,'').replace(',','.'));return Number.isFinite(n)?n:0};
 /** Apport minimum : plus bas dans le neuf (frais de notaire réduits) que dans l'ancien. */
 const apportMinimum=p=>$('v9operation')?.value==='old'?p.seuils.apportMin:(p.seuils.apportMinNeuf??p.seuils.apportMin);
-const P=()=>window.ptParametres||{taux:[{t10:3,t15:3.1,t20:3.2,t25:3.35}],assurance:{tranches:[{taux:.1},{taux:.15}],quotiteCouple:100},frais:{notaireNeuf:2.5,notaireAncien:7.5,dossier:1000,courtagePct:1},seuils:{endettement:35,resteAdulte:800,resteEnfant:300,apportMin:10,apportMinNeuf:5}};
+const P=()=>window.ptParametres||{taux:[{t10:3,t15:3.1,t20:3.2,t25:3.35}],assurance:{tranches:[{taux:.1},{taux:.15}],quotiteCouple:100},frais:{notaireNeuf:2.5,notaireAncien:7.5,dossier:1000,courtagePct:0},seuils:{endettement:35,resteAdulte:800,resteEnfant:300,apportMin:10,apportMinNeuf:5}};
 const tauxDuree=a=>{const g=P().taux[0];return a<=10?g.t10:a<=15?g.t15:a<=20?g.t20:g.t25};
 const studio=$('pt-studio');let vue='plan';
 

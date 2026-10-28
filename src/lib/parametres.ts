@@ -9,6 +9,8 @@
  */
 /** Version du barème de garanties : les paramètres enregistrés avant la version 2 reprennent ces taux. */
 export const VERSION_GARANTIES = 2
+/** Version 1 : courtage passé à 0 % par défaut (les anciens enregistrements à 1 % sont remis à 0 une fois). */
+export const VERSION_COURTAGE = 1
 export const GARANTIES: { cle: string; nom: string; defaut: number }[] = [
   { cle: "cl_classic", nom: "Crédit Logement · Classic", defaut: 1.3 },
   { cle: "cl_initio", nom: "Crédit Logement · Initio", defaut: 1.2 },
@@ -45,10 +47,11 @@ export const PARAMETRES_DEFAUT = {
     notaireNeuf: 2.5,
     notaireAncien: 7.5,
     dossier: 1000,
-    courtagePct: 1,
+    courtagePct: 0,
   },
   garanties: Object.fromEntries(GARANTIES.map((g) => [g.cle, g.defaut])) as Record<string, number>,
   versionGaranties: 2,
+  versionCourtage: 1,
   seuils: { endettement: 35, resteAdulte: 800, resteEnfant: 300, apportMin: 10, apportMinNeuf: 5, ageFinPret: 75 },
   /** Valeurs proposées sur les écrans (toujours modifiables par le vendeur). */
   defauts: { taux: 3.6, assurance: 0.3, zone: "A" },
@@ -117,10 +120,11 @@ export function normaliser(brut: unknown): Parametres {
       tranches: D.assurance.tranches.map((d, i) => ({ jusqua: d.jusqua, taux: nombre(objet(tr[i]).taux, d.taux, 10) })),
       quotiteCouple: nombre(a.quotiteCouple, D.assurance.quotiteCouple, 100),
     },
-    frais: Object.fromEntries(Object.entries(D.frais).map(([k, v]) => [k, nombre(f[k], v, k === "dossier" ? 1e6 : 100)])) as Parametres["frais"],
+    frais: Object.fromEntries(Object.entries(D.frais).map(([k, v]) => [k, k === "courtagePct" && !(Number(b.versionCourtage) >= VERSION_COURTAGE) ? v : nombre(f[k], v, k === "dossier" ? 1e6 : 100)])) as Parametres["frais"],
     // Barème relevé en version 2 : les anciens taux enregistrés sont remplacés une fois par les nouveaux.
     garanties: Object.fromEntries(GARANTIES.map((g) => [g.cle, nombre(Number(b.versionGaranties) >= VERSION_GARANTIES ? gar[g.cle] ?? ancien(g.cle) : undefined, g.defaut, 20)])),
     versionGaranties: VERSION_GARANTIES,
+    versionCourtage: VERSION_COURTAGE,
     seuils: {
       endettement: nombre(s.endettement, D.seuils.endettement, 100),
       resteAdulte: nombre(s.resteAdulte, D.seuils.resteAdulte, 1e5),
