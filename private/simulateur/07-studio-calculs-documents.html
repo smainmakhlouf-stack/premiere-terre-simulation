@@ -440,6 +440,8 @@ function bases(d){
   return {p,taux,seuil,r,n,ins,facteur,resteMin,mensualite:Math.max(0,Math.min(parEndettement,parReste)),limite:parReste<parEndettement?'reste':'endettement',garCle:d.garantie||'cl_classic',garPct:(window.ptTauxGarantie(d.garantie||'cl_classic')??(d.garantie==='none'?0:1.2))/100,courtPct:p.frais.courtagePct/100,fraisPct:((window.ptTauxGarantie(d.garantie||'cl_classic')??(d.garantie==='none'?0:1.2))+p.frais.courtagePct)/100};
 }
 const ptzPour=(d,type,prix)=>d.ptzFixe?d.ptzFixe:type==='neuf'&&d.primo&&window.ptCalculPTZ?window.ptCalculPTZ(d.zone,d.occupants||d.adultes+d.enfants,d.ptzType||'coll',prix,d.rfr||d.revenus*12*0.9):{montant:0};
+/** Règle anti-effet d'aubaine : le PTZ ne dépasse pas les autres prêts de 2 ans et plus (1,25 fois si sa quotité est de 50 %). */
+const plafonnerPTZ=(z,autres)=>{if(!z||!z.montant)return z;const max=Math.max(0,Math.round(autres*((z.quotite||0)>=50?1.25:1)));return z.montant>max?{...z,montant:max,montantBareme:z.montant,plafonne:true}:z};
 const annuite=(c,t,m)=>{const r=t/1200;return c<=0||m<=0?0:r?c*r/(1-Math.pow(1+r,-m)):c/m};
 // Nouveaux prêts (Action Logement, complémentaire) : mensualité avec l'assurance du prêt principal, comme dans le plan.
 const pretsExt=d=>{const ins=bases(d).ins;return (d.prets||[]).filter(x=>x.montant>0).map(x=>{const mois=x.mois||Math.round((x.ans||d.ans)*12);return {...x,mois,mens:x.mens!=null?x.mens:annuite(x.montant,x.taux||0,mois)+x.montant*ins}})};
@@ -455,18 +457,23 @@ function capacite(d,type){
   const vaAssPTZ=z=>{if(!z.montant)return 0;let va=0;for(let t=1;t<=Math.min(z.duree*12,b.n);t++)va+=z.montant*b.ins/Math.pow(1+b.r,t);return va};
   const vaPTZ=z=>{if(!z.montant)return 0;const deb=(z.differe||0)*12,fin=z.duree*12,mens=z.montant/(fin-deb);let va=0;for(let t=deb+1;t<=Math.min(fin,b.n);t++)va+=mens/Math.pow(1+b.r,t);return va};
   const ext=pretsExt(d).filter(x=>!(x.neufSeul&&type!=='neuf')),totExt=ext.reduce((a,x)=>a+(x.existant?0:x.montant),0),solde=d.solde||0;let vaExt=0;ext.forEach(x=>{if(x.horsLissage)return;for(let t=1;t<=Math.min(x.mois,b.n);t++)vaExt+=x.mens/Math.pow(1+b.r,t)});
-  for(let k=0;k<8;k++){
+  for(let k=0;k<40;k++){
     pret=Math.max(0,(b.mensualite*A-vaPTZ(ptz)-vaExt-vaAssPTZ(ptz))/(1+b.ins*A));
     budget=Math.max(0,(pret+ptz.montant+totExt+d.apport-solde-b.p.frais.dossier-b.courtPct*pret-b.garPct*(pret+ptz.montant+totExt))/(1+notaire));
-    const suivant=ptzPour(d,type,budget);if(Math.abs((suivant.montant||0)-ptz.montant)<1){ptz=suivant;break}ptz=suivant;
+    const suivant=plafonnerPTZ(ptzPour(d,type,budget),pret+totExt);if(Math.abs((suivant.montant||0)-ptz.montant)<1){ptz=suivant;break}ptz=suivant;
   }
+  // Le PTZ plafonné n'est retenu que s'il respecte la règle avec le prêt bancaire final.
+  ptz=plafonnerPTZ(ptz,pret+totExt);
+  budget=Math.max(0,(pret+(ptz.montant||0)+totExt+d.apport-solde-b.p.frais.dossier-b.courtPct*pret-b.garPct*(pret+(ptz.montant||0)+totExt))/(1+notaire));
   return {...b,type,pret,budget,ptz,ext,totExt,solde,offerts,notairePct:pctTheo*100,notaireOffert:offerts?budget*pctTheo:0,notaire:budget*notaire,frais:b.p.frais.dossier+b.courtPct*pret+b.garPct*(pret+(ptz.montant||0)+totExt),fraisGarantie:b.garPct*(pret+(ptz.montant||0)+totExt),courtage:b.courtPct*pret,reste:d.revenus-d.charges-b.mensualite,taux:b.taux};
 }
 /** À prix égal : ce qu'il faut emprunter, les intérêts et le capital restant dû année par année. */
 function aPrixEgal(d,type,prix){
-  const b=bases(d),notaire=type==='neuf'&&d.notaireOfferts?0:(d.notairePct!=null&&type===d.type?d.notairePct:(type==='neuf'?b.p.frais.notaireNeuf:b.p.frais.notaireAncien))/100,ptz=ptzPour(d,type,prix);
-  const besoin=prix*(1+notaire)+b.p.frais.dossier-d.apport-(ptz.montant||0);
-  const banque=Math.max(0,(besoin+b.garPct*(ptz.montant||0))/(1-b.garPct-b.courtPct)),mens=banque*b.facteur,assurance=banque*b.ins*b.n,interets=mens*b.n-banque;
+  const b=bases(d),notaire=type==='neuf'&&d.notaireOfferts?0:(d.notairePct!=null&&type===d.type?d.notairePct:(type==='neuf'?b.p.frais.notaireNeuf:b.p.frais.notaireAncien))/100;
+  const bareme=ptzPour(d,type,prix),banquePour=z=>Math.max(0,(prix*(1+notaire)+b.p.frais.dossier-d.apport-(z.montant||0)+b.garPct*(z.montant||0))/(1-b.garPct-b.courtPct));
+  // PTZ limité par le prêt bancaire (règle anti-effet d'aubaine) : la banque finance alors le reste.
+  let ptz=bareme;for(let k=0;k<40;k++){const z=plafonnerPTZ(bareme,banquePour(ptz));if(Math.abs((z.montant||0)-(ptz.montant||0))<1){ptz=z;break}ptz=z}
+  const banque=banquePour(ptz),mens=banque*b.facteur,assurance=banque*b.ins*b.n,interets=mens*b.n-banque;
   const crd=[];let reste=banque;for(let a=0;a<=d.ans;a++){
     if(a>0)for(let i=0;i<12;i++){const it=reste*b.r;reste=Math.max(0,reste-(mens-it))}
     // PTZ : capital constant pendant le différé, puis remboursé linéairement.
@@ -897,6 +904,7 @@ function resDiag(){
   $('st-res').innerHTML=`
   ${fragiles.length?alerte('data-alerte-contrat','Budget à confirmer par la banque.',fragiles.map(([q,x])=>`${q} : ${esc(CONTRATS_FRAGILES[x])}.`).join(' ')):''}
   ${(()=>{const t=taegEstime(c),u=usureDuree(d.ans);return t!=null&&u&&t>u.taux?`<div data-alerte-usure style="background:#fdecea;border:1px solid #f3b8b2;color:#8c1d14;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13.5px;line-height:1.5"><b>TAEG estimé ${pc(t,2)} au-dessus du taux d'usure (${pc(u.taux,2)}, ${esc(u.trim.replace('-Q',' T'))}).</b> Prêt impossible en l'état : baissez l'assurance (délégation), les frais de garantie ou de courtage.</div>`:''})()}
+  ${c.ptz.plafonne?alerte('data-alerte-ptz',`PTZ limité à ${eur(c.ptz.montant)} (barème : ${eur(c.ptz.montantBareme)}).`,`Le PTZ ne peut pas dépasser le montant des autres prêts${(c.ptz.quotite||0)>=50?' (1,25 fois avec une quotité de 50 %)':''} : c'est la règle anti-effet d'aubaine. ${c.pret+c.totExt>0?'Pour obtenir tout le PTZ, il faut un prêt bancaire plus important.':'Sans prêt bancaire, pas de PTZ.'}`):''}
   ${ages.length?alerte('data-alerte-age',`Âge en fin de prêt au-delà de ${ageMax} ans.`,ages.map(([q,a])=>`${q} : ${a+d.ans} ans à la dernière échéance (${a} ans aujourd'hui, prêt sur ${d.ans} ans)${ageMax-a>=5?` ; durée maximale pour rester à ${ageMax} ans : ${ageMax-a} ans`:''}.`).join(' ')+' Assurance et accord de la banque à vérifier.'):''}
   <div class="hero"><div><small>Budget d'achat maximum · ${d.type==='neuf'?'neuf':'ancien'}</small><strong>${eur(c.budget)}</strong><span>prix du bien, hors frais de notaire · sur ${d.ans} ans à ${pc(c.taux,2)}${c.ptz.montant?' · PTZ compris':''}</span></div>
   <div class="side">Prêt bancaire <b>${eur(c.pret)}</b>${c.ptz.montant?`<br>PTZ <b>${eur(c.ptz.montant)}</b>`:''}${c.ext.map(x=>x.existant?`<br>${esc(x.nom)} <b>${eur(x.mens)}/mois · ${x.mois} mois</b>`:`<br>${esc(x.nom)} <b>${eur(x.montant)}</b>`).join('')}${c.solde?`<br>Crédits soldés <b>${eur(c.solde)}</b>`:''}${d.redevance?`<br>Redevance BRS <b>${eur(d.redevance)}/mois</b>`:''}<br>Apport <b>${eur(d.apport)}</b><br>Garantie <b>${eur(c.fraisGarantie)}</b><br>Frais de notaire ${d.type==='neuf'?'neuf':'ancien'} <b>${c.offerts?'offerts ('+eur(c.notaireOffert)+')':eur(c.notaire)}</b></div></div>

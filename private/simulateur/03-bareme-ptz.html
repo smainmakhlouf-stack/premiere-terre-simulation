@@ -130,7 +130,7 @@ window.ptCalculPTZ=function(zone,pers,type,prix,rfr){
   const plafond=B.plafond[zone]*coefOperation(pers),revenu=Math.max(rfr||0,prix/9);
   const t=B.revenus[zone].map(v=>v*coefRevenu(pers)).findIndex(s=>revenu<=s);
   if(t<0)return {montant:0,motif:'Revenus au-dessus du plafond PTZ.'};
-  return {montant:Math.round(Math.min(prix,plafond)*B.quotite[type][t]/100),tranche:t+1,differe:B.differe[t],duree:B.duree[t]};
+  return {montant:Math.round(Math.min(prix,plafond)*B.quotite[type][t]/100),quotite:B.quotite[type][t],tranche:t+1,differe:B.differe[t],duree:B.duree[t]};
 };
 function rendre(){
   const zone=$('ptz-zone').value,pers=+$('ptz-pers').value,type=$('ptz-type').value,r=calcul();
