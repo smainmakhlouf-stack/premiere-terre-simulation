@@ -607,7 +607,7 @@ function grapheRemb(d,c){
     const tip=`<b>De l'an ${Math.floor(p.t0/12)+1} à l'an ${Math.ceil(p.t1/12)}</b><br>Prêt bancaire : ${eur(p.pb)}${z.montant?'<br>PTZ : '+eur(p.pz):''}${p.pe?'<br>Autres prêts : '+eur(p.pe):''}${p.pl?'<br>Crédits en cours (lissés) : '+eur(p.pl):''}${p.pk?'<br>Crédits en cours conservés : '+eur(p.pk):''}${p.ph?'<br>Prêt relais (en plus) : '+eur(p.ph):''}<br>Total : ${eur(p.pb+p.pz+p.pe+p.pl+p.ph+p.pk)} / mois`;
     return `<g data-tip="${tip.replace(/"/g,'&quot;')}">${hz>0.5?`<rect x="${x0}" y="${y(p.pz)}" width="${w}" height="${hz}" fill="${C.aide}" rx="3"></rect>`:''}${hk>0.5?`<rect x="${x0}" y="${y(p.pz+p.pe+p.pl+p.pb+p.pk)}" width="${w}" height="${Math.max(0,hk-2)}" fill="#8f8079" rx="3"></rect>`:''}${hh>0.5?`<rect x="${x0}" y="${y(p.pz+p.pe+p.pl+p.pb+p.pk+p.ph)}" width="${w}" height="${Math.max(0,hh-2)}" fill="${C.apport}" rx="3"></rect>`:''}${he>0.5?`<rect x="${x0}" y="${y(p.pz+p.pe)}" width="${w}" height="${Math.max(0,he-(hz>0.5?2:0))}" fill="${C.frais}" rx="3"></rect>`:''}${hl>0.5?`<rect x="${x0}" y="${y(p.pz+p.pe+p.pl)}" width="${w}" height="${Math.max(0,hl-(hz+he>0.5?2:0))}" fill="#8f8079" rx="3"></rect>`:''}${hb>0.5?`<rect x="${x0}" y="${y(p.pz+p.pe+p.pl+p.pb)}" width="${w}" height="${Math.max(0,hb-(hz+he+hl>0.5?2:0))}" fill="${C.main}" opacity=".85" rx="3"></rect>`:''}</g>`}).join('');
   const yl=y(c.mensualite),pct=(c.mensualite+d.charges)/d.revenus*100;
-  const ligne=`<g class="remb-barre" style="cursor:ns-resize"><rect x="${L}" y="${yl-10}" width="${PW}" height="20" fill="transparent"></rect><line x1="${L}" x2="${W-R}" y1="${yl}" y2="${yl}" stroke="#2b2320" stroke-width="2"></line><circle cx="${W-R-6}" cy="${yl}" r="9" fill="#fff" stroke="#2b2320" stroke-width="2"></circle><text x="${W-R-18}" y="${yl-8}" text-anchor="end" font-size="15" font-weight="700" fill="#2b2320">${eur(c.mensualite)} · ${pc(pct)}</text></g>`;
+  const ligne=`<g class="remb-barre" style="cursor:ns-resize"><rect x="${L}" y="${yl-10}" width="${PW}" height="20" fill="transparent"></rect><line x1="${L}" x2="${W-R}" y1="${yl}" y2="${yl}" stroke="#2b2320" stroke-width="2"></line><circle cx="${W-R-6}" cy="${yl}" r="9" fill="#fff" stroke="#2b2320" stroke-width="2"></circle><text class="remb-saisie" x="${W-R-18}" y="${yl-8}" text-anchor="end" font-size="15" font-weight="700" fill="#2b2320" style="cursor:text" data-tip="Cliquez pour saisir une mensualité précise">${eur(c.mensualite)} · ${pc(pct)} ✎</text></g>`;
   return `<svg class="remb-svg" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Évolution des remboursements mensuels" style="touch-action:none;user-select:none" data-top="${top}" data-t="${T}" data-ph="${PH}" data-h="${H}">${g}${blocs}${ligne}</svg>
   <div class="legend"><span><i style="background:${C.main}"></i>Prêt bancaire (lissé)</span>${z.montant?`<span><i style="background:${C.aide}"></i>PTZ</span>`:''}${ext.some(e=>!e.horsLissage&&!e.existant)?`<span><i style="background:${C.frais}"></i>${ext.filter(e=>!e.horsLissage&&!e.existant).map(e=>e.nom).filter((v,i,t)=>t.indexOf(v)===i).join(', ')}</span>`:''}${ext.some(e=>e.existant&&!e.horsLissage)?`<span><i style="background:#8f8079"></i>${ext.filter(e=>e.existant&&!e.horsLissage).map(e=>esc(e.nom)+' ('+eur(e.mens)+'/mois, '+e.mois+' mois)').join(', ')}</span>`:''}${gardes.length?`<span><i style="background:#8f8079"></i>${gardes.map(k=>esc(NATURES[k.nature]||'Crédit')+' conservé ('+eur(+k.mens)+'/mois'+(+k.mois>0?', '+Math.round(+k.mois)+' mois':'')+')').join(', ')}</span>`:''}${ext.some(e=>e.horsLissage)?`<span><i style="background:${C.apport}"></i>Prêt relais (non lissé)</span>`:''}<span><i style="background:#2b2320;height:2px"></i>Mensualité maximale : glissez la barre</span></div>`;
 }
@@ -711,7 +711,7 @@ function lierScenarios(d,c){
 function lierRemb(d,racine,surEndet,surDuree){
   racine=racine||$('st-res');
   surDuree=surDuree||(a=>{m('dg-duree').value=a;const y=$('pt-studio').scrollTop;rafraichir();$('pt-studio').scrollTop=y});
-  surEndet=surEndet||(v=>{m('dg-endet').value=Math.abs(v-P().seuils.endettement)<1e-9?'':v;const er=$('sd-endet'),en=$('sd-endet-n');if(er)er.value=v;if(en)en.value=v;resDiag()});
+  surEndet=surEndet||(v=>{m('dg-endet').value=Math.abs(v-P().seuils.endettement)<1e-9?'':v;const er=$('sd-endet'),en=$('sd-endet-n');if(er)er.value=v;if(en)en.value=Math.round(v*10)/10;resDiag()});
   racine.querySelectorAll('.st-env tr[data-ans]').forEach(tr=>tr.onclick=()=>surDuree(+tr.dataset.ans));
   const svg=racine.querySelector('.remb-svg');if(!svg)return;
   let glisse=false,attente=0;
@@ -719,7 +719,24 @@ function lierRemb(d,racine,surEndet,surDuree){
   const appliquer=ev=>{const M=versMensualite(ev);let v=Math.round((M+d.charges)/d.revenus*1000)/10;surEndet(Math.min(45,Math.max(20,v)))};
   const bouge=ev=>{if(!glisse)return;ev.preventDefault();cancelAnimationFrame(attente);attente=requestAnimationFrame(()=>appliquer(ev))};
   const fin=()=>{if(!glisse)return;glisse=false;document.body.style.cursor='';window.removeEventListener('pointermove',bouge);window.removeEventListener('pointerup',fin)};
-  svg.addEventListener('pointerdown',ev=>{if(!ev.target.closest('.remb-barre'))return;ev.preventDefault();glisse=true;document.body.style.cursor='ns-resize';window.addEventListener('pointermove',bouge);window.addEventListener('pointerup',fin)});
+  // Clic sur le montant : saisie d'une mensualité précise (ex. 1 300 €), convertie en taux d'endettement visé.
+  svg.addEventListener('click',ev=>{
+    const t=ev.target.closest('.remb-saisie');if(!t)return;
+    document.querySelectorAll('.remb-input').forEach(x=>x.remove());
+    const r=t.getBoundingClientRect(),inp=document.createElement('input');
+    inp.className='remb-input';inp.type='text';inp.inputMode='numeric';inp.placeholder='Mensualité €';inp.setAttribute('aria-label','Mensualité souhaitée en euros');
+    inp.value=String(Math.round(d.revenus*((d.endet??P().seuils.endettement))/100-d.charges));
+    Object.assign(inp.style,{position:'fixed',left:Math.max(8,r.right-150)+'px',top:(r.top-6)+'px',width:'150px',zIndex:10000,font:'700 15px Inter,Arial,sans-serif',padding:'6px 10px',border:'2px solid #a34d31',borderRadius:'8px',background:'#fff',boxShadow:'0 6px 18px rgba(0,0,0,.18)',textAlign:'right'});
+    document.body.appendChild(inp);inp.focus();inp.select();
+    let fait=false;
+    const valider=ok=>{if(fait)return;fait=true;const M=num(inp.value);inp.remove();if(!ok||!(M>0)||!(d.revenus>0))return;
+      const v=(M+d.charges)/d.revenus*100;
+      if(v>60){alert('Mensualité trop élevée pour ces revenus : '+pc(v)+' d\'endettement (60 % maximum).');return}
+      surEndet(Math.max(1,Math.round(v*1000)/1000))};
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();valider(true)}else if(e.key==='Escape')valider(false)});
+    inp.addEventListener('blur',()=>valider(true));
+  });
+  svg.addEventListener('pointerdown',ev=>{if(ev.target.closest('.remb-saisie'))return;if(!ev.target.closest('.remb-barre'))return;ev.preventDefault();glisse=true;document.body.style.cursor='ns-resize';window.addEventListener('pointermove',bouge);window.addEventListener('pointerup',fin)});
 }
 /** Résultat visuel du diagnostic détaillé (même moteur que l'écran Budget max). */
 function resultatDetaille(d,racine,surEndet,surDuree,ctx){
