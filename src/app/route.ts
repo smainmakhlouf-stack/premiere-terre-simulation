@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
 import { pageSimulateur } from "@/lib/simulateur"
@@ -39,10 +40,10 @@ setInterval(function(){var t=Date.now()-der;if(t>=DELAI){var f=document.getEleme
   const page = await pageSimulateur()
   const html = page.includes("<header") ? page.replace("<header", barre + "<header") : barre + page
 
-  return new NextResponse(html, {
-    headers: {
-      "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "private, no-store",
-    },
-  })
+  // La page (~500 Ko) ne change qu'à chaque mise en ligne : le navigateur la garde et redemande seulement
+  // si elle a changé (ETag). La session est vérifiée avant, à chaque ouverture.
+  const etag = `"${createHash("sha1").update(html).digest("base64url")}"`
+  const headers = { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-cache", ETag: etag }
+  if (request.headers.get("if-none-match") === etag) return new NextResponse(null, { status: 304, headers })
+  return new NextResponse(html, { headers })
 }

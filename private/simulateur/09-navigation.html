@@ -1,4 +1,14 @@
 <script>
+/* Champs de montants : au clic, le contenu est sélectionné (un « 0 » est remplacé par la frappe au lieu de
+   donner « 0250000 ») ; un zéro resté devant un nombre est retiré pendant la saisie. */
+(function(){
+  const chiffre=el=>el&&el.tagName==='INPUT'&&(el.type==='number'||/numeric|decimal/.test(el.inputMode||'')||!!el.closest('.euro'));
+  // Sélection immédiate ; au clic de souris, le relâchement ne doit pas la remplacer par un curseur.
+  let vientDeFocus=null;
+  document.addEventListener('focusin',e=>{const el=e.target;if(!chiffre(el))return;try{el.select()}catch(_){}vientDeFocus=el});
+  document.addEventListener('mouseup',e=>{if(vientDeFocus&&e.target===vientDeFocus)e.preventDefault();vientDeFocus=null},true);
+  document.addEventListener('input',e=>{const el=e.target;if(!chiffre(el)||el.type==='number')return;const v=el.value;if(/^0+\d/.test(v)){const pos=el.selectionStart,n=v.replace(/^0+(?=\d)/,''),k=Math.max(0,pos-(v.length-n.length));el.value=n;try{el.setSelectionRange(k,k)}catch(_){}}},true);
+})();
 /* Retour à l'accueil depuis n'importe quel écran (bouton de la barre du haut). */
 window.ptAllerAccueil=function(){
   const ouvert=id=>document.getElementById(id)?.classList.contains('open'),h0=document.getElementById('pt-home');
