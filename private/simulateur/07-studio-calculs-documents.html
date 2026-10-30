@@ -332,15 +332,22 @@ function bindPlan(){
   const f=$('st-form');
   $('sp-notoff')?.querySelectorAll('button').forEach(b=>b.onclick=()=>{m('pl-notoff').value=b.dataset.v;fraisAuto();rafraichir()});
   f.querySelectorAll('[data-seg] button').forEach(b=>b.onclick=()=>{const champ=b.closest('[data-seg]').dataset.seg;poser(champ,b.dataset.v);if(champ==='v9operation')fraisAuto();rafraichir()});
-  f.querySelectorAll('[data-lien]').forEach(i=>i.addEventListener('input',()=>{poser(i.dataset.lien,num(i.value));if(i.dataset.lien==='price'||i.dataset.lien==='works'||i.dataset.lien==='deposit')fraisAuto();resPlan()}));
+  // Pendant la frappe, le recalcul complet (échéancier mois par mois) attend une courte pause :
+  // la valeur est enregistrée tout de suite, l'affichage suit 0,15 s après la dernière touche.
+  let attente=0;const plusTard=fn=>{clearTimeout(attente);attente=setTimeout(fn,150)};
+  f.querySelectorAll('[data-lien]').forEach(i=>{
+    const calc=()=>{if(i.dataset.lien==='price'||i.dataset.lien==='works'||i.dataset.lien==='deposit')fraisAuto();resPlan()};
+    i.addEventListener('input',()=>{poser(i.dataset.lien,num(i.value));plusTard(calc)});
+    i.addEventListener('change',()=>{clearTimeout(attente);calc()});
+  });
   // Le prêt Action Logement reprend l'assurance et la garantie du prêt principal, tant qu'on ne les modifie pas sur ce prêt.
   const suivrePrincipal=()=>(typeof loans!=='undefined'?loans:[]).forEach(l=>{if(l.type==='action'&&l.suit){l.insurance=window.mainSettings?.insurance??fv('mainIns');l.garantie=$('guarantee')?.value||'none'}});
   const majPrincipal=()=>{fixerPrincipal(num($('sp-rate').value),num($('sp-years').value),num($('sp-ins').value));suivrePrincipal();fraisAuto();resPlan()};
   $('sp-gar').onchange=()=>{poser('guarantee',$('sp-gar').value);suivrePrincipal();fraisAuto();rafraichir()};
   // La durée ne remplace le taux par celui de la grille que si le vendeur n'a pas saisi le sien.
   lierDuree('sp-years',a=>{if(!tauxPlanManuel)$('sp-rate').value=tauxDuree(a);majPrincipal()});
-  $('sp-rate').addEventListener('input',()=>{const avant=tauxPlanManuel;tauxPlanManuel=true;majPrincipal();if(!avant)majAide()});
-  $('sp-ins').addEventListener('input',majPrincipal);
+  $('sp-rate').addEventListener('input',()=>{const avant=tauxPlanManuel;tauxPlanManuel=true;plusTard(majPrincipal);if(!avant)majAide()});
+  $('sp-ins').addEventListener('input',()=>plusTard(majPrincipal));
   const majAide=()=>{const h=$('sp-rate').closest('.duo').nextElementSibling;if(h)h.innerHTML='Taux saisi : il ne change plus avec la durée. <button type="button" class="lien" id="sp-grille">Reprendre le taux de la grille</button>';const g=$('sp-grille');if(g)g.onclick=()=>{tauxPlanManuel=false;$('sp-rate').value=tauxDuree(num($('sp-years').value));majPrincipal();rafraichir()}};
   if(tauxPlanManuel)majAide();
   // Onglets d'information PTZ / Action Logement (conditions et plafonds) ; l'ajout au plan se fait depuis l'onglet.
@@ -1354,8 +1361,23 @@ function versDiagDetaille(){
 }
 function versExpert(sel){fermer();const h=$('pt-home');if(h)h.style.display='none';const t=document.querySelector(sel);if(t)t.scrollIntoView({behavior:'smooth',block:'center'})}
 function rafraichir(){const v=VUES[vue];v.form();v.bind();v.res()}
+// Budget max -> Plan : revenus, apport, neuf/ancien, crédits en cours, durée et taux suivent automatiquement,
+// tant que le conseiller n'a pas changé lui-même la valeur dans le plan (champ vide ou égal à la dernière reprise).
+const repris={};
+function synchroPlan(){
+  if(typeof lireDiag!=='function')return;
+  const d=lireDiag();if(!(d.revenus>0))return;
+  const suivre=(cle,actuel,val,appliquer)=>{if(!actuel||actuel===repris[cle]||Math.abs(actuel-(repris[cle]??NaN))<0.005){appliquer(val);repris[cle]=val}};
+  suivre('income',fv('income'),Math.round(d.revenus),v=>poser('income',v));
+  suivre('deposit',fv('deposit'),d.apport||0,v=>poser('deposit',v));
+  const op=d.type==='neuf'?'new':'old';if(!repris.op||$('v9operation')?.value===repris.op){poser('v9operation',op);repris.op=op}
+  if(!tauxPlanManuel){const b=bases(d),ans=window.mainSettings?.years||fv('mainYears');if(!repris.ans||ans===repris.ans){fixerPrincipal(b.taux,d.ans,Math.round(b.ins*1200*1000)/1000);repris.ans=d.ans}}
+  if(typeof existing!=='undefined'&&existing.every(x=>x.id>=8990)){existing.splice(0);(d.credits||[]).forEach((x,i)=>existing.push({id:9000+i,name:NATURES[x.nature]||'Crédit',payment:+x.mens||0,months:+x.mois||0,balance:+x.crd||0,penalty:+x.ind||0,mode:x.mode==='repay'?'refinance':x.mode==='smooth'?'smooth':'keep'}));if(d.redevance)existing.push({id:8990,name:'Redevance foncière BRS',payment:d.redevance,months:d.ans*12,balance:0,penalty:0,mode:'keep'});if(d.pensVersee)existing.push({id:8991,name:'Pension alimentaire versée',payment:d.pensVersee,months:d.ans*12,balance:0,penalty:0,mode:'keep'})}
+  if(typeof fraisAuto==='function')fraisAuto();
+}
 function ouvrir(nom){
   const avant=studio.classList.contains('open')?vue:null;
+  if(nom==='plan'&&avant!=='plan')try{synchroPlan()}catch(e){console.warn('[synchro plan]',e)}
   vue=VUES[nom]?nom:'plan';principal();
   $('st-h1').textContent=VUES[vue].t;$('st-p').textContent=VUES[vue].p;
   $('st-expert').style.display=vue==='plan'?'':'none';

@@ -122,13 +122,28 @@ function barre(){
 function setCourant(c){courant=c;try{c?sessionStorage.setItem('pt-dossier-courant',JSON.stringify(c)):sessionStorage.removeItem('pt-dossier-courant')}catch{}barre();if(window.ptStudioDossier)window.ptStudioDossier()}
 
 async function enregistrerRapide(){
+  const boutons=[$('dos-bar-save'),$('st-save')].filter(Boolean);
+  const occupe=()=>boutons.forEach(b=>{b.disabled=true;b.dataset.txt=b.textContent;b.textContent='Enregistrement…'});
+  const libere=()=>{barre();boutons.forEach(b=>{b.disabled=false;if(b.dataset.txt)b.textContent=b.dataset.txt})};
+  const fini=()=>{try{localStorage.removeItem('pt-brouillon-simulation')}catch{}if(window.ptMarquerEnregistre)window.ptMarquerEnregistre();boutons.forEach(b=>b.textContent='Enregistré ✓');setTimeout(libere,1500)};
+  const nomSim='Simulation du '+new Date().toLocaleDateString('fr-FR');
+  const creerSimulation=async(client)=>{const j=await api('/api/dossiers/'+client.id+'/simulations',{method:'POST',body:corps(capturer(),{nom:nomSim})});setCourant({clientId:client.id,client:nomClient(client),simId:j.simulation.id,simNom:j.simulation.nom})};
   if(!courant){
-    // Noms saisis dans le Budget max : on cherche le client, sinon le dossier est proposé prérempli.
+    // Noms saisis dans le Budget max : sans client du même nom, le dossier est créé et la simulation
+    // enregistrée d'un seul clic ; s'il existe déjà un client de ce nom, on laisse choisir.
     const n=nomsSaisis();
-    if(n.nom){dialog.classList.add('open');$('dos-q').value=n.nom;await chargerListe();nouveauClient(n);return}
-    await ouvrir();const d=$('dos-droite');if(d&&!selection)d.innerHTML='<div class="vide"><b>Pour enregistrer cette simulation</b>, choisissez le client à gauche, ou créez-le avec « + Client ».<br><br>Astuce : saisissez le nom et le prénom du client en haut du Budget max, le dossier sera prérempli.</div>';return}
-  if(!courant.simId)return ouvrir(courant.clientId,true);
-  const boutons=[$('dos-bar-save'),$('st-save')].filter(Boolean);boutons.forEach(b=>{b.disabled=true;b.dataset.txt=b.textContent;b.textContent='Enregistrement…'});
+    if(n.nom){
+      const norm=x=>String(x||'').trim().toLowerCase();
+      let memes=[];try{memes=((await api('/api/dossiers?q='+encodeURIComponent(n.nom))).clients||[]).filter(c=>norm(c.nom)===norm(n.nom))}catch{}
+      if(!memes.length){
+        occupe();
+        try{const j=await api('/api/dossiers',{method:'POST',body:JSON.stringify({nom:n.nom,prenom:n.prenom||null,nom2:n.nom2||null,prenom2:n.prenom2||null})});await creerSimulation(j.client);fini()}
+        catch(e){alert('Enregistrement impossible : '+e.message);libere()}
+        return}
+      dialog.classList.add('open');$('dos-q').value=n.nom;await chargerListe();nouveauClient(n);return}
+    await ouvrir();const d=$('dos-droite');if(d&&!selection)d.innerHTML='<div class="vide"><b>Pour enregistrer cette simulation</b>, choisissez le client à gauche, ou créez-le avec « + Client ».<br><br>Astuce : saisissez le nom et le prénom du client en haut du Budget max : l\'enregistrement se fera alors en un clic.</div>';return}
+  if(!courant.simId){occupe();try{await creerSimulation({id:courant.clientId,nom:courant.client});fini()}catch(e){alert('Enregistrement impossible : '+e.message);libere()}return}
+  occupe();
   try{await api('/api/simulations/'+courant.simId,{method:'PUT',body:corps(capturer())});if(window.ptMarquerEnregistre)window.ptMarquerEnregistre();boutons.forEach(b=>b.textContent='Enregistré ✓');setTimeout(()=>{barre();boutons.forEach(b=>{b.disabled=false;b.textContent=b.dataset.txt})},1500)}
   catch(e){alert('Enregistrement impossible : '+e.message);barre();boutons.forEach(b=>{b.disabled=false;b.textContent=b.dataset.txt})}
 }
