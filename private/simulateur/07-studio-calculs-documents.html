@@ -491,7 +491,6 @@ function htmlMensEgale(d,neuf,ancien){
     <b style="font-size:15px">${nom}</b>
     <div><div style="display:flex;height:44px;border-radius:10px;overflow:hidden;gap:2px;background:#f6f0ec">${seg(x.budget,LOG,'Votre logement '+eur(x.budget))}${seg(x.notaire,NOT,'Notaire '+eur(x.notaire))}${seg(x.perte,INT,'Intérêts '+eur(x.perte))}</div>
     <div style="display:flex;justify-content:space-between;font-size:12.5px;color:#7b6b62;margin-top:3px"><span>${eur(x.M)} / mois pendant ${d.ans} ans + apport ${eur(d.apport||0)}</span><b style="color:#2b2320;font-size:13.5px">versé en tout : ${eur(x.total)}</b></div></div></div>`;
-  const ligne=(l,vn,va,bon)=>{const e=vn-va;return `<tr><td>${l}</td><td class="n">${eur(vn)}</td><td class="n">${eur(va)}</td><td class="n" style="font-weight:700;color:${Math.abs(e)<0.5?'#7b6b62':(e>0)===bon?'#2f7a3e':'#b3261e'}">${Math.abs(e)<0.5?'=':(e>0?'+ ':'− ')+eur(Math.abs(e))}</td></tr>`};
   return `<h2>À mensualité égale (${eur(n.M)} / mois) : où va votre argent</h2>
    <div style="background:linear-gradient(90deg,#1f5c2c,#2f7a3e);color:#fff;border-radius:14px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin:10px 0 6px">
     <div><div style="font-size:11.5px;letter-spacing:1.6px;text-transform:uppercase;color:#d4f0da">Même mensualité, dans le neuf</div>
@@ -504,10 +503,7 @@ function htmlMensEgale(d,neuf,ancien){
    <div style="font-size:13px;color:#7b6b62;margin:12px 0 -4px">Tout ce que vous versez sur ${d.ans} ans, et ce que ça devient :</div>
    ${barre('Neuf',n)}${barre('Ancien',a)}
    <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:#5e4f48;margin:2px 0 12px 90px">${[[LOG,'Votre logement (à vous)'],[NOT,'Frais de notaire (perdus)'],[INT,'Intérêts et assurance (perdus)']].map(([c,l])=>`<span><i style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${c};vertical-align:-1px"></i> ${l}</span>`).join('')}</div>
-   <table class="fs"><tr><th></th><th class="n">Neuf</th><th class="n">Ancien</th><th class="n">Écart</th></tr>
-    ${ligne('Mensualité',n.M,a.M,false)}${ligne('Logement acheté, il est à vous',n.budget,a.budget,true)}${ligne('Frais de notaire, perdus',n.notaire,a.notaire,false)}${ligne('Intérêts et assurance, perdus',n.perte,a.perte,false)}
-    <tr style="font-weight:700"><td>Total versé sur ${d.ans} ans</td><td class="n">${eur(n.total)}</td><td class="n">${eur(a.total)}</td><td class="n" style="color:#7b6b62">${Math.abs(n.total-a.total)<0.5?'=':(n.total>a.total?'+ ':'− ')+eur(Math.abs(n.total-a.total))}</td></tr></table>
-   <p class="note" style="margin:8px 0 0">Même foyer, même apport, même mensualité de départ. Le total versé comprend aussi la garantie et les frais de dossier. Neuf : notaire réduit${neuf.ptz?.montant?', PTZ '+eur(neuf.ptz.montant)+' sans intérêts':''}${(neuf.ext||[]).filter(x=>!x.existant&&x.montant>0).map(x=>', '+esc(x.nom)+' '+eur(x.montant)).join('')}. Travaux éventuels de l'ancien non comptés.</p>`;
+   <p class="note" style="margin:8px 0 0">Même foyer, même apport, même mensualité de départ. Neuf : notaire réduit${neuf.ptz?.montant?', PTZ '+eur(neuf.ptz.montant)+' sans intérêts':''}${(neuf.ext||[]).filter(x=>!x.existant&&x.montant>0).map(x=>', '+esc(x.nom)+' '+eur(x.montant)).join('')}. Travaux éventuels de l'ancien non comptés.</p>`;
 }
 /** À prix égal : ce qu'il faut emprunter, les intérêts et le capital restant dû année par année. */
 function aPrixEgal(d,type,prix){
