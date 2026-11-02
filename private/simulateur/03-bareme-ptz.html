@@ -206,7 +206,7 @@ function ouvrir(){
   if(v('v9operation')==='old')$('ptz-type').value='ancien';
   const cout=(+v('price')||0)+(v('v9operation')==='old'?(+v('works')||0):0);
   if(!$('ptz-prix').value&&cout)$('ptz-prix').value=Math.round(cout);
-  if(!$('ptz-rfr').value&&+v('v9rfr'))$('ptz-rfr').value=+v('v9rfr');
+  { const r=+v('v9rfr')||+v('dg-rfr')||+v('dg-rfr1');if(!$('ptz-rfr').value&&r)$('ptz-rfr').value=r; }
   preremplirAL();editeur();rendre();choisirOnglet('ptz');dialog.classList.add('open');
 }
 // ---------- Onglet Prêt Action Logement ----------
@@ -271,7 +271,7 @@ function preremplirAL(){
   const pers=+v('v9people');if(pers>0)$('al-pers').value=String(Math.min(8,Math.round(pers)));
   $('al-type').value=v('v9operation')==='old'?'ancien':'neuf';
   const cout=(+v('price')||0)+(+v('works')||0)+(+v('notary')||0);if(!$('al-cout').value&&cout)$('al-cout').value=Math.round(cout);
-  const rfr=+v('v9rfr')||+v('dg-rfr');if(!$('al-rfr').value&&rfr)$('al-rfr').value=rfr;
+  const rfr=+v('v9rfr')||+v('dg-rfr')||+v('dg-rfr1');if(!$('al-rfr').value&&rfr)$('al-rfr').value=rfr;
 }
 window.ptOpenPTZ=ouvrir;
 window.ptOpenAL=()=>{ouvrir();choisirOnglet('al')};

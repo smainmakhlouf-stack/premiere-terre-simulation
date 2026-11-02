@@ -383,7 +383,7 @@ function lireDiagBase(){
   const g=id=>num(m(id).value),rev2=g('dg-rev2');
   const RF_PCT=70;
   return {rf:g('dg-rf'),rfPct:RF_PCT,pensRecue:g('dg-pensr'),pensVersee:g('dg-pensv'),creditsConso:g('dg-charges'),creditsImmo:g('dg-credimmo'),revenus:g('dg-rev1')+rev2+g('dg-autres')+g('dg-pensr')+g('dg-rf')*RF_PCT/100,charges:g('dg-charges')+g('dg-credimmo')+g('dg-pensv'),apport:g('dg-apport'),ans:g('dg-duree')||25,enfants:g('dg-enfants'),adultes:rev2>0?2:1,
-    type:m('dg-type').value||'neuf',zone:m('dg-zone').value||'A',rfr:g('dg-rfr'),primo:m('dg-primo').value!=='non',occupants:g('dg-occ')||null,notaireOfferts:m('dg-notoff').value==='oui',garantie:m('dg-gar').value||'cl_classic',prets:m('dg-al').value==='oui'?[{neufSeul:true,nom:'Prêt Action Logement',montant:g('dg-almt')||30000,taux:m('dg-altx').value===''?1:num(m('dg-altx').value.replace(',','.')),ans:g('dg-alans')||25}]:[],notairePct:m('dg-notpct').value===''?null:num(m('dg-notpct').value.replace(',','.')),ptzType:m('dg-ptztype').value||'coll',
+    type:m('dg-type').value||'neuf',zone:m('dg-zone').value||'A',rfr:g('dg-rfr')||g('dg-rfr1'),primo:m('dg-primo').value!=='non',occupants:g('dg-occ')||null,notaireOfferts:m('dg-notoff').value==='oui',garantie:m('dg-gar').value||'cl_classic',prets:m('dg-al').value==='oui'?[{neufSeul:true,nom:'Prêt Action Logement',montant:g('dg-almt')||30000,taux:m('dg-altx').value===''?1:num(m('dg-altx').value.replace(',','.')),ans:g('dg-alans')||25}]:[],notairePct:m('dg-notpct').value===''?null:num(m('dg-notpct').value.replace(',','.')),ptzType:m('dg-ptztype').value||'coll',
     taux:m('dg-taux').value===''?null:g('dg-taux'),ass:m('dg-ass').value===''?null:g('dg-ass'),endet:m('dg-endet').value===''?null:g('dg-endet')};
 }
 /** Crédits en cours : conservés (charge), lissés (dans la mensualité) ou soldés (sur le budget). */
@@ -497,6 +497,26 @@ function aPrixEgal(d,type,prix){
   return {type,banque,ptz,ext,totExt,mens:mens+banque*b.ins+(ptz.montant||0)*b.ins+(ptz.montant&&!ptz.differe?ptz.montant/(ptz.duree*12):0)+ext.reduce((a,x)=>a+x.mens,0),interets,assurance,coutCredit:interets+assurance+coutExt,crd,notaire:prix*notaire};
 }
 
+(function(){if(document.getElementById('pt-info-style'))return;const st=document.createElement('style');st.id='pt-info-style';st.textContent='.pt-info{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;background:#f3e1d6;color:#a34d31;border:1px solid #e3c3b1;font:700 11px Georgia,serif;cursor:pointer;margin-left:5px;vertical-align:1px;padding:0}.pt-info:hover{background:#a34d31;color:#fff}';document.head.appendChild(st)})();
+// « À chaque mensualité, j'épargne » : illustration simple, une couleur pour l'épargne ; la part des intérêts au départ
+// est réglable (40 % par défaut) et baisse jusqu'à zéro à la fin du prêt. La valeur réelle du dossier est rappelée dessous.
+let partInterets=40;
+function grapheEpargne(c,ans){
+  let reel=null;try{const e=echeancier(c),p0=e.prets.map(p=>p.lignes[0]).filter(Boolean),tot=p0.reduce((a,l)=>a+l.pay,0);if(tot>0)reel=p0.reduce((a,l)=>a+l.int+l.ins,0)/tot*100}catch(_){}
+  const M=c.mensualite,pi=partInterets/100,W=1000,H=330,L=60,B=34,T=14,PW=W-L-16,PH=H-T-B,x=a=>L+a/ans*PW,y=p=>T+PH-p*PH;
+  let g='';[0,.25,.5,.75,1].forEach(p=>g+=`<line x1="${L}" x2="${W-16}" y1="${y(p)}" y2="${y(p)}" stroke="#f1e8e2"/><text x="${L-8}" y="${y(p)+4}" text-anchor="end" font-size="12" fill="#8a7a70">${p*100} %</text>`);
+  g+=`<path d="M${x(0)},${y(1-pi)} L${x(ans)},${y(1)} L${x(ans)},${y(0)} L${x(0)},${y(0)} Z" fill="${C.main}"/><path d="M${x(0)},${y(1)} L${x(ans)},${y(1)} L${x(0)},${y(1-pi)} Z" fill="#f4e6de"/>`;
+  g+=`<line x1="${x(0)}" x2="${x(ans)}" y1="${y(1)}" y2="${y(1)}" stroke="#2b2320" stroke-dasharray="6 5" stroke-width="1.5"/>`;
+  g+=`<text x="${x(ans*.03)}" y="${y(1)+28}" font-size="13" font-weight="700" fill="#7b6b62">INTÉRÊTS ${Math.round(pi*100)} %</text><text x="${x(ans*.03)}" y="${y(1)+54}" font-size="24" fill="#2b2320">${eur(M*pi)}</text>`;
+  g+=`<text x="${x(ans*.03)}" y="${y(.3)}" font-size="13" font-weight="700" fill="#fbe3d4">CAPITAL ÉPARGNÉ ${Math.round(100-pi*100)} %</text><text x="${x(ans*.03)}" y="${y(.3)+28}" font-size="24" fill="#fff">${eur(M*(1-pi))}</text>`;
+  g+=`<text x="${x(ans*.8)}" y="${y(.45)}" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">À la fin : 100 % épargne</text>`;
+  g+=`<text x="${x(0)}" y="${H-10}" font-size="12" fill="#8a7a70">0</text><text x="${x(ans)}" y="${H-10}" text-anchor="end" font-size="12" fill="#8a7a70">${ans} ans</text><text x="${(x(0)+x(ans))/2}" y="${H-10}" text-anchor="middle" font-size="11" fill="#8a7a70" letter-spacing="2">DURÉE D'EMPRUNT</text>`;
+  return `<div style="text-align:center"><div style="font:700 22px Georgia,serif;letter-spacing:.5px">À CHAQUE MENSUALITÉ, J'ÉPARGNE</div><div class="sub" style="margin:2px 0 8px">Prêt amortissable · Mensualité : <b style="color:#2b2320">${eur(M)}</b></div>
+   <label style="display:inline-flex;align-items:center;gap:10px;font-size:13.5px">Part des intérêts au départ : <input type="range" id="sd-partint" min="10" max="80" step="1" value="${partInterets}" style="width:200px;accent-color:${C.main}"> <b style="color:${C.main}">${Math.round(pi*100)} % intérêts · ${Math.round(100-pi*100)} % capital</b></label></div>
+   <svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Répartition de la mensualité entre intérêts et capital épargné">${g}</svg>
+   <p class="note" style="text-align:center;margin:4px 0 0">Illustration pédagogique : la part des intérêts baisse chaque année jusqu'à zéro à la fin du prêt.${reel!=null?` Valeur réelle de ce dossier au départ : ${Math.round(reel)} % d'intérêts et d'assurance, ${Math.round(100-reel)} % d'épargne.`:''}</p>`;
+}
+function lierEpargne(c,ans){const r=$('sd-partint');if(!r)return;r.oninput=()=>{partInterets=+r.value;const box=$('sd-epargne');if(box){box.innerHTML=grapheEpargne(c,ans);lierEpargne(c,ans)}}}
 function courbes(series,ans){
   const W=760,H=240,L=64,B=26,T=12,PW=W-L-12,PH=H-T-B,max=Math.max(1,...series.flatMap(s=>s.v));
   const pas=[10000,20000,25000,50000,100000,200000].find(p=>max/p<=5)||200000,top=Math.ceil(max/pas)*pas;
@@ -562,17 +582,20 @@ function formDiag(){
   <div class="hint" id="sd-brsinfo" style="margin:-4px 0 12px"></div>`:''}
   <div class="f"><label for="sd-notpct">Frais de notaire ${d.type==='neuf'?'neuf':'ancien'} <span style="font-weight:400;color:#8a7a70">${d.notaireOfferts&&d.type==='neuf'?'offerts':'du prix'}</span></label><div class="euro" data-u="%"><input autocomplete="off" id="sd-notpct" data-memo="dg-notpct" inputmode="decimal" placeholder="${String(d.type==='neuf'?P().frais.notaireNeuf:P().frais.notaireAncien).replace('.',',')}" value="${v('dg-notpct')}"></div><div class="hint" id="sd-notmt" style="margin:4px 0 0"></div></div>
   ${d.type==='neuf'?`<div class="f"><label>Frais de notaire offerts par le promoteur</label><div class="seg" data-dseg="dg-notoff"><button type="button" data-v="oui" class="${d.notaireOfferts?'on':''}">Oui</button><button type="button" data-v="non" class="${d.notaireOfferts?'':'on'}">Non</button></div></div>`:''}
-  <div class="st-ptz" style="background:#fbf3ee;border:1px solid #efdcd1;border-radius:12px;padding:12px 12px 2px;margin-bottom:14px"><h3 style="margin-top:0">PTZ (neuf)</h3>
+  <div class="f"><label for="sd-apport">Apport disponible</label><div class="euro" data-u="€"><input autocomplete="off" id="sd-apport" data-memo="dg-apport" inputmode="numeric" value="${v('dg-apport')}"></div></div>
+  <div class="st-ptz" style="background:#fbf3ee;border:1px solid #efdcd1;border-radius:12px;padding:12px 12px 2px;margin-bottom:14px"><h3 style="margin-top:0">PTZ (neuf) <button type="button" class="pt-info" onclick="window.ptOpenPTZ&&window.ptOpenPTZ()" title="Voir le barème PTZ : plafonds, zones, éligibilité" aria-label="Voir le barème PTZ : plafonds, zones, éligibilité">i</button></h3>
   <div class="duo"><div class="f"><label for="sd-zone">Zone</label><select autocomplete="off" id="sd-zone" data-memo="dg-zone">${['A','B1','B2','C'].map(z=>`<option value="${z}" ${d.zone===z?'selected':''}>${z==='A'?'A bis / A':z}</option>`).join('')}</select></div>
-  <div class="f"><label for="sd-rfr">RFR N-2</label><div class="euro" data-u="€"><input autocomplete="off" id="sd-rfr" data-memo="dg-rfr" inputmode="numeric" placeholder="estimé" value="${v('dg-rfr')}"></div></div></div>
-  <div class="duo"><div class="f"><label for="sd-occ">Occupants</label><input autocomplete="off" id="sd-occ" data-memo="dg-occ" type="number" min="1" max="9" placeholder="${d.adultes+d.enfants}" value="${v('dg-occ')}"></div>
-  <div class="f"><label for="sd-ptztype">Logement</label><select autocomplete="off" id="sd-ptztype" data-memo="dg-ptztype"><option value="coll" ${d.ptzType!=='indiv'?'selected':''}>Appartement</option><option value="indiv" ${d.ptzType==='indiv'?'selected':''}>Maison</option></select></div></div>
+  <div class="f"><label for="sd-occ">Occupants</label><input autocomplete="off" id="sd-occ" data-memo="dg-occ" type="number" min="1" max="9" placeholder="${d.adultes+d.enfants}" value="${v('dg-occ')}"></div></div>
+  <div class="duo"><div class="f"><label for="sd-rfr">RFR N-2 <button type="button" class="pt-info" onclick="window.ptOpenPTZ&&window.ptOpenPTZ()" title="Voir les plafonds de revenus du PTZ" aria-label="Voir les plafonds de revenus du PTZ">i</button></label><div class="euro" data-u="€"><input autocomplete="off" id="sd-rfr" data-memo="dg-rfr" inputmode="numeric" placeholder="estimé" value="${v('dg-rfr')}"></div></div>
+  <div class="f"><label for="sd-rfr1">RFR N-1</label><div class="euro" data-u="€"><input autocomplete="off" id="sd-rfr1" data-memo="dg-rfr1" inputmode="numeric" placeholder="facultatif" value="${v('dg-rfr1')}"></div></div></div>
+  <div class="hint" style="margin:-6px 0 10px">Le PTZ retient le RFR N-2 ; sans N-2, le N-1 est utilisé, sinon le RFR est estimé.</div>
+  <div class="duo"><div class="f"><label for="sd-ptztype">Logement</label><select autocomplete="off" id="sd-ptztype" data-memo="dg-ptztype"><option value="coll" ${d.ptzType!=='indiv'?'selected':''}>Appartement</option><option value="indiv" ${d.ptzType==='indiv'?'selected':''}>Maison</option></select></div><div></div></div>
   <div class="hint" style="margin:-6px 0 10px">Occupants : toutes les personnes qui vivront dans le logement (fixe le plafond du PTZ). Vide = emprunteurs + enfants.</div>
   <div class="f"><label>Primo-accédant</label><div class="seg" data-dseg="dg-primo"><button type="button" data-v="oui" class="${d.primo?'on':''}">Oui</button><button type="button" data-v="non" class="${d.primo?'':'on'}">Non</button></div></div>
   </div>
   <h3>Garantie et autres prêts</h3>
   <div class="f"><label for="sd-gar">Garantie <span style="font-weight:400;color:#8a7a70">appliquée à tous les prêts</span></label><select autocomplete="off" id="sd-gar" data-memo="dg-gar">${[{cle:'none',nom:'Aucune'},...((window.ptCatalogueGaranties&&window.ptCatalogueGaranties.length)?window.ptCatalogueGaranties:[{cle:'cl_classic',nom:'Crédit Logement · Classic'}])].map(x=>`<option value="${x.cle}" ${(d.garantie||'cl_classic')===x.cle?'selected':''}>${esc(x.nom)}${window.ptTauxGarantie(x.cle)!=null&&x.cle!=='none'?' · '+String(window.ptTauxGarantie(x.cle)).replace('.',',')+' %':''}</option>`).join('')}</select><div class="hint" id="sd-garmt" style="margin:4px 0 0"></div></div>
-  ${d.type==='neuf'?`<div class="f"><label>Prêt Action Logement <span style="font-weight:400;color:#8a7a70">neuf uniquement</span></label><div class="seg" data-dseg="dg-al"><button type="button" data-v="oui" class="${d.prets.some(x=>x.neufSeul)?'on':''}">Oui</button><button type="button" data-v="non" class="${d.prets.some(x=>x.neufSeul)?'':'on'}">Non</button></div></div>
+  ${d.type==='neuf'?`<div class="f"><label>Prêt Action Logement <span style="font-weight:400;color:#8a7a70">neuf uniquement</span> <button type="button" class="pt-info" onclick="window.ptOpenAL&&window.ptOpenAL()" title="Voir les conditions du prêt Action Logement" aria-label="Voir les conditions du prêt Action Logement">i</button></label><div class="seg" data-dseg="dg-al"><button type="button" data-v="oui" class="${d.prets.some(x=>x.neufSeul)?'on':''}">Oui</button><button type="button" data-v="non" class="${d.prets.some(x=>x.neufSeul)?'':'on'}">Non</button></div></div>
   ${d.prets.some(x=>x.neufSeul)?`<div class="duo"><div class="f"><label for="sd-almt">Montant</label><div class="euro" data-u="€"><input autocomplete="off" id="sd-almt" data-memo="dg-almt" inputmode="numeric" placeholder="30000" value="${v('dg-almt')||30000}"></div></div><div class="f"><label for="sd-altx">Taux</label><div class="euro" data-u="%"><input autocomplete="off" id="sd-altx" data-memo="dg-altx" inputmode="decimal" placeholder="1" value="${v('dg-altx')||1}"></div></div></div>
   <div class="f"><label for="sd-alans">Durée Action Logement</label><div class="euro" data-u="ans"><input autocomplete="off" id="sd-alans" data-memo="dg-alans" type="number" min="1" max="25" placeholder="25" value="${v('dg-alans')||25}"></div><div class="hint" style="margin:4px 0 0">30 000 € maximum à 1 %, sous conditions (salarié du privé, entreprise de 10 salariés et plus, ressources). Lissé avec le prêt bancaire.</div></div>`:''}`:''}
   <div class="f"><label>Prêt complémentaire</label><div class="seg" data-dseg="dg-pc"><button type="button" data-v="oui" class="${m('dg-pc').value==='oui'?'on':''}">Oui</button><button type="button" data-v="non" class="${m('dg-pc').value==='oui'?'':'on'}">Non</button></div></div>
@@ -590,7 +613,6 @@ function formDiag(){
   <div class="duo"><div class="f"><label for="sd-rltx">Taux relais</label><div class="euro" data-u="%"><input autocomplete="off" id="sd-rltx" data-memo="dg-rltx" inputmode="decimal" placeholder="${String(d.taux??'').replace('.',',')}" value="${v('dg-rltx')}"></div></div><div class="f"><label for="sd-rltype">Intérêts</label><select autocomplete="off" id="sd-rltype" data-memo="dg-rltype"><option value="partielle" ${m('dg-rltype').value!=='totale'?'selected':''}>Chaque mois</option><option value="totale" ${m('dg-rltype').value==='totale'?'selected':''}>À la vente</option></select></div></div>
   <div class="f"><label>Lisser les intérêts du relais</label><div class="seg" data-dseg="dg-rllisse"><button type="button" data-v="oui" class="${m('dg-rllisse').value==='oui'?'on':''}">Oui</button><button type="button" data-v="non" class="${m('dg-rllisse').value==='oui'?'':'on'}">Non</button></div></div>
   <div class="hint" id="sd-rlinfo" style="margin:-4px 0 12px"></div>`:''}
-  <div class="f"><label for="sd-apport">Apport disponible</label><div class="euro" data-u="€"><input autocomplete="off" id="sd-apport" data-memo="dg-apport" inputmode="numeric" value="${v('dg-apport')}"></div></div>
   ${champDuree('sd-duree','Durée',v('dg-duree'),'')}
   <div class="f"><label for="sd-endet-n">Taux d'endettement visé</label><div class="duree"><input autocomplete="off" id="sd-endet" type="range" min="20" max="45" step="0.5" value="${d.endet??P().seuils.endettement}" aria-label="Taux d'endettement visé"><div class="euro" data-u="%"><input autocomplete="off" id="sd-endet-n" type="number" min="20" max="45" step="0.5" inputmode="decimal" value="${d.endet??P().seuils.endettement}" style="padding-right:30px"></div></div><div class="hint">Repère de l'équipe : ${pc(P().seuils.endettement,0)}. Faites glisser pour ajuster le budget. ${d.endet!=null?'<button type="button" class="lien" id="sd-endet-reset">Revenir au repère</button>':''}</div></div>
   <div class="duo"><div class="f"><label for="sd-taux">Taux</label><div class="euro" data-u="%"><input autocomplete="off" id="sd-taux" data-memo="dg-taux" inputmode="decimal" placeholder="${String(tauxDuree(d.ans)).replace('.',',')}" value="${v('dg-taux')}"></div></div>
@@ -654,35 +676,50 @@ function tremplin(d,c){
 }
 /** doc = version figée pour les sorties client (années clés, sans clic). */
 function htmlTremplin(d,c,doc){
-  const t=tremplin(d,c);anRevente=Math.min(Math.max(1,anRevente),t.ans);const x=t.lignes[anRevente-1],loyer=num(m('dg-loyer').value),rv=t.r!==0,rtxt=pc(t.r*100,1).replace(/,0 %$/,' %')+' / an';
+  const t=tremplin(d,c);anRevente=Math.min(Math.max(1,anRevente),t.ans);const x=t.lignes[anRevente-1],loyer=num(m('dg-loyer').value),rv=t.r!==0,brs=!!d.redevance;
+  const rtxt=pc(t.r*100,1).replace(/,0 %$/,' %')+' / an';
   const cles=new Set([1,2,3,5,7,10,12,15,20,25,t.ans,anRevente]),vues=doc?t.lignes.filter(l=>cles.has(l.a)):t.lignes;
   const ligne=(l,v,fort)=>`<div style="display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid #f4ece7;${fort?'font-weight:700;font-size:15px':''}"><span>${l}</span><b style="font-variant-numeric:tabular-nums;white-space:nowrap">${v}</b></div>`;
-  const ans=a=>a+' an'+(a>1?'s':'');
-  return `<div class="trem-grid${doc?' doc':''}"><div><table class="st-env st-trem"><thead><tr><th>Revente</th><th>Restant dû</th><th>Récupéré</th>${rv?`<th>Avec ${rtxt}</th>`:''}</tr></thead><tbody>${vues.map(l=>`<tr data-an="${l.a}" class="${l.a===anRevente?'on':''}" title="Revente après ${ans(l.a)}"><td>${ans(l.a)}</td><td>${eur(l.crd)}</td><td>${eur(l.recupere)}</td>${rv?`<td>${eur(l.recupereReval)}</td>`:''}</tr>`).join('')}</tbody></table></div>
-   <div><div style="border:1px solid #ecdfd8;border-radius:12px;padding:16px;border-top:4px solid ${C.main}">
-    <div style="font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:#7b6b62">Revente après ${ans(anRevente)}</div>
-    <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-end;margin:6px 0 2px">
-     <div><div style="font:34px Georgia,serif;color:${x.recupere>=0?'#2b2320':'#b3261e'}">${eur(x.recupere)}</div><div class="sub" style="margin:0">au prix d'achat (prudent)</div></div>
-     ${rv?`<div><div style="font:34px Georgia,serif;color:${x.recupereReval>=0?C.main:'#b3261e'}">${eur(x.recupereReval)}</div><div class="sub" style="margin:0">avec un prix ${t.r>0?'revalorisé':'en baisse'} de ${rtxt}</div></div>`:''}
-    </div>
-    <div class="sub" style="margin:6px 0 12px">récupérés ${doc?"":"par le client "}une fois les prêts soldés, à réinvestir comme apport dans le projet suivant</div>
-    ${ligne('Prix d\'achat',eur(c.budget))}
+  const ans=a=>a+' an'+(a>1?'s':''),mois=anRevente*12;
+  // Propriétaire : mensualités des prêts (+ redevance BRS) ; locataire : loyer actuel, sans rien récupérer.
+  const mensProp=x.verse/mois+(d.redevance||0),patrimoineMois=x.recupere/mois,ecart=mensProp-loyer;
+  const vert='#2f7a3e',rouge='#b3261e',L=(l,v,col)=>`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px dashed #e6dbd4"><span>${l}</span><b style="font-size:18px;white-space:nowrap;${col?'color:'+col:''}">${v}</b></div>`;
+  const carte=(titre,fond,bord,lignes)=>`<div style="border:1px solid ${bord};background:${fond};border-radius:14px;padding:14px 16px"><div style="font-weight:700;font-size:15.5px;margin-bottom:4px">${titre}</div>${lignes}</div>`;
+  const table=`<table class="st-env st-trem"><thead><tr><th>Revente</th><th>Restant dû</th><th>Récupéré</th>${rv?`<th>${brs?'Indexé':'Avec '+rtxt}</th>`:''}</tr></thead><tbody>${vues.map(l=>`<tr data-an="${l.a}" class="${l.a===anRevente?'on':''}" title="Revente après ${ans(l.a)}"><td>${ans(l.a)}</td><td>${eur(l.crd)}</td><td>${eur(l.recupere)}</td>${rv?`<td>${eur(l.recupereReval)}</td>`:''}</tr>`).join('')}</tbody></table>`;
+  const detail=`${ligne('Prix d\'achat',eur(c.budget))}
     ${ligne('− Capital restant dû'+(c.ptz?.montant?' (PTZ compris, remboursé à la vente)':''),'− '+eur(x.crd))}
     ${ligne('= Somme récupérée au prix d\'achat',eur(x.recupere),1)}
     ${rv?ligne((t.r>0?'+ Plus-value':'− Moins-value')+' ('+rtxt+' pendant '+ans(anRevente)+')',(t.r>0?'+ ':'− ')+eur(Math.abs(x.prix-c.budget)))+ligne('= Somme récupérée, prix de revente '+eur(x.prix),eur(x.recupereReval),1):''}
-    <div style="height:10px"></div>
+    <div style="height:8px"></div>
     ${ligne('Capital remboursé en '+ans(anRevente),eur(x.rembourse))}
     ${ligne('+ Apport mis dans le projet',eur(d.apport))}
     ${t.frais>0.5?ligne('− Frais d\'achat ('+(c.offerts?'garantie, dossier':'notaire, garantie, dossier')+(c.solde?', crédits soldés':'')+')','− '+eur(t.frais)):''}
     ${ligne('= Somme récupérée au prix d\'achat',eur(x.recupere),1)}
-    <div style="height:10px"></div>
+    <div style="height:8px"></div>
     ${ligne('Mensualités versées en '+ans(anRevente),eur(x.verse))}
     ${ligne('dont intérêts et assurance',eur(x.cout))}
-    ${loyer?ligne('Loyers versés sur la même durée ('+eur(loyer)+' / mois), sans rien récupérer',eur(loyer*12*anRevente)):''}
-   </div>
-   <p class="note" style="margin-top:10px">Revente avant frais de vente (agence, diagnostics) et pénalités de remboursement anticipé éventuelles. ${rv?`Revalorisation de ${rtxt} : hypothèse de travail, pas une prévision ; le chiffre au prix d'achat reste la référence prudente. `:'Hypothèse prudente : revente au prix d\'achat, sans plus-value. '}En résidence principale, la plus-value est exonérée d'impôt.${d.redevance?' En BRS, le prix de revente est encadré par l\'organisme foncier solidaire.':''}${doc?'':' Cliquez une année pour voir le détail.'}</p></div></div>`;
+    ${brs?ligne('Redevance BRS versée ('+eur(d.redevance)+' / mois)',eur(d.redevance*mois)):''}`;
+  const resume=`<div style="background:${C.main};color:#fff;border-radius:14px;padding:16px 20px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-end">
+     <div><div style="font-size:11.5px;letter-spacing:1.6px;text-transform:uppercase;color:#fbe3d4">Revente après ${ans(anRevente)} · vous récupérez</div><div style="font:40px Georgia,serif;line-height:1.15;color:${x.recupere>=0?'#fff':'#ffd9d4'}">${eur(x.recupere)}</div><div style="font-size:13px;color:#fbe3d4">une fois le prêt remboursé, ${brs?'prix de revente encadré':'au prix d\'achat'}</div></div>
+     ${rv?`<div style="text-align:right"><div style="font-size:11.5px;letter-spacing:1.6px;text-transform:uppercase;color:#fbe3d4">${brs?'Avec l\'indexation OFS':'Si le prix monte de '+rtxt}</div><div style="font:28px Georgia,serif;color:#fff">${eur(x.recupereReval)}</div><div style="font-size:13px;color:#fbe3d4">de quoi financer le prochain projet</div></div>`:''}</div>
+    ${brs?`<div style="background:#fff7e6;border:1px solid #f3c77a;color:#7a4b00;border-radius:10px;padding:8px 12px;font-size:12.5px;margin-top:10px"><b>Bail réel solidaire :</b> le prix de revente est encadré par l'organisme de foncier solidaire, sans plus-value libre. La redevance (${eur(d.redevance)} / mois) est comptée dans ce que paie le propriétaire.</div>`:''}
+    ${loyer?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+      ${carte('🏠 Propriétaire','#f2f8f3','#c7e3cd',L('Vous payez chaque mois',eur(mensProp))+L('Dans '+ans(anRevente)+', il vous reste',eur(x.recupere),x.recupere>=0?vert:rouge)+L('Votre patrimoine se construit',(patrimoineMois>=0?'+ ':'− ')+eur(Math.abs(patrimoineMois))+' / mois',patrimoineMois>=0?vert:rouge))}
+      ${carte('🔑 Locataire','#fbf5f2','#ecdfd8',L('Vous payez chaque mois',eur(loyer))+L('Dans '+ans(anRevente)+', il vous reste','0 €',rouge)+L('Loyers versés, perdus','− '+eur(loyer*mois),rouge))}
+     </div>
+     <div style="border:1px solid #ecdfd8;border-radius:12px;padding:12px 16px;margin-top:10px;background:#fff"><div style="font:700 15px Georgia,serif;margin-bottom:6px">Et sur ${ans(t.ans)} ?</div>
+      <div style="display:grid;grid-template-columns:110px 1fr;gap:4px 10px;align-items:center;font-size:13.5px">
+       <b>🔑 Locataire</b><div style="height:10px;border-radius:5px;background:#d9a59a"></div><span></span><b style="color:${rouge}">${eur(loyer*12*t.ans)} de loyers versés · 0 € de patrimoine</b>
+       <b>🏠 Propriétaire</b><div style="height:10px;border-radius:5px;background:${vert}"></div><span></span><b style="color:${vert}">un logement payé, d'une valeur de ${eur(c.budget)}${brs?' (prix encadré en BRS)':' (au prix d\'achat)'}</b></div>
+      <div style="font-size:11px;color:#9a8a80;margin-top:6px">Loyer de ${eur(loyer)} sans hausse : en réalité les loyers augmentent chaque année, la perte est donc plus forte.</div></div>
+     <div style="text-align:center;font-size:16px;margin-top:12px;line-height:1.5">${ecart>0?`Pour <b style="color:${C.main};font-size:19px">${eur(ecart)}</b> de plus par mois qu'un loyer`:`Pour <b style="color:${C.main};font-size:19px">${eur(-ecart)}</b> de moins par mois qu'un loyer`}, vous vous constituez <b style="color:${C.main};font-size:19px">${eur(Math.max(0,x.recupere))}</b> en ${ans(anRevente)}.</div>`
+    :`<p class="note" style="margin-top:10px">Indiquez le loyer actuel du client (bloc « Charges et foyer ») pour comparer avec la location.</p>`}`;
+  return `<div class="trem-grid${doc?' doc':''}"><div>${table}</div>
+   <div>${resume}
+   ${doc?`<div style="margin-top:12px">${detail}</div>`:`<details style="margin-top:12px"><summary style="cursor:pointer;color:${C.main};font-weight:600;font-size:13px">Voir le détail du calcul</summary><div style="margin-top:8px">${detail}</div></details>`}
+   <p class="note" style="margin-top:10px">Revente avant frais de vente (agence, diagnostics) et pénalités de remboursement anticipé éventuelles. ${brs?'En BRS, le prix de revente suit la formule de l\'organisme de foncier solidaire. ':rv?`Revalorisation de ${rtxt} : hypothèse de travail, pas une prévision ; le chiffre au prix d'achat reste la référence prudente. `:'Hypothèse prudente : revente au prix d\'achat, sans plus-value. '}En résidence principale, la plus-value est exonérée d'impôt.${doc?'':' Cliquez une année dans le tableau pour changer d\'horizon.'}</p></div></div>`;
 }
-function champReval(){const v=m('dg-reval').value;return `<div class="f" style="max-width:260px;margin:0 0 12px"><label for="sd-reval">Revalorisation du prix <span style="font-weight:400;color:#8a7a70">/ an, facultatif</span></label><div class="euro" data-u="%"><input autocomplete="off" id="sd-reval" inputmode="decimal" placeholder="0" value="${esc(v)}"></div></div>`}
+function champReval(){const v=m('dg-reval').value,brs=m('dg-brs')?.value==='oui';return `<div class="f" style="max-width:300px;margin:0 0 12px"><label for="sd-reval">${brs?'Indexation du prix fixée par l\'OFS':'Revalorisation du prix'} <span style="font-weight:400;color:#8a7a70">/ an, ${brs?'selon le programme':'facultatif'}</span></label><div class="euro" data-u="%"><input autocomplete="off" id="sd-reval" inputmode="decimal" placeholder="0" value="${esc(v)}"></div></div>`}
 function lierTremplin(d,c){
   const box=$('sd-trem');if(!box)return;
   const maj=()=>{const y=$('pt-studio').scrollTop;box.innerHTML=htmlTremplin(d,c);lierTremplin(d,c);$('pt-studio').scrollTop=y};
@@ -958,9 +995,10 @@ function resDiag(){
   <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="margin:0">Comparer des scénarios</h2><button type="button" class="srt-btn prim" id="sd-scen-add">Garder ce scénario</button></div><div id="sd-scen" style="margin-top:10px">${htmlScenarios()}</div></div>
   <div class="card"><h2>Neuf ou ancien : la différence de budget</h2><p class="sub">Même foyer, même mensualité. ${ecart>0?`Dans le neuf, votre client peut viser <b style="color:#a34d31">${eur(ecart)} de plus</b> : frais de notaire ${neuf.offerts?'offerts':'réduits'}${neuf.ptz.montant?' et PTZ à 0 %':''}.`:'Avec ces critères, le neuf n\'apporte pas de budget supplémentaire.'}${neuf.ptz.motif&&d.primo?' '+esc(neuf.ptz.motif)+(d.rfr?'':` (RFR non saisi, estimé à ${eur(d.revenus*12*0.9)} : saisissez le RFR N-2 réel dans le bloc PTZ)`):''}${!d.primo?' PTZ non retenu : le client n\'est pas primo-accédant.':''}</p>
    <div class="cols">${colonne(neuf,'Neuf',C.main)}${colonne(ancien,'Ancien',C.frais,neuf)}</div></div>
-  <div class="card"><h2>À prix égal (${eur(prixRef)}) : le neuf s'amortit plus vite</h2><p class="sub">Moins de frais de notaire${sn.ptz.montant?' et un PTZ sans intérêts':''}${sn.totExt?' et des prêts aidés':''} : on emprunte moins à la banque, la dette baisse plus vite et coûte moins cher.</p>
+  <div class="card" id="sd-epargne">${grapheEpargne(c,d.ans)}</div>
+  <div class="card"><h2>À prix égal (${eur(prixRef)}) : le neuf coûte moins cher</h2><p class="sub">Moins de frais de notaire${sn.ptz.montant?' et un PTZ sans intérêts':''}${sn.totExt?' et des prêts aidés':''} : on emprunte moins à la banque, la dette baisse plus vite et coûte moins cher.</p>
    <p class="note" style="margin:-4px 0 10px">Neuf : apport ${eur(d.apport)}${sn.ptz.montant?' + PTZ '+eur(sn.ptz.montant):''}${sn.ext.map(x=>' + '+esc(x.nom)+' '+eur(x.montant)+' à '+pc(x.taux||0,2)).join('')} + banque ${eur(sn.banque)}. Ancien : apport ${eur(d.apport)}${sa.ptz.montant?' + PTZ '+eur(sa.ptz.montant):''}${sa.ext.map(x=>' + '+esc(x.nom)+' '+eur(x.montant)).join('')} + banque ${eur(sa.banque)}. Garantie et frais de dossier compris.</p>
-   ${courbes([{l:'Neuf · capital restant dû',c:C.main,v:sn.crd},{l:'Ancien · capital restant dû',c:C.frais,v:sa.crd}],d.ans)}
+   
    <div class="tiles" style="margin-top:14px">
     <div class="tile"><small>Emprunt bancaire</small><b>${eur(sn.banque)} <span style="font-size:14px;color:#8a7a70">/ ${eur(sa.banque)}</span></b><em class="ok" style="background:#f3ece8;color:#5e4f48">neuf / ancien</em></div>
     <div class="tile"><small>Coût du crédit</small><b>${eur(sn.coutCredit)} <span style="font-size:14px;color:#8a7a70">/ ${eur(sa.coutCredit)}</span></b><em class="ok" style="background:#f3ece8;color:#5e4f48">intérêts + assurance</em></div>
@@ -975,6 +1013,7 @@ function resDiag(){
   <p class="note">Estimation indicative : taux ${pc(c.taux,2)}, assurance ${pc(d.ass==null?assDefaut():d.ass,2)} par emprunteur, frais et seuils de l'équipe, barème PTZ (${d.ptzType==='indiv'?'maison individuelle':'logement collectif'}, ${d.occupants||d.adultes+d.enfants} occupant${(d.occupants||d.adultes+d.enfants)>1?'s':''}). Avec un PTZ, le prêt bancaire est lissé : la mensualité totale reste au niveau maximum pendant toute la durée. Elle ne vaut pas accord de financement.${(()=>{const t=taegEstime(c),u=usureDuree(d.ans);return t!=null?` <span data-taeg>TAEG estimé du prêt bancaire : <b>${pc(t,2)}</b>${u?` (taux d'usure ${pc(u.taux,2)} pour ${d.ans} ans, ${esc(u.trim.replace('-Q',' T'))}${u.auto?', Banque de France':''})`:''}.</span>`:''})()}</p>`;
   lierRemb(d,$('st-res'));
   lierTremplin(d,c);
+  lierEpargne(c,d.ans);
   lierScenarios(d,c);
   const ai=$('sd-assinfo');if(ai&&d.assAges){const x=d.assAges;ai.innerHTML=`Assurance selon l'âge : ${x.a1!=null?`<b>${pc(x.t1,2)}</b> (${x.a1} ans)`:''}${d.adultes>1&&x.a2!=null?` et <b>${pc(x.t2,2)}</b> (${x.a2} ans)`:''} · barème de l'équipe.`}
   const ri=$('sd-rlinfo');if(ri){const rl=(c.ext||[]).find(x=>/relais/i.test(x.nom));ri.innerHTML=rl?`Relais : <b>${eur(rl.montant)}</b> (quotité de la revente − capital restant dû), intérêts ${rl.mens?eur(rl.mens)+' / mois':'payés à la vente'}.`:'Indiquez le prix de revente et le capital restant dû.'}
