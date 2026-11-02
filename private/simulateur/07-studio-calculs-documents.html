@@ -478,32 +478,36 @@ function capacite(d,type){
   budget=Math.max(0,(pret+(ptz.montant||0)+totExt+d.apport-solde-b.p.frais.dossier-b.courtPct*pret-b.garPct*(pret+(ptz.montant||0)+totExt))/(1+notaire));
   return {...b,type,pret,budget,ptz,ext,totExt,solde,offerts,notairePct:pctTheo*100,notaireOffert:offerts?budget*pctTheo:0,notaire:budget*notaire,frais:b.p.frais.dossier+b.courtPct*pret+b.garPct*(pret+(ptz.montant||0)+totExt),fraisGarantie:b.garPct*(pret+(ptz.montant||0)+totExt),courtage:b.courtPct*pret,reste:d.revenus-d.charges-b.mensualite,taux:b.taux};
 }
-/** « À prix égal » : le même logement acheté neuf ou ancien. Barres du coût total (prix + notaire + crédit), frais de l'ancien en évidence. */
-function htmlPrixEgal(d,sn,sa,prix){
-  const totN=prix+sn.notaire+sn.coutCredit,totA=prix+sa.notaire+sa.coutCredit,ecartTot=totA-totN,surN=sn.notaire+sn.coutCredit,surA=sa.notaire+sa.coutCredit,max=Math.max(surN,surA,1);
-  const pctN=sn.notaire/prix*100,pctA=sa.notaire/prix*100;
-  const NOT='#c0392b',CRED='#e8a15a';
-  const seg=(v,col,txt,clair)=>v>0.5?`<div style="width:${v/max*100}%;background:${col};height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;white-space:nowrap;font:700 12.5px Inter,Arial,sans-serif;color:${clair?'#fff':'#4a3c35'}">${v/max>.24?txt:v/max>.1?eur(v):''}</div>`:'';
-  const barre=(nom,x,sur,pctNot,fort)=>`<div style="display:grid;grid-template-columns:78px 1fr;gap:12px;align-items:center;margin:10px 0">
+/** « À mensualité égale » : même effort chaque mois ; ce qui devient le logement du client et ce qui part en frais. */
+// Intérêts et assurance = tout ce qui est remboursé au-delà du capital emprunté ; garantie et dossier = le reste du capital, hors logement et notaire.
+function bilanVerse(d,c){const e=echeancier(c);let pay=0;e.prets.forEach(p=>p.lignes.forEach(l=>{pay+=l.pay}));
+  const emprunte=(c.pret||0)+(c.ptz?.montant||0)+(c.ext||[]).filter(x=>!x.existant).reduce((a,x)=>a+x.montant,0),ap=d.apport||0;
+  const notaire=c.notaire||0,perte=Math.max(0,pay-emprunte),autres=Math.max(0,emprunte+ap-c.budget-notaire);return {M:c.mensualite,budget:c.budget,notaire,perte,autres,total:ap+pay}}
+function htmlMensEgale(d,neuf,ancien){
+  const n=bilanVerse(d,neuf),a=bilanVerse(d,ancien),max=Math.max(n.total,a.total,1),plus=n.budget-a.budget,perdN=n.notaire+n.perte,perdA=a.notaire+a.perte;
+  const LOG='#2f7a3e',NOT='#c0392b',INT='#e8a15a';
+  const seg=(v,col,txt)=>v>0.5?`<div style="width:${v/max*100}%;background:${col};height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;white-space:nowrap;font:700 12.5px Inter,Arial,sans-serif;color:#fff">${v/max>.22?txt:v/max>.09?eur(v):''}</div>`:'';
+  const barre=(nom,x)=>`<div style="display:grid;grid-template-columns:78px 1fr;gap:12px;align-items:center;margin:10px 0">
     <b style="font-size:15px">${nom}</b>
-    <div><div style="display:flex;height:${fort?46:40}px;border-radius:10px;overflow:hidden;gap:2px;background:#f6f0ec">${seg(x.notaire,NOT,'Notaire '+eur(x.notaire),1)}${seg(x.coutCredit,CRED,'Crédit '+eur(x.coutCredit),1)}</div>
-    <div style="display:flex;justify-content:space-between;font-size:12.5px;color:#7b6b62;margin-top:3px"><span>notaire ${pc(pctNot,1)} du prix${x.notaire<0.5?' (offerts)':''} · intérêts et assurance ${eur(x.coutCredit)}</span><b style="color:#2b2320;font-size:14px">${eur(sur)} en plus du prix</b></div></div></div>`;
-  const ligne=(l,n,a)=>{const e=a-n;return `<tr><td>${l}</td><td class="n">${eur(n)}</td><td class="n">${eur(a)}</td><td class="n" style="color:${e>0?'#b3261e':'#2f7a3e'};font-weight:700">${e>0?'+ ':e<0?'− ':''}${eur(Math.abs(e))}</td></tr>`};
-  return `<h2>À prix égal (${eur(prix)}) : l'ancien coûte beaucoup plus cher</h2>
-   <div style="background:linear-gradient(90deg,#7d1f14,#c0392b);color:#fff;border-radius:14px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin:10px 0 6px">
-    <div><div style="font-size:11.5px;letter-spacing:1.6px;text-transform:uppercase;color:#ffd9d1">Le même logement, acheté dans l'ancien</div>
-     <div style="font:38px Georgia,serif;line-height:1.15">${ecartTot>=0?'+ ':'− '}${eur(Math.abs(ecartTot))}</div>
-     <div style="font-size:13.5px;color:#ffe7e1">de plus à payer sur la durée du prêt</div></div>
-    <div style="text-align:right"><div style="font-size:11.5px;letter-spacing:1.6px;text-transform:uppercase;color:#ffd9d1">Frais de notaire de l'ancien</div>
-     <div style="font:30px Georgia,serif">${eur(sa.notaire)}</div><div style="font-size:13px;color:#ffe7e1">${pc(pctA,1)} du prix, perdus dès la signature${sn.notaire>0.5?` (neuf : ${eur(sn.notaire)})`:' (neuf : 0 €)'}</div></div>
+    <div><div style="display:flex;height:44px;border-radius:10px;overflow:hidden;gap:2px;background:#f6f0ec">${seg(x.budget,LOG,'Votre logement '+eur(x.budget))}${seg(x.notaire,NOT,'Notaire '+eur(x.notaire))}${seg(x.perte,INT,'Intérêts '+eur(x.perte))}</div>
+    <div style="display:flex;justify-content:space-between;font-size:12.5px;color:#7b6b62;margin-top:3px"><span>${eur(x.M)} / mois pendant ${d.ans} ans + apport ${eur(d.apport||0)}</span><b style="color:#2b2320;font-size:13.5px">versé en tout : ${eur(x.total)}</b></div></div></div>`;
+  const ligne=(l,vn,va,bon)=>{const e=vn-va;return `<tr><td>${l}</td><td class="n">${eur(vn)}</td><td class="n">${eur(va)}</td><td class="n" style="font-weight:700;color:${Math.abs(e)<0.5?'#7b6b62':(e>0)===bon?'#2f7a3e':'#b3261e'}">${Math.abs(e)<0.5?'=':(e>0?'+ ':'− ')+eur(Math.abs(e))}</td></tr>`};
+  return `<h2>À mensualité égale (${eur(n.M)} / mois) : où va votre argent</h2>
+   <div style="background:linear-gradient(90deg,#1f5c2c,#2f7a3e);color:#fff;border-radius:14px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin:10px 0 6px">
+    <div><div style="font-size:11.5px;letter-spacing:1.6px;text-transform:uppercase;color:#d4f0da">Même mensualité, dans le neuf</div>
+     <div style="font:38px Georgia,serif;line-height:1.15">${plus>=0?'+ ':'− '}${eur(Math.abs(plus))}</div>
+     <div style="font-size:13.5px;color:#e3f6e7">de logement en plus : ${eur(n.budget)} au lieu de ${eur(a.budget)}</div></div>
+    <div style="text-align:right"><div style="font-size:11.5px;letter-spacing:1.6px;text-transform:uppercase;color:#d4f0da">Argent perdu (notaire, intérêts)</div>
+     <div style="font:30px Georgia,serif">${eur(perdN)} <span style="font-size:18px;color:#d4f0da">au lieu de ${eur(perdA)}</span></div>
+     <div style="font-size:13px;color:#e3f6e7">${perdA-perdN>=0?eur(perdA-perdN)+' de moins perdus dans le neuf':eur(perdN-perdA)+' de plus dans le neuf'}</div></div>
    </div>
-   <div style="font-size:13px;color:#7b6b62;margin:12px 0 -4px">Ce que vous payez <b>en plus du prix du logement</b> :</div>
-   ${barre('Neuf',sn,surN,pctN)}${barre('Ancien',sa,surA,pctA,1)}
-   <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:#5e4f48;margin:2px 0 12px 90px"><span><i style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${NOT};vertical-align:-1px"></i> Frais de notaire</span><span><i style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${CRED};vertical-align:-1px"></i> Coût du crédit (intérêts + assurance)</span></div>
+   <div style="font-size:13px;color:#7b6b62;margin:12px 0 -4px">Tout ce que vous versez sur ${d.ans} ans, et ce que ça devient :</div>
+   ${barre('Neuf',n)}${barre('Ancien',a)}
+   <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:#5e4f48;margin:2px 0 12px 90px">${[[LOG,'Votre logement (à vous)'],[NOT,'Frais de notaire (perdus)'],[INT,'Intérêts et assurance (perdus)']].map(([c,l])=>`<span><i style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${c};vertical-align:-1px"></i> ${l}</span>`).join('')}</div>
    <table class="fs"><tr><th></th><th class="n">Neuf</th><th class="n">Ancien</th><th class="n">Écart</th></tr>
-    ${ligne('Mensualité (départ)',sn.mens,sa.mens)}${ligne('Frais de notaire',sn.notaire,sa.notaire)}${ligne('Emprunt bancaire',sn.banque,sa.banque)}${ligne('Coût du crédit',sn.coutCredit,sa.coutCredit)}
-    <tr style="font-weight:700"><td>Coût total</td><td class="n">${eur(totN)}</td><td class="n">${eur(totA)}</td><td class="n" style="color:${ecartTot>0?'#b3261e':'#2f7a3e'}">${ecartTot>0?'+ ':ecartTot<0?'− ':''}${eur(Math.abs(ecartTot))}</td></tr></table>
-   <p class="note" style="margin:8px 0 0">Neuf : apport ${eur(d.apport)}${sn.ptz.montant?' + PTZ '+eur(sn.ptz.montant)+' sans intérêts':''}${sn.ext.map(x=>' + '+esc(x.nom)+' '+eur(x.montant)+' à '+pc(x.taux||0,2)).join('')} + banque ${eur(sn.banque)}. Ancien : apport ${eur(d.apport)}${sa.ptz.montant?' + PTZ '+eur(sa.ptz.montant):''}${sa.ext.map(x=>' + '+esc(x.nom)+' '+eur(x.montant)).join('')} + banque ${eur(sa.banque)}. Garantie et frais de dossier compris. Travaux éventuels de l'ancien non comptés.</p>`;
+    ${ligne('Mensualité',n.M,a.M,false)}${ligne('Logement acheté, il est à vous',n.budget,a.budget,true)}${ligne('Frais de notaire, perdus',n.notaire,a.notaire,false)}${ligne('Intérêts et assurance, perdus',n.perte,a.perte,false)}
+    <tr style="font-weight:700"><td>Total versé sur ${d.ans} ans</td><td class="n">${eur(n.total)}</td><td class="n">${eur(a.total)}</td><td class="n" style="color:#7b6b62">${Math.abs(n.total-a.total)<0.5?'=':(n.total>a.total?'+ ':'− ')+eur(Math.abs(n.total-a.total))}</td></tr></table>
+   <p class="note" style="margin:8px 0 0">Même foyer, même apport, même mensualité de départ. Le total versé comprend aussi la garantie et les frais de dossier. Neuf : notaire réduit${neuf.ptz?.montant?', PTZ '+eur(neuf.ptz.montant)+' sans intérêts':''}${(neuf.ext||[]).filter(x=>!x.existant&&x.montant>0).map(x=>', '+esc(x.nom)+' '+eur(x.montant)).join('')}. Travaux éventuels de l'ancien non comptés.</p>`;
 }
 /** À prix égal : ce qu'il faut emprunter, les intérêts et le capital restant dû année par année. */
 function aPrixEgal(d,type,prix){
@@ -1098,16 +1102,16 @@ function resDiag(){
    <div class="srt-row" style="margin:14px 0 0"><button type="button" class="srt-btn prim" id="sd-solv">Fiche de solvabilité</button><button type="button" class="srt-btn" id="sd-sorties">Sorties client…</button></div></div>
   <div class="card"><h2>Neuf ou ancien : la différence de budget</h2><p class="sub">Même foyer, même mensualité. ${ecart>0?`Dans le neuf, votre client peut viser <b style="color:#a34d31">${eur(ecart)} de plus</b> : frais de notaire ${neuf.offerts?'offerts':'réduits'}${neuf.ptz.montant?' et PTZ à 0 %':''}.`:'Avec ces critères, le neuf n\'apporte pas de budget supplémentaire.'}${neuf.ptz.motif&&d.primo?' '+esc(neuf.ptz.motif)+(d.rfr?'':` (RFR non saisi, estimé à ${eur(d.revenus*12*0.9)} : saisissez le RFR N-2 réel dans le bloc PTZ)`):''}${!d.primo?' PTZ non retenu : le client n\'est pas primo-accédant.':''}</p>
    <div class="cols">${colonne(neuf,'Neuf',C.main)}${colonne(ancien,'Ancien',C.frais,neuf)}</div></div>
-  <div class="card">${htmlPrixEgal(d,sn,sa,prixRef)}</div>
+  <div class="card">${htmlMensEgale(d,neuf,ancien)}</div>
   <div class="card" id="sd-epargne">${carteEpargne(d,c)}</div>
   <div class="card"><h2>Projet tremplin : si le client revend</h2><p class="sub">Ce qu'il récupère selon l'année de revente : le capital déjà remboursé plus son apport. Cette somme devient l'apport de son prochain achat.</p>${champReval()}<div id="sd-trem">${htmlTremplin(d,c)}</div></div>
-  <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="margin:0">Comparer des scénarios</h2><button type="button" class="srt-btn prim" id="sd-scen-add">Garder ce scénario</button></div><div id="sd-scen" style="margin-top:10px">${htmlScenarios()}</div></div>
   <div class="cols">
    <div class="card"><h2>Où vont les revenus du foyer</h2><p class="sub">Sur ${eur(d.revenus)} par mois. ${okReste?'C\'est le taux d\'endettement maximum qui limite la mensualité.':'La mensualité suit le taux d\'endettement, mais le reste à vivre passe sous le minimum : voir l\'alerte en haut.'}</p>
     ${barre100([{l:d.redevance?'Crédits en cours et redevance BRS':'Crédits en cours',v:d.charges,c:C.frais},{l:'Nouvelle mensualité',v:c.mensualite,c:C.main},{l:'Reste à vivre',v:Math.max(0,c.reste),c:C.apport}])}</div>
    <div class="card"><h2>Budget selon la durée</h2><p class="sub">${d.type==='neuf'?'Neuf':'Ancien'}, même apport.</p>${barresH(durees.map(x=>({l:x.a+' ans',v:x.c.budget,c:x.a===d.ans?C.main:'#d9b9aa',d:'Prêt '+eur(x.c.pret)+(x.c.ptz.montant?' + PTZ '+eur(x.c.ptz.montant):'')+' · mensualité '+eur(x.c.mensualite)})))}</div>
   </div>
   <button type="button" class="cta" id="sd-vers-plan">Construire le plan de financement avec ce budget →</button>
+  <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="margin:0">Comparer des scénarios</h2><button type="button" class="srt-btn prim" id="sd-scen-add">Garder ce scénario</button></div><div id="sd-scen" style="margin-top:10px">${htmlScenarios()}</div></div>
   <p class="note">Estimation indicative : taux ${pc(c.taux,2)}, assurance ${pc(d.ass==null?assDefaut():d.ass,2)} par emprunteur, frais et seuils de l'équipe, barème PTZ (${d.ptzType==='indiv'?'maison individuelle':'logement collectif'}, ${d.occupants||d.adultes+d.enfants} occupant${(d.occupants||d.adultes+d.enfants)>1?'s':''}). Avec un PTZ, le prêt bancaire est lissé : la mensualité totale reste au niveau maximum pendant toute la durée. Elle ne vaut pas accord de financement.${(()=>{const t=taegEstime(c),u=usureDuree(d.ans);return t!=null?` <span data-taeg>TAEG estimé du prêt bancaire : <b>${pc(t,2)}</b>${u?` (taux d'usure ${pc(u.taux,2)} pour ${d.ans} ans, ${esc(u.trim.replace('-Q',' T'))}${u.auto?', Banque de France':''})`:''}.</span>`:''})()}</p>`;
   lierRemb(d,$('st-res'));
   lierTremplin(d,c);
