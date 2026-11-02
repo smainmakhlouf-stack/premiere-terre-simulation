@@ -119,6 +119,8 @@ function barre(){
   }
   $('dos-bar-open').onclick=()=>ouvrir(courant?.clientId);
 }
+// Une simulation rouverte s'affiche d'abord sur le Budget max ; sur le plan seulement si le Budget max est vide.
+function ecranOuverture(){const v=id=>Number(String(document.getElementById(id)?.value||'').replace(/\s/g,'').replace(',','.'))||0;return v('dg-rev1')+v('dg-rev2')+v('dg-autres')>0?'diag':'plan'}
 function setCourant(c){courant=c;try{c?sessionStorage.setItem('pt-dossier-courant',JSON.stringify(c)):sessionStorage.removeItem('pt-dossier-courant')}catch{}barre();if(window.ptStudioDossier)window.ptStudioDossier()}
 
 async function enregistrerRapide(){
@@ -279,7 +281,7 @@ $('dos-droite').addEventListener('click',async e=>{
       restaurer(s.data);
       setCourant({clientId:c.id,client:nomClient(c),simId:s.id,simNom:s.nom});setTimeout(()=>window.ptMarquerEnregistre&&window.ptMarquerEnregistre(),0);
       fermer();
-      if(window.ptOpenStudio)window.ptOpenStudio('plan');else{const plan=document.querySelector('#pt-home [data-go="plan"]');if(plan)plan.click()}
+      if(window.ptOpenStudio)window.ptOpenStudio(ecranOuverture());else{const plan=document.querySelector('#pt-home [data-go="plan"]');if(plan)plan.click()}
     }else if(b.dataset.maj){
       if(!confirm('Remplacer cette simulation par ce qui est affiché dans le simulateur ?'))return;
       await api('/api/simulations/'+b.dataset.maj,{method:'PUT',body:corps(capturer())});await choisir(c.id);message('Simulation mise à jour.');
@@ -417,7 +419,7 @@ function proposerBrouillon(){
   el.style.cssText='position:fixed;top:44px;left:50%;transform:translateX(-50%);z-index:9800;background:#fff;color:#2b2320;border:1px solid #e2cfc3;border-radius:12px;box-shadow:0 10px 30px #0002;padding:10px 14px;font:13px Inter,Arial,sans-serif;display:flex;gap:10px;align-items:center;flex-wrap:wrap;max-width:94vw';
   el.innerHTML=`<span>Simulation non enregistrée du <b>${esc(new Date(b.at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))}</b> retrouvée.</span><button type="button" id="brouillon-oui" style="background:#a34d31;color:#fff;border:0;border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:600">Reprendre</button><button type="button" id="brouillon-non" style="background:#f1e5dd;color:#7e412f;border:0;border-radius:8px;padding:6px 12px;cursor:pointer">Ignorer</button>`;
   document.body.appendChild(el);
-  $('brouillon-oui').onclick=()=>{try{restaurer(b.data);marquerEnregistre()}catch(e){alert('Brouillon illisible.')}el.remove();if(window.ptOpenStudio)window.ptOpenStudio('plan')};
+  $('brouillon-oui').onclick=()=>{try{restaurer(b.data);marquerEnregistre()}catch(e){alert('Brouillon illisible.')}el.remove();if(window.ptOpenStudio)window.ptOpenStudio(ecranOuverture())};
   $('brouillon-non').onclick=()=>{try{localStorage.removeItem(CLE_BROUILLON)}catch{}el.remove()};
 }
 setTimeout(proposerBrouillon,1500);
