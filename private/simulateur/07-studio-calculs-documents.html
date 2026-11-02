@@ -515,23 +515,44 @@ function aPrixEgal(d,type,prix){
   let ptz=bareme;for(let k=0;k<40;k++){const z=plafonnerPTZ(bareme,banquePour(ptz)+totExt);if(Math.abs((z.montant||0)-(ptz.montant||0))<1){ptz=z;break}ptz=z}
   const banque=banquePour(ptz),mens=banque*b.facteur,assurance=banque*b.ins*b.n,interets=mens*b.n-banque;
   const coutExt=ext.reduce((a,x)=>a+Math.max(0,x.mens*x.mois-x.montant),0);
-  const crd=[];let reste=banque;const resteExt=ext.map(x=>({x,r:x.montant,t:(x.taux||0)/1200,m:annuite(x.montant,x.taux||0,x.mois)}));
+  const crd=[],verse=[];let reste=banque,cumul=0;const resteExt=ext.map(x=>({x,r:x.montant,t:(x.taux||0)/1200,m:annuite(x.montant,x.taux||0,x.mois)}));
   for(let a=0;a<=d.ans;a++){
-    if(a>0)for(let i=0;i<12;i++){const it=reste*b.r;reste=Math.max(0,reste-(mens-it));resteExt.forEach(e=>{if(e.r>0)e.r=Math.max(0,e.r-(e.m-e.r*e.t))})}
+    if(a>0)for(let i=0;i<12;i++){const mo=(a-1)*12+i+1;const it=reste*b.r;if(reste>0)cumul+=mens+banque*b.ins;reste=Math.max(0,reste-(mens-it));resteExt.forEach(e=>{if(mo<=e.x.mois)cumul+=e.x.mens;if(e.r>0)e.r=Math.max(0,e.r-(e.m-e.r*e.t))});
+      if(ptz.montant){const deb=(ptz.differe||0)*12,fin=ptz.duree*12;if(mo<=fin)cumul+=ptz.montant*b.ins+(mo>deb?ptz.montant/(fin-deb):0)}}
+    verse.push(cumul);
     // PTZ : capital constant pendant le différé, puis remboursé linéairement.
     let rPtz=0;if(ptz.montant){const fin=ptz.duree,deb=ptz.differe||0;rPtz=a<=deb?ptz.montant:a>=fin?0:ptz.montant*(fin-a)/(fin-deb)}
     crd.push(reste+rPtz+resteExt.reduce((s,e)=>s+e.r,0))}
-  return {type,banque,ptz,ext,totExt,mens:mens+banque*b.ins+(ptz.montant||0)*b.ins+(ptz.montant&&!ptz.differe?ptz.montant/(ptz.duree*12):0)+ext.reduce((a,x)=>a+x.mens,0),interets,assurance,coutCredit:interets+assurance+coutExt,crd,notaire:prix*notaire};
+  return {type,banque,ptz,ext,totExt,mens:mens+banque*b.ins+(ptz.montant||0)*b.ins+(ptz.montant&&!ptz.differe?ptz.montant/(ptz.duree*12):0)+ext.reduce((a,x)=>a+x.mens,0),interets,assurance,coutCredit:interets+assurance+coutExt,crd,verse,notaire:prix*notaire};
 }
 
 (function(){if(document.getElementById('pt-info-style'))return;const st=document.createElement('style');st.id='pt-info-style';st.textContent='.pt-info{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;background:#f3e1d6;color:#a34d31;border:1px solid #e3c3b1;font:700 11px Georgia,serif;cursor:pointer;margin-left:5px;vertical-align:1px;padding:0}.pt-info:hover{background:#a34d31;color:#fff}';document.head.appendChild(st)})();
 // « À chaque mensualité, j'épargne » : illustration simple, une couleur pour l'épargne ; la part des intérêts au départ
 // est réglable (40 % par défaut) et baisse jusqu'à zéro à la fin du prêt. La valeur réelle du dossier est rappelée dessous.
 let partInterets=40;
+let ongletEpargne=null;const epargneInit=new WeakSet();
+/** Part réelle des intérêts et de l'assurance dans la 1re mensualité d'un montage « à prix égal ». */
+function partReelle(d,x){const b=bases(d);let i=x.banque*b.r+(x.banque+(x.ptz.montant||0))*b.ins;
+  x.ext.forEach(e=>{i+=e.montant*(e.taux||0)/1200+Math.max(0,e.mens-annuite(e.montant,e.taux||0,e.mois))});return x.mens>0?i/x.mens*100:null}
+/** Données du graphe pour le neuf ou l'ancien : le montage du dossier pour son type, sinon le même logement dans l'autre type. */
+function optionEpargne(d,c,t){if(t===d.type)return {t,M:c.mensualite,reel:reelDe(c)};const x=aPrixEgal(d,t,c.budget);return {t,M:x.mens,reel:partReelle(d,x)}}
+function carteEpargne(d,c){
+  const t=ongletEpargne||d.type,o=optionEpargne(d,c,t);if(!epargneInit.has(c)&&o.reel!=null){epargneInit.add(c);partInterets=Math.min(80,Math.max(10,Math.round(o.reel)))}
+  const autre=optionEpargne(d,c,t==='neuf'?'ancien':'neuf'),on=t==='neuf'?o:autre,oa=t==='neuf'?autre:o;
+  const ong=(k,l)=>`<button type="button" data-ongep="${k}" style="border:0;border-radius:9px;padding:8px 20px;cursor:pointer;font:600 14px Inter,Arial,sans-serif;${t===k?'background:#fff;color:#8e3f29;box-shadow:0 1px 4px #0002':'background:transparent;color:#7b6b62'}">${l}</button>`;
+  const ep=x=>x.reel!=null?100-x.reel:null,capN=on.M*(ep(on)||0)/100,capA=oa.M*(ep(oa)||0)/100,dp=(ep(on)??0)-(ep(oa)??0);
+  const bloc=(nom,x,cap,actif)=>`<div style="flex:1;min-width:200px;border:2px solid ${actif?C.main:'#eaded7'};border-radius:12px;padding:10px 14px;background:${actif?'#fbf3ee':'#fff'}"><div style="font-weight:700">${nom}</div><div style="font:700 24px Georgia,serif;color:${C.main}">${x.reel!=null?Math.round(100-x.reel)+' % épargné':'—'}</div><div style="font-size:13px;color:#7b6b62">soit ${eur(cap)} de capital sur une mensualité de ${eur(x.M)}</div></div>`;
+  return `<div style="display:flex;justify-content:center;margin-bottom:12px"><div style="display:inline-flex;gap:4px;background:#f3ece8;border-radius:12px;padding:4px">${ong('neuf','Neuf')}${ong('ancien','Ancien')}</div></div>
+   <div id="sd-ep-corps">${grapheEpargne(c,d.ans,o)}</div>
+   <div style="margin-top:12px;border-top:1px dashed #e3d5cc;padding-top:12px"><div style="text-align:center;font-weight:700;margin-bottom:8px">Le même logement à ${eur(c.budget)} : ce que chaque mensualité met de côté au départ</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">${bloc('Neuf',on,capN,t==='neuf')}${bloc('Ancien',oa,capA,t==='ancien')}</div>
+    ${on.reel!=null&&oa.reel!=null?`<p style="text-align:center;margin:10px 0 0;font-size:15px">${dp>=0?`Dans le neuf, <b style="color:#2f7a3e">${Math.round(ep(on))} %</b> de chaque mensualité va à votre épargne, contre <b>${Math.round(ep(oa))} %</b> dans l'ancien.`:`Dans l'ancien, <b>${Math.round(ep(oa))} %</b> de chaque mensualité va à l'épargne, contre <b>${Math.round(ep(on))} %</b> dans le neuf.`}</p>`:''}</div>`;
+}
 const reelEpargne=new WeakMap();
-function grapheEpargne(c,ans){
-  let reel=reelEpargne.has(c)?reelEpargne.get(c):null;if(!reelEpargne.has(c))try{const e=echeancier(c),p0=e.prets.map(p=>p.lignes[0]).filter(Boolean),tot=p0.reduce((a,l)=>a+l.pay,0);if(tot>0)reel=p0.reduce((a,l)=>a+l.int+l.ins,0)/tot*100;reelEpargne.set(c,reel)}catch(_){}
-  const M=c.mensualite,pi=Math.round(partInterets)/100,W=1000,H=330,L=60,B=34,T=14,PW=W-L-16,PH=H-T-B,x=a=>L+a/ans*PW,y=p=>T+PH-p*PH;
+function reelDe(c){let reel=reelEpargne.has(c)?reelEpargne.get(c):null;if(!reelEpargne.has(c))try{const e=echeancier(c),p0=e.prets.map(p=>p.lignes[0]).filter(Boolean),tot=p0.reduce((a,l)=>a+l.pay,0);if(tot>0)reel=p0.reduce((a,l)=>a+l.int+l.ins,0)/tot*100;reelEpargne.set(c,reel)}catch(_){}return reel}
+function grapheEpargne(c,ans,o){
+  const reel=o?o.reel:reelDe(c);
+  const M=o?o.M:c.mensualite,pi=Math.round(partInterets)/100,W=1000,H=330,L=60,B=34,T=14,PW=W-L-16,PH=H-T-B,x=a=>L+a/ans*PW,y=p=>T+PH-p*PH;
   let g='';[0,.25,.5,.75,1].forEach(p=>g+=`<line x1="${L}" x2="${W-16}" y1="${y(p)}" y2="${y(p)}" stroke="#f1e8e2"/><text x="${L-8}" y="${y(p)+4}" text-anchor="end" font-size="12" fill="#8a7a70">${p*100} %</text>`);
   g+=`<path d="M${x(0)},${y(1-pi)} L${x(ans)},${y(1)} L${x(ans)},${y(0)} L${x(0)},${y(0)} Z" fill="${C.main}"/><path d="M${x(0)},${y(1)} L${x(ans)},${y(1)} L${x(0)},${y(1-pi)} Z" fill="#f4e6de"/>`;
   g+=`<line x1="${x(0)}" x2="${x(ans)}" y1="${y(1)}" y2="${y(1)}" stroke="#2b2320" stroke-dasharray="6 5" stroke-width="1.5"/>`;
@@ -539,15 +560,19 @@ function grapheEpargne(c,ans){
   g+=`<text x="${x(ans*.03)}" y="${y(.3)}" font-size="13" font-weight="700" fill="#fbe3d4">CAPITAL ÉPARGNÉ ${Math.round(100-pi*100)} %</text><text x="${x(ans*.03)}" y="${y(.3)+28}" font-size="24" fill="#fff">${eur(M*(1-pi))}</text>`;
   g+=`<text x="${x(ans*.8)}" y="${y(.45)}" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">À la fin : 100 % épargne</text>`;
   g+=`<text x="${x(0)}" y="${H-10}" font-size="12" fill="#8a7a70">0</text><text x="${x(ans)}" y="${H-10}" text-anchor="end" font-size="12" fill="#8a7a70">${ans} ans</text><text x="${(x(0)+x(ans))/2}" y="${H-10}" text-anchor="middle" font-size="11" fill="#8a7a70" letter-spacing="2">DURÉE D'EMPRUNT</text>`;
-  return `<div style="text-align:center"><div style="font:700 22px Georgia,serif;letter-spacing:.5px">À CHAQUE MENSUALITÉ, J'ÉPARGNE</div><div class="sub" style="margin:2px 0 8px">Prêt amortissable · Mensualité : <b style="color:#2b2320">${eur(M)}</b></div>
+  return `<div style="text-align:center"><div style="font:700 22px Georgia,serif;letter-spacing:.5px">À CHAQUE MENSUALITÉ, J'ÉPARGNE</div><div class="sub" style="margin:2px 0 8px">${o?(o.t==='neuf'?'Neuf':'Ancien')+' · ':''}Prêt amortissable · Mensualité : <b style="color:#2b2320">${eur(M)}</b></div>
    <label style="display:inline-flex;align-items:center;gap:10px;font-size:13.5px">Part des intérêts au départ : <input type="range" id="sd-partint" min="10" max="80" step="0.5" value="${partInterets}" style="width:200px;accent-color:${C.main}"> <b style="color:${C.main}">${Math.round(pi*100)} % intérêts · ${Math.round(100-pi*100)} % capital</b></label></div>
    <svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Répartition de la mensualité entre intérêts et capital épargné">${g}</svg>
-   <p class="note" style="text-align:center;margin:4px 0 0">Illustration pédagogique : la part des intérêts baisse chaque année jusqu'à zéro à la fin du prêt.${reel!=null?` Valeur réelle de ce dossier au départ : ${Math.round(reel)} % d'intérêts et d'assurance, ${Math.round(100-reel)} % d'épargne.`:''}</p>`;
+   <p class="note" style="text-align:center;margin:4px 0 0">Illustration pédagogique : la part des intérêts baisse chaque année jusqu'à zéro à la fin du prêt.${reel!=null?` Valeur réelle${o?(o.t==='neuf'?' dans le neuf':' dans l\'ancien'):' de ce dossier'} au départ : ${Math.round(reel)} % d'intérêts et d'assurance, ${Math.round(100-reel)} % d'épargne.`:''}</p>`;
+}
+function lierOngletsEpargne(d,c){const box=$('sd-epargne');if(!box)return;
+  const o=()=>optionEpargne(d,c,ongletEpargne||d.type);lierEpargne(c,d.ans,o());
+  box.querySelectorAll('[data-ongep]').forEach(b=>b.onclick=()=>{ongletEpargne=b.dataset.ongep;const r=o().reel;if(r!=null)partInterets=Math.min(80,Math.max(10,Math.round(r)));box.innerHTML=carteEpargne(d,c);lierOngletsEpargne(d,c)});
 }
 // Le curseur n'est jamais redessiné pendant qu'on le tire : seuls le graphique et le libellé changent, une fois par image.
-function lierEpargne(c,ans){const r=$('sd-partint');if(!r)return;let attente=false;
+function lierEpargne(c,ans,o){const r=$('sd-partint');if(!r)return;let attente=false;
   r.oninput=()=>{partInterets=+r.value;if(attente)return;attente=true;requestAnimationFrame(()=>{attente=false;const box=$('sd-epargne');if(!box)return;
-    const t=document.createElement('div');t.innerHTML=grapheEpargne(c,ans);
+    const t=document.createElement('div');t.innerHTML=grapheEpargne(c,ans,o);
     const sv=box.querySelector('svg'),nsv=t.querySelector('svg');if(sv&&nsv)sv.replaceWith(nsv);
     const lb=r.parentElement.querySelector('b'),nlb=t.querySelector('#sd-partint')?.parentElement.querySelector('b');if(lb&&nlb)lb.innerHTML=nlb.innerHTML})}}
 function courbes(series,ans){
@@ -1071,7 +1096,7 @@ function resDiag(){
   <div class="card"><h2>Neuf ou ancien : la différence de budget</h2><p class="sub">Même foyer, même mensualité. ${ecart>0?`Dans le neuf, votre client peut viser <b style="color:#a34d31">${eur(ecart)} de plus</b> : frais de notaire ${neuf.offerts?'offerts':'réduits'}${neuf.ptz.montant?' et PTZ à 0 %':''}.`:'Avec ces critères, le neuf n\'apporte pas de budget supplémentaire.'}${neuf.ptz.motif&&d.primo?' '+esc(neuf.ptz.motif)+(d.rfr?'':` (RFR non saisi, estimé à ${eur(d.revenus*12*0.9)} : saisissez le RFR N-2 réel dans le bloc PTZ)`):''}${!d.primo?' PTZ non retenu : le client n\'est pas primo-accédant.':''}</p>
    <div class="cols">${colonne(neuf,'Neuf',C.main)}${colonne(ancien,'Ancien',C.frais,neuf)}</div></div>
   <div class="card">${htmlPrixEgal(d,sn,sa,prixRef)}</div>
-  <div class="card" id="sd-epargne">${grapheEpargne(c,d.ans)}</div>
+  <div class="card" id="sd-epargne">${carteEpargne(d,c)}</div>
   <div class="card"><h2>Projet tremplin : si le client revend</h2><p class="sub">Ce qu'il récupère selon l'année de revente : le capital déjà remboursé plus son apport. Cette somme devient l'apport de son prochain achat.</p>${champReval()}<div id="sd-trem">${htmlTremplin(d,c)}</div></div>
   <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="margin:0">Comparer des scénarios</h2><button type="button" class="srt-btn prim" id="sd-scen-add">Garder ce scénario</button></div><div id="sd-scen" style="margin-top:10px">${htmlScenarios()}</div></div>
   <div class="cols">
@@ -1083,7 +1108,7 @@ function resDiag(){
   <p class="note">Estimation indicative : taux ${pc(c.taux,2)}, assurance ${pc(d.ass==null?assDefaut():d.ass,2)} par emprunteur, frais et seuils de l'équipe, barème PTZ (${d.ptzType==='indiv'?'maison individuelle':'logement collectif'}, ${d.occupants||d.adultes+d.enfants} occupant${(d.occupants||d.adultes+d.enfants)>1?'s':''}). Avec un PTZ, le prêt bancaire est lissé : la mensualité totale reste au niveau maximum pendant toute la durée. Elle ne vaut pas accord de financement.${(()=>{const t=taegEstime(c),u=usureDuree(d.ans);return t!=null?` <span data-taeg>TAEG estimé du prêt bancaire : <b>${pc(t,2)}</b>${u?` (taux d'usure ${pc(u.taux,2)} pour ${d.ans} ans, ${esc(u.trim.replace('-Q',' T'))}${u.auto?', Banque de France':''})`:''}.</span>`:''})()}</p>`;
   lierRemb(d,$('st-res'));
   lierTremplin(d,c);
-  lierEpargne(c,d.ans);
+  lierOngletsEpargne(d,c);
   lierScenarios(d,c);
   const ai=$('sd-assinfo');if(ai&&d.assAges){const x=d.assAges;ai.innerHTML=`Assurance selon l'âge : ${x.a1!=null?`<b>${pc(x.t1,2)}</b> (${x.a1} ans)`:''}${d.adultes>1&&x.a2!=null?` et <b>${pc(x.t2,2)}</b> (${x.a2} ans)`:''} · barème de l'équipe.`}
   const ri=$('sd-rlinfo');if(ri){const rl=(c.ext||[]).find(x=>/relais/i.test(x.nom));ri.innerHTML=rl?`Relais : <b>${eur(rl.montant)}</b> (quotité de la revente − capital restant dû), intérêts ${rl.mens?eur(rl.mens)+' / mois':'payés à la vente'}.`:'Indiquez le prix de revente et le capital restant dû.'}
