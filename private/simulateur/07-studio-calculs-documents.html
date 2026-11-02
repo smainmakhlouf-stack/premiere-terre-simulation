@@ -481,17 +481,22 @@ function capacite(d,type){
 /** À prix égal : ce qu'il faut emprunter, les intérêts et le capital restant dû année par année. */
 function aPrixEgal(d,type,prix){
   const b=bases(d),notaire=type==='neuf'&&d.notaireOfferts?0:(d.notairePct!=null&&type===d.type?d.notairePct:(type==='neuf'?b.p.frais.notaireNeuf:b.p.frais.notaireAncien))/100;
-  const bareme=ptzPour(d,type,prix),banquePour=z=>Math.max(0,(prix*(1+notaire)+b.p.frais.dossier-d.apport-(z.montant||0)+b.garPct*(z.montant||0))/(1-b.garPct-b.courtPct));
-  // PTZ limité par le prêt bancaire (règle anti-effet d'aubaine) : la banque finance alors le reste.
-  let ptz=bareme;for(let k=0;k<40;k++){const z=plafonnerPTZ(bareme,banquePour(ptz));if(Math.abs((z.montant||0)-(ptz.montant||0))<1){ptz=z;break}ptz=z}
+  // Prêts complémentaires du dossier (Action Logement, etc.) : ils financent aussi le projet, la banque prête le reste.
+  const ext=pretsExt(d).filter(x=>!x.existant&&!(x.neufSeul&&type!=='neuf')),totExt=ext.reduce((a,x)=>a+x.montant,0);
+  const bareme=ptzPour(d,type,prix),banquePour=z=>Math.max(0,(prix*(1+notaire)+b.p.frais.dossier-d.apport-(z.montant||0)-totExt+b.garPct*((z.montant||0)+totExt))/(1-b.garPct-b.courtPct));
+  // PTZ limité par les autres prêts (règle anti-effet d'aubaine) : la banque finance alors le reste.
+  let ptz=bareme;for(let k=0;k<40;k++){const z=plafonnerPTZ(bareme,banquePour(ptz)+totExt);if(Math.abs((z.montant||0)-(ptz.montant||0))<1){ptz=z;break}ptz=z}
   const banque=banquePour(ptz),mens=banque*b.facteur,assurance=banque*b.ins*b.n,interets=mens*b.n-banque;
-  const crd=[];let reste=banque;for(let a=0;a<=d.ans;a++){
-    if(a>0)for(let i=0;i<12;i++){const it=reste*b.r;reste=Math.max(0,reste-(mens-it))}
+  const coutExt=ext.reduce((a,x)=>a+Math.max(0,x.mens*x.mois-x.montant),0);
+  const crd=[];let reste=banque;const resteExt=ext.map(x=>({x,r:x.montant,t:(x.taux||0)/1200,m:annuite(x.montant,x.taux||0,x.mois)}));
+  for(let a=0;a<=d.ans;a++){
+    if(a>0)for(let i=0;i<12;i++){const it=reste*b.r;reste=Math.max(0,reste-(mens-it));resteExt.forEach(e=>{if(e.r>0)e.r=Math.max(0,e.r-(e.m-e.r*e.t))})}
     // PTZ : capital constant pendant le différé, puis remboursé linéairement.
     let rPtz=0;if(ptz.montant){const fin=ptz.duree,deb=ptz.differe||0;rPtz=a<=deb?ptz.montant:a>=fin?0:ptz.montant*(fin-a)/(fin-deb)}
-    crd.push(reste+rPtz)}
-  return {type,banque,ptz,mens:mens+banque*b.ins+(ptz.montant||0)*b.ins+(ptz.montant&&!ptz.differe?ptz.montant/(ptz.duree*12):0),interets,assurance,coutCredit:interets+assurance,crd,notaire:prix*notaire};
+    crd.push(reste+rPtz+resteExt.reduce((s,e)=>s+e.r,0))}
+  return {type,banque,ptz,ext,totExt,mens:mens+banque*b.ins+(ptz.montant||0)*b.ins+(ptz.montant&&!ptz.differe?ptz.montant/(ptz.duree*12):0)+ext.reduce((a,x)=>a+x.mens,0),interets,assurance,coutCredit:interets+assurance+coutExt,crd,notaire:prix*notaire};
 }
+
 function courbes(series,ans){
   const W=760,H=240,L=64,B=26,T=12,PW=W-L-12,PH=H-T-B,max=Math.max(1,...series.flatMap(s=>s.v));
   const pas=[10000,20000,25000,50000,100000,200000].find(p=>max/p<=5)||200000,top=Math.ceil(max/pas)*pas;
@@ -953,7 +958,8 @@ function resDiag(){
   <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="margin:0">Comparer des scénarios</h2><button type="button" class="srt-btn prim" id="sd-scen-add">Garder ce scénario</button></div><div id="sd-scen" style="margin-top:10px">${htmlScenarios()}</div></div>
   <div class="card"><h2>Neuf ou ancien : la différence de budget</h2><p class="sub">Même foyer, même mensualité. ${ecart>0?`Dans le neuf, votre client peut viser <b style="color:#a34d31">${eur(ecart)} de plus</b> : frais de notaire ${neuf.offerts?'offerts':'réduits'}${neuf.ptz.montant?' et PTZ à 0 %':''}.`:'Avec ces critères, le neuf n\'apporte pas de budget supplémentaire.'}${neuf.ptz.motif&&d.primo?' '+esc(neuf.ptz.motif)+(d.rfr?'':` (RFR non saisi, estimé à ${eur(d.revenus*12*0.9)} : saisissez le RFR N-2 réel dans le bloc PTZ)`):''}${!d.primo?' PTZ non retenu : le client n\'est pas primo-accédant.':''}</p>
    <div class="cols">${colonne(neuf,'Neuf',C.main)}${colonne(ancien,'Ancien',C.frais,neuf)}</div></div>
-  <div class="card"><h2>À prix égal (${eur(prixRef)}) : le neuf s'amortit plus vite</h2><p class="sub">Moins de frais de notaire${sn.ptz.montant?' et un PTZ sans intérêts':''} : on emprunte moins à la banque, la dette baisse plus vite et coûte moins cher.</p>
+  <div class="card"><h2>À prix égal (${eur(prixRef)}) : le neuf s'amortit plus vite</h2><p class="sub">Moins de frais de notaire${sn.ptz.montant?' et un PTZ sans intérêts':''}${sn.totExt?' et des prêts aidés':''} : on emprunte moins à la banque, la dette baisse plus vite et coûte moins cher.</p>
+   <p class="note" style="margin:-4px 0 10px">Neuf : apport ${eur(d.apport)}${sn.ptz.montant?' + PTZ '+eur(sn.ptz.montant):''}${sn.ext.map(x=>' + '+esc(x.nom)+' '+eur(x.montant)+' à '+pc(x.taux||0,2)).join('')} + banque ${eur(sn.banque)}. Ancien : apport ${eur(d.apport)}${sa.ptz.montant?' + PTZ '+eur(sa.ptz.montant):''}${sa.ext.map(x=>' + '+esc(x.nom)+' '+eur(x.montant)).join('')} + banque ${eur(sa.banque)}. Garantie et frais de dossier compris.</p>
    ${courbes([{l:'Neuf · capital restant dû',c:C.main,v:sn.crd},{l:'Ancien · capital restant dû',c:C.frais,v:sa.crd}],d.ans)}
    <div class="tiles" style="margin-top:14px">
     <div class="tile"><small>Emprunt bancaire</small><b>${eur(sn.banque)} <span style="font-size:14px;color:#8a7a70">/ ${eur(sa.banque)}</span></b><em class="ok" style="background:#f3ece8;color:#5e4f48">neuf / ancien</em></div>
