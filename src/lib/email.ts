@@ -81,3 +81,38 @@ export async function envoyerSauvegarde(to: string[], fichier: string, contenu: 
   })
   if (error) throw new Error(`Échec de l'envoi de la sauvegarde : ${error.message}`)
 }
+
+/**
+ * Étude de financement envoyée au client, PDF en pièce jointe. Le vendeur est en copie et reçoit
+ * les réponses du client (reply-to) : l'adresse d'expédition reste celle du domaine vérifié.
+ */
+export async function envoyerEtudeClient(o: { to: string; vendeurNom: string; vendeurEmail: string; objet: string; message: string; fichier: string; pdf: Buffer }) {
+  const adresse = FROM.match(/<([^>]+)>/)?.[1] || FROM
+  const nom = o.vendeurNom.replace(/[<>"\r\n]/g, "").slice(0, 60)
+  const corps = escapeHtml(o.message).replace(/\r?\n/g, "<br>")
+  const { error } = await getResend().emails.send({
+    from: `${nom ? nom + " · " : ""}Première Terre <${adresse}>`,
+    to: o.to,
+    cc: o.vendeurEmail,
+    replyTo: o.vendeurEmail,
+    subject: o.objet,
+    attachments: [{ filename: o.fichier, content: o.pdf }],
+    text: o.message,
+    html: `
+      <div style="font-family: 'Trebuchet MS', Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #342b27;">
+        <div style="background-color:#8c4c3d; padding: 22px 28px; border-radius: 8px 8px 0 0;">
+          <div style="font-family: Georgia, serif; font-size: 20px; font-weight: 600; color: #fff;">Première Terre</div>
+          <div style="font-size: 10.5px; color: rgba(255,255,255,0.75); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px;">Votre étude de financement</div>
+        </div>
+        <div style="background-color:#fff; border: 1px solid #e8ddd6; border-top: none; border-radius: 0 0 8px 8px; padding: 28px; font-size: 14px; line-height: 1.65;">
+          ${corps}
+          <p style="font-size: 12px; color: #7c7068; margin-top: 24px; border-top: 1px solid #f0e6e0; padding-top: 12px;">Étude indicative, établie selon les informations communiquées et les conditions de crédit du moment ; elle ne vaut pas offre de prêt. Pour répondre, utilisez simplement « Répondre » : votre conseiller recevra votre message.</p>
+        </div>
+      </div>
+    `,
+  })
+  if (error) {
+    console.error("[envoyerEtudeClient] Échec de l'envoi via Resend:", error)
+    throw new Error(`Échec de l'envoi de l'e-mail : ${error.message}`)
+  }
+}

@@ -555,6 +555,7 @@ function formDiag(){
   <h3 style="margin-top:0">Client</h3>
   <div class="duo"><div class="f"><label for="sd-nom1">Nom</label><input autocomplete="off" id="sd-nom1" data-memo="dg-nom1" value="${v('dg-nom1')}" maxlength="100"></div>
   <div class="f"><label for="sd-prenom1">Prénom</label><input autocomplete="off" id="sd-prenom1" data-memo="dg-prenom1" value="${v('dg-prenom1')}" maxlength="100"></div></div>
+  <div class="f"><label for="sd-email">E-mail <span style="font-weight:400;color:#8a7a70">pour envoyer l'étude</span></label><input autocomplete="off" id="sd-email" data-memo="dg-email" type="email" inputmode="email" value="${v('dg-email')}" maxlength="200"></div>
   <div class="duo" id="sd-co" style="${couple?'':'display:none'}"><div class="f"><label for="sd-nom2">Nom co-emprunteur</label><input autocomplete="off" id="sd-nom2" data-memo="dg-nom2" value="${v('dg-nom2')}" maxlength="100" placeholder="${v('dg-nom1')}"></div>
   <div class="f"><label for="sd-prenom2">Prénom co-emprunteur</label><input autocomplete="off" id="sd-prenom2" data-memo="dg-prenom2" value="${v('dg-prenom2')}" maxlength="100"></div></div>
   <div class="f"><label for="sd-sitfam">Situation familiale</label><select autocomplete="off" id="sd-sitfam" data-memo="dg-sitfam">${['','Célibataire','Marié(e)','Pacsé(e)','Union libre','Divorcé(e)','Séparé(e)','Veuf / veuve'].map(x=>`<option value="${x}" ${m('dg-sitfam').value===x?'selected':''}>${x||'— choisir —'}</option>`).join('')}</select></div>
@@ -927,22 +928,79 @@ function ouvrirSorties(d,c,ctx){
   el.innerHTML=`<div class="srt-win"><div class="srt-tete"><h2>Sorties client</h2><button type="button" class="srt-x" aria-label="Fermer">✕</button></div>
    <p class="srt-sub">${ctx.nom?esc(ctx.nom)+' · ':''}budget ${eur(c.budget)} · ${d.ans} ans</p>
    <div class="srt-liste">${SORTIES.map(([k,l,def])=>`<label><input autocomplete="off" type="checkbox" value="${k}" ${(memo.length?memo.includes(k):def)?'checked':''}> ${l}</label>`).join('')}</div>
-   <div class="srt-act"><button type="button" class="srt-btn prim" data-a="voir">Afficher (présenter au client)</button><button type="button" class="srt-btn" data-a="pdf">Télécharger le PDF</button><button type="button" class="srt-btn" data-a="imprimer">Imprimer</button></div></div>`;
+   <div class="srt-act"><button type="button" class="srt-btn prim" data-a="voir">Afficher (présenter au client)</button><button type="button" class="srt-btn" data-a="pdf">Télécharger le PDF</button><button type="button" class="srt-btn" data-a="imprimer">Imprimer</button><button type="button" class="srt-btn" data-a="mail">✉ Envoyer au client</button></div></div>`;
   el.classList.add('open');
   const choix=()=>{const v=[...el.querySelectorAll('input:checked')].map(i=>i.value);try{localStorage.setItem('pt-sorties-choix',JSON.stringify(v))}catch(e){}return v};
   el.querySelector('.srt-x').onclick=()=>el.classList.remove('open');
   el.onclick=e=>{if(e.target===el)el.classList.remove('open')};
   el.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const v=choix();if(!v.length)return alert('Cochez au moins un document.');const sec=sectionsSorties(v,d,c,ctx);
-    if(b.dataset.a==='voir'){el.classList.remove('open');presenterDoc('Étude de financement',sec,ctx.nom)}else if(b.dataset.a==='pdf')telechargerPDF('Étude de financement',sec,ctx.nom,b);else imprimerDoc('Étude de financement',sec)});
+    if(b.dataset.a==='voir'){el.classList.remove('open');presenterDoc('Étude de financement',sec,ctx.nom)}else if(b.dataset.a==='pdf')telechargerPDF('Étude de financement',sec,ctx.nom,b);else if(b.dataset.a==='mail'){el.classList.remove('open');ouvrirEnvoi(sec,d,c,ctx)}else imprimerDoc('Étude de financement',sec)});
+}
+/** Envoi de l'étude au client par e-mail : aperçu modifiable, PDF joint, vendeur en copie. */
+async function ouvrirEnvoi(sections,d,c,ctx){
+  if(!d){d=lireDiag();c=capacite(d,d.type);ctx=ctx||{}}
+  if(!(c?.budget>0))return alert('Renseignez d\'abord les revenus du client (Budget max).');
+  let el=$('pt-envoi');if(!el){el=document.createElement('div');el.id='pt-envoi';document.body.appendChild(el)}
+  const prenoms=[m('dg-prenom1').value.trim(),m('dg-prenom2').value.trim()].filter(Boolean);
+  let email=m('dg-email')?.value.trim()||'';
+  const dos=window.ptDossierCourant&&window.ptDossierCourant();
+  if(!email&&dos?.clientId){try{const r=await fetch('/api/dossiers/'+dos.clientId);if(r.ok)email=(await r.json()).client?.email||''}catch(e){}}
+  let profil={};try{const r=await fetch('/api/profil');if(r.ok)profil=(await r.json()).profil||{}}catch(e){}
+  const tm=tauxMoyen([{montant:c.pret,taux:c.taux},{montant:c.ptz?.montant||0,taux:0},...(c.ext||[]).filter(x=>!x.existant).map(x=>({montant:x.montant,taux:x.taux}))]);
+  const aides=[c.ptz?.montant?'PTZ de '+eur(c.ptz.montant):'',...(c.ext||[]).filter(x=>!x.existant&&x.montant>0).map(x=>(x.nom||'prêt complémentaire')+' de '+eur(x.montant))].filter(Boolean);
+  const message=`Bonjour${prenoms.length?' '+prenoms.join(' et '):''},
+
+Suite à notre échange, vous trouverez ci-joint votre étude de financement personnalisée.
+
+En résumé :
+- Budget d'achat maximum : ${eur(c.budget)} (prix du bien, hors frais de notaire)
+- Mensualité : ${eur(c.mensualite)} par mois, assurance comprise, sur ${d.ans} ans
+- ${tm!=null?'Taux moyen de l\'ensemble des prêts : '+pc(tm,2):'Taux du prêt principal : '+pc(c.taux,2)}${aides.length?'\n- Dont '+aides.join(', '):''}
+
+Je reste à votre disposition pour en parler et pour avancer sur votre projet.
+
+Bien cordialement,
+${profil.name||''}${profil.telephone?'\n'+profil.telephone:''}
+Première Terre Immobilier`;
+  el.innerHTML=`<div class="env-win"><div class="srt-tete"><h2>Envoyer l'étude au client</h2><button type="button" class="srt-x" aria-label="Fermer">✕</button></div>
+   <label class="env-f">À (client)<input id="env-to" type="email" autocomplete="off" maxlength="200" value="${esc(email)}" placeholder="adresse@client.fr"></label>
+   <div class="env-cc">Copie : vous (adresse de votre compte). Les réponses du client arrivent dans votre boîte.</div>
+   <label class="env-f">Objet<input id="env-objet" autocomplete="off" maxlength="200" value="${esc('Votre étude de financement'+(ctx.nom?' · '+ctx.nom:'')+' · Première Terre')}"></label>
+   <label class="env-f">Message<textarea id="env-msg" rows="15" maxlength="6000">${esc(message)}</textarea></label>
+   <div class="env-pj">📎 Pièce jointe : Étude de financement (PDF), identique au document affiché</div>
+   <div class="srt-act" style="justify-content:flex-end"><button type="button" class="srt-btn" data-a="annuler">Annuler</button><button type="button" class="srt-btn prim" data-a="envoyer">Envoyer</button></div>
+   <div class="env-etat" role="status"></div></div>`;
+  el.classList.add('open');
+  const fermer=()=>el.classList.remove('open'),etat=t=>el.querySelector('.env-etat').textContent=t;
+  el.querySelector('.srt-x').onclick=fermer;el.querySelector('[data-a="annuler"]').onclick=fermer;
+  el.onclick=e=>{if(e.target===el)fermer()};
+  el.querySelector('[data-a="envoyer"]').onclick=async e=>{
+    const b=e.currentTarget,to=$('env-to').value.trim(),objet=$('env-objet').value.trim(),msg=$('env-msg').value.trim();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(to))return alert('Adresse e-mail du client invalide.');
+    if(!objet||!msg)return alert('L\'objet et le message sont obligatoires.');
+    if(!confirm('Envoyer l\'étude à '+to+' ? Vous serez en copie.'))return;
+    b.disabled=true;b.textContent='Préparation du PDF…';etat('');
+    try{
+      const {pdf,fichier}=await produirePDF('Étude de financement',sections,ctx.nom);
+      const b64=await new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]);r.onerror=()=>ko(new Error('lecture du PDF impossible'));r.readAsDataURL(pdf)});
+      b.textContent='Envoi…';
+      const r=await fetch('/api/envoi-client',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to,objet,message:msg,fichier,pdf:b64})});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok)throw new Error(j.message||'erreur '+r.status);
+      if(m('dg-email')&&!m('dg-email').value){m('dg-email').value=to;const i=$('sd-email');if(i)i.value=to}
+      etat('Étude envoyée à '+to+', copie à '+(j.copie||'vous')+'.');b.textContent='Envoyé ✓';setTimeout(fermer,2200);
+    }catch(err){etat('Envoi impossible : '+err.message);b.disabled=false;b.textContent='Envoyer'}
+  };
 }
 /** Présentation plein écran du document, avec impression possible. */
 function presenterDoc(titre,sections,nom){
   let el=$('pt-apercu');if(!el){el=document.createElement('div');el.id='pt-apercu';document.body.appendChild(el)}
-  el.innerHTML=`<div class="apc-barre"><button type="button" class="srt-btn" data-a="fermer">← Retour</button><span>${esc(titre)}${nom?' · '+esc(nom):''}</span><span class="apc-act"><button type="button" class="srt-btn prim" data-a="pdf">Télécharger le PDF</button> <button type="button" class="srt-btn" data-a="imprimer">Imprimer</button></span></div><iframe title="Aperçu du document"></iframe>`;
+  el.innerHTML=`<div class="apc-barre"><button type="button" class="srt-btn" data-a="fermer">← Retour</button><span>${esc(titre)}${nom?' · '+esc(nom):''}</span><span class="apc-act"><button type="button" class="srt-btn prim" data-a="mail">✉ Envoyer au client</button> <button type="button" class="srt-btn" data-a="pdf">Télécharger le PDF</button> <button type="button" class="srt-btn" data-a="imprimer">Imprimer</button></span></div><iframe title="Aperçu du document"></iframe>`;
   el.classList.add('open');
   const f=el.querySelector('iframe');f.srcdoc=docHtml(titre,sections).replace('</style>','body{background:#ece6e1!important}#pt-studio{max-width:880px;margin:24px auto!important;background:#fff;padding:36px 42px!important;box-shadow:0 6px 30px #0002;border-radius:6px}.doc-section+.doc-section{border-top:1px dashed #d9c5b9;padding-top:26px}@media print{body{background:#fff!important}#pt-studio{box-shadow:none;margin:0!important;padding:0!important;max-width:none}.doc-section+.doc-section{border-top:0;padding-top:0}}</style>');
   el.querySelector('[data-a="fermer"]').onclick=()=>el.classList.remove('open');
   el.querySelector('[data-a="pdf"]').onclick=e=>telechargerPDF(titre,sections,nom,e.currentTarget);
+  el.querySelector('[data-a="mail"]').onclick=()=>ouvrirEnvoi(sections,null,null,{nom});
   el.querySelector('[data-a="imprimer"]').onclick=()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){alert('Impression impossible : '+e.message)}};
 }
 window.ptSortiesClient=ouvrirSorties;
@@ -1496,6 +1554,15 @@ function docHtml(titreDoc,sections){
 const PDF_LIB=location.origin+'/vendor/html2pdf-0.10.1.bundle.min.js';
 async function telechargerPDF(titreDoc,sections,nom,bouton){
   const texte=bouton?.textContent;if(bouton){bouton.disabled=true;bouton.textContent='Préparation du PDF…'}
+  try{
+    const {pdf,fichier}=await produirePDF(titreDoc,sections,nom);
+    const a=document.createElement('a');a.href=URL.createObjectURL(pdf);a.download=fichier;document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);
+  }catch(e){alert('PDF impossible : '+e.message+'. Utilisez « Imprimer » puis « Enregistrer au format PDF ».')}
+  finally{if(bouton){bouton.disabled=false;bouton.textContent=texte}}
+}
+/** Fabrique le PDF (Blob) du document : utilisé pour le téléchargement et pour l'envoi au client. */
+async function produirePDF(titreDoc,sections,nom){
   const f=document.createElement('iframe');f.style.cssText='position:fixed;left:-10000px;top:0;width:718px;height:1200px;border:0';document.body.appendChild(f);
   try{
     const doc=f.contentDocument;doc.open();doc.write(docHtml(titreDoc,sections).replace('</head>',`<style>.fs td{padding:3px 8px}.fs{margin-bottom:9px}.doc-section{margin-bottom:0}.doc-section>.st-res{padding-bottom:0!important;margin-bottom:0!important}.doc-tete{margin-bottom:12px}</style><script src="${PDF_LIB}"><\/script></head>`));doc.close();
@@ -1510,11 +1577,8 @@ async function telechargerPDF(titreDoc,sections,nom,bouton){
       pagebreak:{mode:['css'],avoid:['tr','.card:not(.longue)','.tile','.hero','.fs-hcsf']}}));
     const blob=await f.contentWindow.html2pdf().set(options).from(doc.getElementById('pt-studio')).outputPdf('blob');
     // Copie du fichier dans la fenêtre principale : le cadre est supprimé juste après.
-    const pdf=new Blob([await blob.arrayBuffer()],{type:'application/pdf'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(pdf);a.download=fichier;document.body.appendChild(a);a.click();
-    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);
-  }catch(e){alert('PDF impossible : '+e.message+'. Utilisez « Imprimer » puis « Enregistrer au format PDF ».')}
-  finally{f.remove();if(bouton){bouton.disabled=false;bouton.textContent=texte}}
+    return {pdf:new Blob([await blob.arrayBuffer()],{type:'application/pdf'}),fichier};
+  }finally{f.remove()}
 }
 function imprimerDoc(titreDoc,sections){
   const html=docHtml(titreDoc,sections);
