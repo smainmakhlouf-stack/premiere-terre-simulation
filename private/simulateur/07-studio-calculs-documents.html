@@ -490,7 +490,7 @@ function htmlMensEgale(d,neuf,ancien){
   const ligne=(l,v,col)=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed #e6dbd4;font-size:15px"><span>${l}</span><b${col?` style="color:${col}"`:''}>${eur(v)}</b></div>`;
   const carte=(nom,x,col,fond,bord,coulNom,perte)=>`<div style="border:2px solid ${bord};background:${fond};border-radius:16px;padding:18px 20px">
     <div style="font-weight:800;font-size:16px;letter-spacing:1px;text-transform:uppercase;color:${coulNom}">${nom}</div>
-    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">${jauge(pct(x),col)}<div><div style="font:700 40px Georgia,serif;line-height:1.1;color:${nom==='Neuf'?C.main:'#5e4f48'}">${eur(x.budget)}</div><div style="font-size:13.5px;color:#7b6b62">de logement, qui est à vous</div></div></div>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">${jauge(pct(x),col)}<div><div style="font:700 40px Georgia,serif;line-height:1.1;color:${nom==='Neuf'?C.main:'#5e4f48'}">${eur(x.budget)}</div></div></div>
     ${ligne('Notaire',x.notaire,perte)}${ligne('Intérêts et assurance',x.perte,perte)}</div>`;
   return `<h2>Même mensualité : ${eur(n.M)} / mois pendant ${d.ans} ans</h2><p class="sub">Sur 100 € versés, combien deviennent votre logement ?</p>
    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
