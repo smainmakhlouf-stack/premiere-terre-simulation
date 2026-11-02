@@ -501,9 +501,10 @@ function aPrixEgal(d,type,prix){
 // « À chaque mensualité, j'épargne » : illustration simple, une couleur pour l'épargne ; la part des intérêts au départ
 // est réglable (40 % par défaut) et baisse jusqu'à zéro à la fin du prêt. La valeur réelle du dossier est rappelée dessous.
 let partInterets=40;
+const reelEpargne=new WeakMap();
 function grapheEpargne(c,ans){
-  let reel=null;try{const e=echeancier(c),p0=e.prets.map(p=>p.lignes[0]).filter(Boolean),tot=p0.reduce((a,l)=>a+l.pay,0);if(tot>0)reel=p0.reduce((a,l)=>a+l.int+l.ins,0)/tot*100}catch(_){}
-  const M=c.mensualite,pi=partInterets/100,W=1000,H=330,L=60,B=34,T=14,PW=W-L-16,PH=H-T-B,x=a=>L+a/ans*PW,y=p=>T+PH-p*PH;
+  let reel=reelEpargne.has(c)?reelEpargne.get(c):null;if(!reelEpargne.has(c))try{const e=echeancier(c),p0=e.prets.map(p=>p.lignes[0]).filter(Boolean),tot=p0.reduce((a,l)=>a+l.pay,0);if(tot>0)reel=p0.reduce((a,l)=>a+l.int+l.ins,0)/tot*100;reelEpargne.set(c,reel)}catch(_){}
+  const M=c.mensualite,pi=Math.round(partInterets)/100,W=1000,H=330,L=60,B=34,T=14,PW=W-L-16,PH=H-T-B,x=a=>L+a/ans*PW,y=p=>T+PH-p*PH;
   let g='';[0,.25,.5,.75,1].forEach(p=>g+=`<line x1="${L}" x2="${W-16}" y1="${y(p)}" y2="${y(p)}" stroke="#f1e8e2"/><text x="${L-8}" y="${y(p)+4}" text-anchor="end" font-size="12" fill="#8a7a70">${p*100} %</text>`);
   g+=`<path d="M${x(0)},${y(1-pi)} L${x(ans)},${y(1)} L${x(ans)},${y(0)} L${x(0)},${y(0)} Z" fill="${C.main}"/><path d="M${x(0)},${y(1)} L${x(ans)},${y(1)} L${x(0)},${y(1-pi)} Z" fill="#f4e6de"/>`;
   g+=`<line x1="${x(0)}" x2="${x(ans)}" y1="${y(1)}" y2="${y(1)}" stroke="#2b2320" stroke-dasharray="6 5" stroke-width="1.5"/>`;
@@ -512,11 +513,16 @@ function grapheEpargne(c,ans){
   g+=`<text x="${x(ans*.8)}" y="${y(.45)}" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">À la fin : 100 % épargne</text>`;
   g+=`<text x="${x(0)}" y="${H-10}" font-size="12" fill="#8a7a70">0</text><text x="${x(ans)}" y="${H-10}" text-anchor="end" font-size="12" fill="#8a7a70">${ans} ans</text><text x="${(x(0)+x(ans))/2}" y="${H-10}" text-anchor="middle" font-size="11" fill="#8a7a70" letter-spacing="2">DURÉE D'EMPRUNT</text>`;
   return `<div style="text-align:center"><div style="font:700 22px Georgia,serif;letter-spacing:.5px">À CHAQUE MENSUALITÉ, J'ÉPARGNE</div><div class="sub" style="margin:2px 0 8px">Prêt amortissable · Mensualité : <b style="color:#2b2320">${eur(M)}</b></div>
-   <label style="display:inline-flex;align-items:center;gap:10px;font-size:13.5px">Part des intérêts au départ : <input type="range" id="sd-partint" min="10" max="80" step="1" value="${partInterets}" style="width:200px;accent-color:${C.main}"> <b style="color:${C.main}">${Math.round(pi*100)} % intérêts · ${Math.round(100-pi*100)} % capital</b></label></div>
+   <label style="display:inline-flex;align-items:center;gap:10px;font-size:13.5px">Part des intérêts au départ : <input type="range" id="sd-partint" min="10" max="80" step="0.5" value="${partInterets}" style="width:200px;accent-color:${C.main}"> <b style="color:${C.main}">${Math.round(pi*100)} % intérêts · ${Math.round(100-pi*100)} % capital</b></label></div>
    <svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Répartition de la mensualité entre intérêts et capital épargné">${g}</svg>
    <p class="note" style="text-align:center;margin:4px 0 0">Illustration pédagogique : la part des intérêts baisse chaque année jusqu'à zéro à la fin du prêt.${reel!=null?` Valeur réelle de ce dossier au départ : ${Math.round(reel)} % d'intérêts et d'assurance, ${Math.round(100-reel)} % d'épargne.`:''}</p>`;
 }
-function lierEpargne(c,ans){const r=$('sd-partint');if(!r)return;r.oninput=()=>{partInterets=+r.value;const box=$('sd-epargne');if(box){box.innerHTML=grapheEpargne(c,ans);lierEpargne(c,ans)}}}
+// Le curseur n'est jamais redessiné pendant qu'on le tire : seuls le graphique et le libellé changent, une fois par image.
+function lierEpargne(c,ans){const r=$('sd-partint');if(!r)return;let attente=false;
+  r.oninput=()=>{partInterets=+r.value;if(attente)return;attente=true;requestAnimationFrame(()=>{attente=false;const box=$('sd-epargne');if(!box)return;
+    const t=document.createElement('div');t.innerHTML=grapheEpargne(c,ans);
+    const sv=box.querySelector('svg'),nsv=t.querySelector('svg');if(sv&&nsv)sv.replaceWith(nsv);
+    const lb=r.parentElement.querySelector('b'),nlb=t.querySelector('#sd-partint')?.parentElement.querySelector('b');if(lb&&nlb)lb.innerHTML=nlb.innerHTML})}}
 function courbes(series,ans){
   const W=760,H=240,L=64,B=26,T=12,PW=W-L-12,PH=H-T-B,max=Math.max(1,...series.flatMap(s=>s.v));
   const pas=[10000,20000,25000,50000,100000,200000].find(p=>max/p<=5)||200000,top=Math.ceil(max/pas)*pas;
