@@ -743,7 +743,7 @@ function htmlTremplin(d,c,doc){
   const tableDe=rows=>`<table class="st-env st-trem" style="width:100%"><thead><tr><th>Revente</th><th>Restant dû</th><th>Récupéré</th><th>Enrichissement</th>${rv?`<th>${brs?'Indexé':'Avec '+rtxt}</th>`:''}</tr></thead><tbody>${rows.map(l=>`<tr data-an="${l.a}" class="${l.a===anRevente?'on':''}" title="Revente après ${ans(l.a)}"><td>${ans(l.a)}</td><td>${eur(l.crd)}</td><td>${eur(l.recupere)}</td><td style="color:${l.a===anRevente?'#fff':l.recupere-(d.apport||0)>=0?'#2f7a3e':'#b3261e'};font-weight:600">${eur(l.recupere-(d.apport||0))}</td>${rv?`<td>${eur(l.recupereReval)}</td>`:''}</tr>`).join('')}</tbody></table>`;
   const moitie=Math.ceil(vues.length/2);
   const table=`<div style="font-weight:700;margin:18px 0 6px">Année par année <span style="font-weight:400;color:#8a7a70;font-size:13px">${doc?'':'· cliquez une année pour changer d\'horizon'}</span></div>
-   <div class="trem-tables">${vues.length>8?tableDe(vues.slice(0,moitie))+tableDe(vues.slice(moitie)):tableDe(vues)}</div>`;
+   <div class="trem-tables"${rv?' style="grid-template-columns:repeat(auto-fit,minmax(520px,1fr))"':''}>${!doc&&vues.length>8?tableDe(vues.slice(0,moitie))+tableDe(vues.slice(moitie)):tableDe(vues)}</div>`;
   const resume=`<div style="background:${C.main};color:#fff;border-radius:14px;padding:16px 20px">
      <div><div style="font-size:11.5px;letter-spacing:1.6px;text-transform:uppercase;color:#fbe3d4">Revente après ${ans(anRevente)} · vous récupérez</div><div style="font:40px Georgia,serif;line-height:1.15;color:${x.recupere>=0?'#fff':'#ffd9d4'}">${eur(x.recupere)}</div><div style="font-size:13px;color:#fbe3d4">une fois le prêt remboursé, ${brs?'prix de revente encadré':'au prix d\'achat'}${d.apport>0?`<div style="margin-top:8px;font-size:14px;color:#fff">dont votre apport ${eur(d.apport)} · <b style="background:#ffffff26;border-radius:6px;padding:2px 8px">enrichissement réel ${eur(enrichi)}</b></div>`:''}</div></div>
      ${rv?`<div style="margin-top:12px;padding-top:12px;border-top:1px solid #ffffff40"><div style="font-size:11.5px;letter-spacing:1.6px;text-transform:uppercase;color:#fbe3d4">${brs?'Avec l\'indexation OFS':'Si le prix monte de '+rtxt}</div><div style="font:28px Georgia,serif;color:#fff">${eur(x.recupereReval)}</div><div style="font-size:13px;color:#fbe3d4">de quoi financer le prochain projet</div></div>`:''}</div>
@@ -1542,7 +1542,11 @@ window.ptOpenStudio=ouvrir;
 // ---------- PDF client ----------
 // Les écrans rapides sont recalculés hors écran puis assemblés dans une page imprimable
 // (impression du navigateur → « Enregistrer au format PDF »).
-function capturerVue(nom){const v=VUES[nom];v.form();v.res();const res=$('st-res').cloneNode(true);res.querySelectorAll('.cta,button').forEach(b=>b.remove());res.querySelectorAll('[data-tip]').forEach(e=>e.removeAttribute('data-tip'));res.querySelectorAll('.legend span').forEach(e=>{if(/Survolez/.test(e.textContent))e.remove()});return res.innerHTML.replace(/ ?Survolez pour le détail\./g,'')}
+function capturerVue(nom){const v=VUES[nom];v.form();v.res();const res=$('st-res').cloneNode(true);res.querySelectorAll('.cta,button').forEach(b=>b.remove());res.querySelectorAll('[data-tip]').forEach(e=>e.removeAttribute('data-tip'));
+  // Document papier : sans champs de saisie ni consignes de clic ; tableau du tremplin d'un seul tenant.
+  res.querySelector('#sd-partint')?.closest('label')?.remove();res.querySelector('#sd-reval')?.closest('.f')?.remove();
+  res.querySelectorAll('.trem-tables').forEach(t=>{const tb=t.querySelectorAll('table');if(tb.length>1){const corps=tb[0].querySelector('tbody');tb[1].querySelectorAll('tbody tr').forEach(tr=>corps.appendChild(tr));tb[1].remove()}t.style.gridTemplateColumns='1fr';t.previousElementSibling?.querySelector('span')?.remove()});
+res.querySelectorAll('.legend span').forEach(e=>{if(/Survolez/.test(e.textContent))e.remove()});return res.innerHTML.replace(/ ?Survolez pour le détail\./g,'')}
 function genererPDF(presenter){
   const avant=vue,ouvert=studio.classList.contains('open');principal();
   const sections=[];
@@ -1610,8 +1614,17 @@ async function produirePDF(titreDoc,sections,nom){
     const jour=new Date().toISOString().slice(0,10),fichier=[titreDoc,nom,jour].filter(Boolean).join(' - ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w .,'()-]/g,'')+'.pdf';
     // Options recréées dans le cadre : html2pdf vérifie les tableaux avec instanceof, propre à chaque fenêtre.
     const options=f.contentWindow.JSON.parse(JSON.stringify({margin:[10,10,10,10],image:{type:'jpeg',quality:.95},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
-      pagebreak:{mode:['css'],avoid:['tr','.card:not(.longue)','.tile','.hero','.fs-hcsf']}}));
-    const blob=await f.contentWindow.html2pdf().set(options).from(doc.getElementById('pt-studio')).outputPdf('blob');
+      pagebreak:{mode:['css'],avoid:['tr','.card:not(.longue)','.tile','.hero','.fs-hcsf','.doc-pied','.trem-tables','.note']}}));
+    // Une partie = un rendu séparé qui commence sur une nouvelle page : le découpage d'une seule longue image
+    // décalait les sauts de quelques pixels par page (titres coupés en deux en bas de page).
+    const racine=doc.getElementById('pt-studio'),secs=[...racine.querySelectorAll('.doc-section')],tete=racine.querySelector('.doc-tete'),pied=racine.querySelector('.doc-pied');
+    // Une partie = un rendu séparé qui commence sur une nouvelle page : le découpage d'une seule longue image
+    // décalait les sauts de quelques pixels par page (titres coupés en deux en bas de page).
+    const parties=secs.length>1?secs.map((sec,i)=>{const r=racine.cloneNode(false);if(i===0&&tete)r.appendChild(tete.cloneNode(true));const c=sec.cloneNode(true);c.style.breakBefore='auto';r.appendChild(c);if(i===secs.length-1&&pied)r.appendChild(pied.cloneNode(true));racine.parentNode.appendChild(r);return r}):[racine];
+    if(parties[0]!==racine)racine.style.display='none';
+    let travail=f.contentWindow.html2pdf().set(options).from(parties[0]).toPdf();
+    for(const part of parties.slice(1))travail=travail.get('pdf').then(pdf=>{pdf.addPage()}).from(part).toContainer().toCanvas().toPdf();
+    const blob=await travail.outputPdf('blob');
     // Copie du fichier dans la fenêtre principale : le cadre est supprimé juste après.
     return {pdf:new Blob([await blob.arrayBuffer()],{type:'application/pdf'}),fichier};
   }finally{f.remove()}
