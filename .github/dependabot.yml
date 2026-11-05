@@ -1,0 +1,19 @@
+# Mises à jour automatiques des bibliothèques (Dependabot) : une demande de fusion groupée par semaine
+# pour les petites mises à jour, une par bibliothèque pour les changements majeurs. Les correctifs de
+# sécurité urgents arrivent en plus, dès leur publication (réglage « Dependabot security updates »).
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 5
+    groups:
+      mises-a-jour-mineures:
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "Dépendances"
+
