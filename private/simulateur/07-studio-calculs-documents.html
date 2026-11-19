@@ -1605,7 +1605,9 @@ async function telechargerPDF(titreDoc,sections,nom,bouton){
 async function produirePDF(titreDoc,sections,nom){
   const f=document.createElement('iframe');f.style.cssText='position:fixed;left:-10000px;top:0;width:718px;height:1200px;border:0';document.body.appendChild(f);
   try{
-    const doc=f.contentDocument;doc.open();doc.write(docHtml(titreDoc,sections).replace('</head>',`<style>.fs td{padding:3px 8px}.fs{margin-bottom:9px}.doc-section{margin-bottom:0}.doc-section>.st-res{padding-bottom:0!important;margin-bottom:0!important}.doc-tete{margin-bottom:12px}</style><script src="${PDF_LIB}"><\/script></head>`));doc.close();
+    // letter-spacing quasi nul : html2canvas place alors chaque lettre à sa position réelle. Sans cela, Safari
+    // (Mac, iPhone) mesure mal les mots : espaces perdus et mots qui se chevauchent dans le PDF.
+    const doc=f.contentDocument;doc.open();doc.write(docHtml(titreDoc,sections).replace('</head>',`<style>#pt-studio,#pt-studio *{letter-spacing:.01px!important}.fs td{padding:3px 8px}.fs{margin-bottom:9px}.doc-section{margin-bottom:0}.doc-section>.st-res{padding-bottom:0!important;margin-bottom:0!important}.doc-tete{margin-bottom:12px}</style><script src="${PDF_LIB}"><\/script></head>`));doc.close();
     await new Promise((ok,ko)=>{let n=0;const t=setInterval(()=>{if(f.contentWindow.html2pdf&&doc.readyState==='complete'){clearInterval(t);ok()}else if(++n>150){clearInterval(t);ko(new Error('bibliothèque PDF indisponible (connexion internet ?)'))}},100)});
     await Promise.all([...doc.images].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
     // Les graphiques SVG sont convertis en image : leurs couleurs définies en CSS doivent être recopiées sur chaque forme.
